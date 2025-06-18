@@ -25,6 +25,7 @@ export default function Login() {
         value={email}
         onChangeText={setEmail}
       />
+      
       <TextInput
         style={styles.input}
         placeholder="Contraseña"

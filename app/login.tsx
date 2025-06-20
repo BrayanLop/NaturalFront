@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/authContext';
 
 export default function Login() {
@@ -11,21 +11,65 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Por ahora permite cualquier credencial
-    login();
-    router.replace('/(tabs)/home'); // o la ruta real de tu vista principal
+  const handleLogin = async () => {
+    setLoading(true);
+
+    // 🔁 MODO SIMULADO (puedes eliminar este bloque cuando tengas el backend)
+    setTimeout(() => {
+      setLoading(false);
+
+      if (email === 'admin' && password === '1234') {
+        login(); // método del contexto
+        router.replace('/(tabs)/home');
+      } else {
+        Alert.alert('Error', 'Credenciales incorrectas');
+      }
+    }, 1200);
+
+    /*
+    // ✅ MODO REAL (descomenta esto cuando tengas tu API lista)
+
+    try {
+      const response = await fetch('https://TU_API.com/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        throw new Error('Credenciales incorrectas');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        login();
+        router.replace('/(tabs)/home');
+      } else {
+        Alert.alert('Error', 'Credenciales inválidas');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'No se pudo iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+    */
   };
 
   return (
     <View style={styles.container}>
-    <View style={styles.logoContainer}>
-      <Image
-        source={require('../assets/images/logo1.png')}
-        style={styles.logo}
-      />
-    </View>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../assets/images/logo1.png')}
+          style={styles.logo}
+        />
+      </View>
+
       <TextInput
         style={styles.input}
         placeholder="Usuario"
@@ -33,7 +77,7 @@ export default function Login() {
         onChangeText={setEmail}
         placeholderTextColor="#555"
       />
-      
+
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
@@ -43,7 +87,6 @@ export default function Login() {
           onChangeText={setPassword}
           placeholderTextColor="#555"
         />
-
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
           <Ionicons
             name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -56,14 +99,15 @@ export default function Login() {
       <TouchableOpacity
         style={[styles.button, !(email && password) && styles.buttonDisabled]}
         onPress={handleLogin}
-        disabled={!(email && password)}>
-        <Text style={styles.buttonText}>Ingresar</Text>
+        disabled={!(email && password) || loading}>
+        <Text style={styles.buttonText}>
+          {loading ? 'Ingresando...' : 'Ingresar'}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => alert('Recuperación no implementada')}>
         <Text style={styles.forgotPassword}>¿Olvidó su contraseña?</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -73,12 +117,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#A8E6CF', // fondo verde menta
-  },
-  title: {
-    fontSize: 24,
-    textAlign: 'center',
-    marginBottom: 20,
+    backgroundColor: '#A8E6CF',
   },
   input: {
     borderWidth: 1,
@@ -89,7 +128,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   button: {
-    backgroundColor: '#4CAF50', // verde más oscuro
+    backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -101,43 +140,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonDisabled: {
-    backgroundColor: '#A5D6A7', // un verde más claro para indicar deshabilitado
+    backgroundColor: '#A5D6A7',
   },
-toggle: {
-  marginLeft: 10,
-  fontSize: 18,
-},
-forgotPassword: {
-  marginTop: 15,
-  textAlign: 'center',
-  color: '#555',
-  textDecorationLine: 'underline',
-},
-passwordContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 5,
-  backgroundColor: '#fff',
-  marginBottom: 10,
-  paddingHorizontal: 10,
-},
-passwordInput: {
-  flex: 1,
-  paddingVertical: 10,
-},
-logo: {
-  width: 200,
-  height: 200,
-  resizeMode: 'contain',
-  marginBottom: 20,
-  textAlign: "center"
-},
-logoContainer: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '100%',
-  marginBottom: 20 // para separarlo del formulario
-}
+  forgotPassword: {
+    marginTop: 15,
+    textAlign: 'center',
+    color: '#555',
+    textDecorationLine: 'underline',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
+    marginBottom: 20,
+    textAlign: "center"
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 20
+  }
 });

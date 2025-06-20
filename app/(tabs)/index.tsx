@@ -7,7 +7,6 @@ export default function Index() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
 
-  // Espera un ciclo de render para asegurarte de que el layout esté montado
   useEffect(() => {
     const timeout = setTimeout(() => setIsReady(true), 0);
     return () => clearTimeout(timeout);
@@ -17,7 +16,7 @@ export default function Index() {
     if (!isReady) return;
 
     if (isAuthenticated) {
-      router.replace('/(tabs)/home'); // ✅ Ruta real
+      router.replace('/(tabs)/home');
     } else {
       router.replace('/login');
     }
@@ -25,3 +24,7 @@ export default function Index() {
 
   return null;
 }
+
+export const metadata = {
+  title: 'Inicio',
+};

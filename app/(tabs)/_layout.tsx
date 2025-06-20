@@ -1,10 +1,29 @@
 import { Stack } from 'expo-router';
-import { AuthProvider } from '../../context/authContext';
 
 export default function Layout() {
   return (
-    <AuthProvider>
-      <Stack />
-    </AuthProvider>
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#00b894',
+        },
+        headerTintColor: '#fff',
+        headerTitleAlign: 'center',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      {/* Personalizamos los títulos */}
+      <Stack.Screen name="home" options={{ title: 'Inicio' }} />
+      <Stack.Screen name="personas/index" options={{ title: 'Personas' }} />
+      <Stack.Screen name="personas/crear" options={{ title: 'Crear persona' }} />
+      <Stack.Screen name="personas/[id]" options={{ title: 'Editar persona' }} />
+      <Stack.Screen name="servicios" options={{ title: 'Servicios' }} />
+      <Stack.Screen name="servicios/crear" options={{ title: 'Crear servicio' }} />
+      <Stack.Screen name="servicios/[id]" options={{ title: 'Editar servicio' }} />
+      <Stack.Screen name="configuracion" options={{ title: 'Configuración general' }} />
+      <Stack.Screen name="registro-servicios" options={{ title: 'Registrar servicios' }} />
+    </Stack>
   );
 }

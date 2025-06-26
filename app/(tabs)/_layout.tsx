@@ -23,7 +23,10 @@ export default function Layout() {
       <Stack.Screen name="servicios/crear" options={{ title: 'Crear servicio' }} />
       <Stack.Screen name="servicios/[id]" options={{ title: 'Editar servicio' }} />
       <Stack.Screen name="configuracion" options={{ title: 'Configuración general' }} />
-      <Stack.Screen name="registro-servicios" options={{ title: 'Registrar servicios' }} />
+      <Stack.Screen name="registroServicio/index" options={{ title: 'Registros' }} />
+      <Stack.Screen name="registroServicio/personas" options={{ title: 'Personas' }} />
+      <Stack.Screen name="registroServicio/servicios" options={{ title: 'Servicios' }} />
+
     </Stack>
   );
 }

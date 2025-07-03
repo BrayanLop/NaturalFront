@@ -1,58 +1,60 @@
-import { Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { api } from '../../api/api'; // ajusta si tu ruta es diferente
 
-const servicios = [
-  { id: 'a', nombre: 'Corte de cabello' },
-  { id: 'b', nombre: 'Manicure' },
-  { id: 'c', nombre: 'Depilación' },
-];
-
-export default function SeleccionarServicios() {
-  const { persona } = useLocalSearchParams();
-  const router = useRouter();
+export default function RegistroServicio() {
+  const [servicios, setServicios] = useState<any[]>([]);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
+  const router = useRouter();
+  const { persona } = useLocalSearchParams();
 
-  const toggle = (id: string) => {
+  useEffect(() => {
+    api.get('/Servicio/Obtener')
+      .then((res) => setServicios(res.data))
+      .catch((err) => console.error('Error al cargar servicios:', err));
+  }, []);
+
+  const toggleServicio = (id: string) => {
     setSeleccionados((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((s) => s !== id)
+        : [...prev, id]
     );
   };
 
-const aceptar = () => {
-  const ruta: Href = {
-    pathname: '/(tabs)/registroServicio',
-    params: {
-      persona: persona as string,
-      servicios: seleccionados.join(','),
-    },
+  const confirmar = () => {
+    router.push({
+      pathname: '/(tabs)/registroServicio',
+      params: {
+        persona: persona as string,
+        servicios: seleccionados.join(','),
+      },
+    });
   };
-
-  router.push(ruta);
-};
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Servicios para {persona}</Text>
+
       <FlatList
         data={servicios}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[
               styles.item,
-              seleccionados.includes(item.id) && styles.itemSelected,
+              seleccionados.includes(item.id.toString()) && styles.itemSeleccionado,
             ]}
-            onPress={() => toggle(item.id)}
+            onPress={() => toggleServicio(item.id.toString())}
           >
-            <Text style={{ color: seleccionados.includes(item.id) ? 'white' : 'black' }}>
-              {item.nombre}
-            </Text>
+            <Text>{item.nombre}</Text>
           </TouchableOpacity>
         )}
       />
-      <TouchableOpacity style={styles.continue} onPress={aceptar}>
-        <Text style={styles.continueText}>Aceptar</Text>
+
+      <TouchableOpacity style={styles.button} onPress={confirmar}>
+        <Text style={styles.buttonText}>Confirmar</Text>
       </TouchableOpacity>
     </View>
   );
@@ -62,20 +64,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   title: { fontSize: 22, marginBottom: 10 },
   item: {
+    backgroundColor: '#dfe6e9',
     padding: 15,
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    marginBottom: 5,
+    marginBottom: 10,
+    borderRadius: 8,
   },
-  itemSelected: {
-    backgroundColor: '#00b894',
+  itemSeleccionado: {
+    backgroundColor: '#81ecec',
   },
-  continue: {
-    marginTop: 20,
-    backgroundColor: '#00b894',
+  button: {
+    backgroundColor: '#0984e3',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
-  continueText: { color: 'white', fontWeight: 'bold' },
+  buttonText: { color: 'white', fontWeight: 'bold' },
 });

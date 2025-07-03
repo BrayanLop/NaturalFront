@@ -7,8 +7,6 @@ export default function ListaRegistros() {
   const [registros, setRegistros] = useState<any[]>([]);
   const { persona, servicios } = useLocalSearchParams();
 
-  const ruta = '/(tabs)/registroServicio' as const;
-
   useFocusEffect(
     useCallback(() => {
       if (persona && servicios) {
@@ -42,7 +40,7 @@ export default function ListaRegistros() {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push({ pathname: '/(tabs)/registroServicio' as const })}
+        onPress={() => router.navigate('/(tabs)/registroServicio/personas')}
       >
         <Text style={styles.buttonText}>Registrar nuevo</Text>
       </TouchableOpacity>

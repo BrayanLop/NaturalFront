@@ -29,7 +29,7 @@ export default function ListaPersonas() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/Persona/Obtener')
+    api.get('Persona/Obtener')
       .then((response) => {
         setPersonas(response.data);
       })

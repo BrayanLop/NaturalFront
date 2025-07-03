@@ -1,43 +1,80 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  KeyboardTypeOptions,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { api } from '../../api/api'; // ⚠️ Asegúrate de que esta ruta sea correcta
+import { api } from '../../api/api';
 
 export default function CrearPersona() {
   const router = useRouter();
 
-  const [nombre, setNombre] = useState('');
-  const [apellido, setApellido] = useState('');
-  const [cedula, setCedula] = useState('');
-  const [residencia, setResidencia] = useState('');
-  const [email, setEmail] = useState('');
-  const [edad, setEdad] = useState('');
-  const [celular, setCelular] = useState('');
-  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [persona, setPersona] = useState({
+    nombre: '',
+    apellido: '',
+    cedula: '',
+    residencia: '',
+    email: '',
+    edad: '',
+    celular: '',
+    fechaNacimiento: '',
+  });
+
+  const [errores, setErrores] = useState<Partial<Record<keyof typeof persona, string>>>({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const validaciones: Record<keyof typeof persona, { regex: RegExp; mensaje: string }> = {
+    nombre: { regex: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]{3,}$/, mensaje: 'Nombre inválido' },
+    apellido: { regex: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]{3,}$/, mensaje: 'Apellido inválido' },
+    cedula: { regex: /^\d{6,10}$/, mensaje: 'Cédula inválida (6-10 dígitos)' },
+    residencia: { regex: /^.{0,100}$/, mensaje: '' },
+    email: { regex: /^[\w.-]+@[\w.-]+\.\w+$/, mensaje: 'Correo inválido' },
+    edad: { regex: /^\d{1,3}$/, mensaje: 'Edad inválida' },
+    celular: { regex: /^\d{10}$/, mensaje: 'Celular inválido (10 dígitos)' },
+    fechaNacimiento: {
+      regex: /^\d{4}-\d{2}-\d{2}$/,
+      mensaje: 'Fecha inválida (formato YYYY-MM-DD)',
+    },
+  };
+
+  const handleChange = (campo: keyof typeof persona, valor: string) => {
+    setPersona((prev) => ({ ...prev, [campo]: valor }));
+    const { regex, mensaje } = validaciones[campo];
+    setErrores((prev) => ({
+      ...prev,
+      [campo]: valor === '' || regex.test(valor) ? '' : mensaje,
+    }));
+  };
 
   const guardar = async () => {
-    if (!nombre || !apellido || !cedula || !email) {
-      Alert.alert('Campos requeridos', 'Nombre, Apellido, Cédula y Email son obligatorios.');
+    const nuevosErrores: Partial<Record<keyof typeof persona, string>> = {};
+
+    (Object.keys(persona) as (keyof typeof persona)[]).forEach((campo) => {
+      const valor = persona[campo];
+      const { regex, mensaje } = validaciones[campo];
+      if (campo !== 'residencia' && (!valor || !regex.test(valor))) {
+        nuevosErrores[campo] = mensaje;
+      }
+    });
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores);
+      Alert.alert('Error', 'Revisa los campos con errores');
       return;
     }
 
     try {
       await api.post('/Persona/Crear', {
-        nombre,
-        apellido,
-        cedula,
-        residencia,
-        email,
-        edad: parseInt(edad),
-        celular,
-        fechaNacimiento, // Debe ir en formato 'YYYY-MM-DD'
+        ...persona,
+        edad: parseInt(persona.edad),
       });
 
       Alert.alert('Éxito', 'Persona creada correctamente');
@@ -48,23 +85,68 @@ export default function CrearPersona() {
     }
   };
 
+  const onChangeFecha = (_: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const iso = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      handleChange('fechaNacimiento', iso);
+    }
+  };
+
+  const campos: {
+    key: keyof typeof persona;
+    label: string;
+    keyboardType?: KeyboardTypeOptions;
+    isDate?: boolean;
+  }[] = [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'apellido', label: 'Apellido' },
+    { key: 'cedula', label: 'Cédula', keyboardType: 'numeric' },
+    { key: 'residencia', label: 'Residencia' },
+    { key: 'email', label: 'Correo electrónico', keyboardType: 'email-address' },
+    { key: 'edad', label: 'Edad', keyboardType: 'numeric' },
+    { key: 'celular', label: 'Celular', keyboardType: 'numeric' },
+    { key: 'fechaNacimiento', label: 'Fecha de nacimiento', isDate: true },
+  ];
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Nueva Persona</Text>
 
-      <TextInput placeholder="Nombre" value={nombre} onChangeText={setNombre} style={styles.input} />
-      <TextInput placeholder="Apellido" value={apellido} onChangeText={setApellido} style={styles.input} />
-      <TextInput placeholder="Cédula" value={cedula} onChangeText={setCedula} style={styles.input} />
-      <TextInput placeholder="Residencia" value={residencia} onChangeText={setResidencia} style={styles.input} />
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
-      <TextInput placeholder="Edad" keyboardType="numeric" value={edad} onChangeText={setEdad} style={styles.input} />
-      <TextInput placeholder="Celular" value={celular} onChangeText={setCelular} style={styles.input} />
-      <TextInput
-        placeholder="Fecha de nacimiento (YYYY-MM-DD)"
-        value={fechaNacimiento}
-        onChangeText={setFechaNacimiento}
-        style={styles.input}
-      />
+      {campos.map(({ key, label, keyboardType, isDate }) => (
+        <View key={key} style={styles.fieldContainer}>
+          <Text style={styles.label}>{label}</Text>
+
+          {isDate ? (
+            <>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={[styles.input, errores[key] && styles.inputError]}>
+                <Text style={{ color: persona[key] ? '#000' : '#888' }}>
+                  {persona[key] || 'Selecciona una fecha'}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={persona.fechaNacimiento ? new Date(persona.fechaNacimiento) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onChangeFecha}
+                  maximumDate={new Date()}
+                />
+              )}
+            </>
+          ) : (
+            <TextInput
+              value={persona[key]}
+              onChangeText={(text) => handleChange(key, text)}
+              style={[styles.input, errores[key] && styles.inputError]}
+              placeholder={label}
+              keyboardType={keyboardType}
+            />
+          )}
+          {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
+        </View>
+      ))}
 
       <TouchableOpacity style={styles.button} onPress={guardar}>
         <Text style={styles.buttonText}>Guardar</Text>
@@ -76,7 +158,7 @@ export default function CrearPersona() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#f2f2f2',
     flexGrow: 1,
   },
   title: {
@@ -84,12 +166,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: 'bold',
   },
+  fieldContainer: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    padding: 10,
-    marginBottom: 15,
+    padding: 12,
+    backgroundColor: '#fff',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
   button: {
     backgroundColor: '#00b894',
@@ -98,5 +197,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  buttonText: { color: 'white', fontWeight: 'bold' },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 });

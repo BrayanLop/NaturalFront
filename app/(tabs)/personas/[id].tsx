@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -10,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { api } from '../../api/api'; // Asegúrate que la ruta sea correcta
+import { api } from '../../api/api';
 
 export default function PersonaDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,14 +28,25 @@ export default function PersonaDetalle() {
     celular: '',
     fechaNacimiento: '',
   });
+
+  const [errores, setErrores] = useState<{ [campo: string]: string }>({});
   const [loading, setLoading] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const validaciones: Record<string, { regex: RegExp; mensaje: string }> = {
+    nombre: { regex: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, mensaje: 'Nombre inválido' },
+    apellido: { regex: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, mensaje: 'Apellido inválido' },
+    cedula: { regex: /^\d{6,10}$/, mensaje: 'Cédula inválida (6 a 10 dígitos)' },
+    email: { regex: /^[\w.-]+@[\w.-]+\.\w+$/, mensaje: 'Correo inválido' },
+    celular: { regex: /^\d{10}$/, mensaje: 'Celular inválido (10 dígitos)' },
+    fechaNacimiento: { regex: /^\d{4}-\d{2}-\d{2}$/, mensaje: 'Formato: YYYY-MM-DD' },
+  };
 
   useEffect(() => {
     if (id) {
       api.get(`/Persona/Obtener/${id}`)
         .then(response => {
           const data = response.data;
-
           setPersona({
             id: data.id,
             nombre: data.nombre,
@@ -44,7 +56,7 @@ export default function PersonaDetalle() {
             email: data.email,
             edad: data.edad,
             celular: data.celular ?? '',
-            fechaNacimiento: data.fechaNacimiento?.split('T')[0], // formato YYYY-MM-DD
+            fechaNacimiento: data.fechaNacimiento?.split('T')[0],
           });
         })
         .catch(error => {
@@ -55,7 +67,42 @@ export default function PersonaDetalle() {
     }
   }, [id]);
 
+  const handleInputChange = (campo: string, valor: string) => {
+    setPersona((prev) => ({ ...prev, [campo]: valor }));
+
+    if (validaciones[campo]) {
+      const { regex, mensaje } = validaciones[campo];
+      setErrores((prev) => ({
+        ...prev,
+        [campo]: regex.test(valor) ? '' : mensaje,
+      }));
+    }
+  };
+
+  const handleEdadChange = (text: string) => {
+    const num = parseInt(text);
+    setPersona((prev) => ({ ...prev, edad: isNaN(num) ? 0 : num }));
+    setErrores((prev) => ({
+      ...prev,
+      edad: isNaN(num) || num <= 0 ? 'Edad inválida' : '',
+    }));
+  };
+
   const actualizar = async () => {
+    for (const key in validaciones) {
+      const valor = persona[key as keyof typeof persona]?.toString() || '';
+      const { regex, mensaje } = validaciones[key];
+      if (!regex.test(valor)) {
+        Alert.alert('Error', mensaje);
+        return;
+      }
+    }
+
+    if (persona.edad <= 0 || isNaN(persona.edad)) {
+      Alert.alert('Error', 'Edad inválida');
+      return;
+    }
+
     try {
       await api.put(`/Persona/Actualizar/${id}`, {
         ...persona,
@@ -101,27 +148,94 @@ export default function PersonaDetalle() {
     );
   }
 
+  const campos = [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'apellido', label: 'Apellido' },
+    { key: 'cedula', label: 'Cédula' },
+    { key: 'residencia', label: 'Residencia' },
+    { key: 'email', label: 'Correo electrónico' },
+    { key: 'celular', label: 'Celular' },
+    { key: 'fechaNacimiento', label: 'Fecha de nacimiento' },
+  ];
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Editar Persona</Text>
+      {campos.map(({ key, label }) =>
+        key === 'fechaNacimiento' ? (
+          <View key={key} style={styles.fieldContainer}>
+            <Text style={styles.label}>{label}</Text>
 
-      {['nombre', 'apellido', 'cedula', 'residencia', 'email', 'celular', 'fechaNacimiento'].map((campo) => (
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={[
+                styles.input,
+                { justifyContent: 'center' },
+                errores.fechaNacimiento && styles.inputError,
+              ]}
+            >
+              <Text style={{ color: persona.fechaNacimiento ? '#000' : '#999' }}>
+                {persona.fechaNacimiento || 'Selecciona una fecha'}
+              </Text>
+            </TouchableOpacity>
+
+            {errores.fechaNacimiento ? (
+              <Text style={styles.errorText}>{errores.fechaNacimiento}</Text>
+            ) : null}
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={
+                  persona.fechaNacimiento
+                    ? new Date(persona.fechaNacimiento)
+                    : new Date('2000-01-01')
+                }
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    const fecha = selectedDate.toISOString().split('T')[0];
+                    setPersona((prev) => ({ ...prev, fechaNacimiento: fecha }));
+
+                    const { regex, mensaje } = validaciones.fechaNacimiento;
+                    setErrores((prev) => ({
+                      ...prev,
+                      fechaNacimiento: regex.test(fecha) ? '' : mensaje,
+                    }));
+                  }
+                }}
+              />
+            )}
+          </View>
+        ) : (
+          <View key={key} style={styles.fieldContainer}>
+            <Text style={styles.label}>{label}</Text>
+            <TextInput
+              value={persona[key as keyof typeof persona]?.toString() || ''}
+              onChangeText={(text) => handleInputChange(key, text)}
+              style={[
+                styles.input,
+                errores[key] && styles.inputError,
+              ]}
+            />
+            {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
+          </View>
+        )
+      )}
+
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Edad</Text>
         <TextInput
-          key={campo}
-          placeholder={campo.charAt(0).toUpperCase() + campo.slice(1)}
-          value={persona[campo as keyof typeof persona]?.toString() || ''}
-          onChangeText={(text) => setPersona({ ...persona, [campo]: text })}
-          style={styles.input}
+          value={persona.edad.toString()}
+          keyboardType="numeric"
+          onChangeText={handleEdadChange}
+          style={[
+            styles.input,
+            errores.edad && styles.inputError,
+          ]}
         />
-      ))}
-
-      <TextInput
-        placeholder="Edad"
-        value={persona.edad.toString()}
-        keyboardType="numeric"
-        onChangeText={(text) => setPersona({ ...persona, edad: parseInt(text) || 0 })}
-        style={styles.input}
-      />
+        {errores.edad ? <Text style={styles.errorText}>{errores.edad}</Text> : null}
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={actualizar}>
         <Text style={styles.buttonText}>Actualizar</Text>
@@ -135,14 +249,28 @@ export default function PersonaDetalle() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20 },
-  title: { fontSize: 22, marginBottom: 10 },
+  container: { flexGrow: 1, padding: 20, backgroundColor: '#f2f2f2' },
+  fieldContainer: { marginBottom: 15 },
+  label: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
     padding: 10,
-    marginBottom: 15,
+    backgroundColor: '#fff',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
   button: {
     backgroundColor: '#00b894',

@@ -1,10 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, StyleSheet,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
   Switch,
-  Text, TextInput,
-  TouchableOpacity, View
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -16,7 +20,16 @@ export default function ServicioDetalle() {
   const [descripcion, setDescripcion] = useState('');
   const [precio, setPrecio] = useState('');
   const [disponible, setDisponible] = useState(false);
+  const [errores, setErrores] = useState<{ [key in CampoValidable]?: string }>({});
   const [loading, setLoading] = useState(true);
+
+  const validaciones = {
+    nombre: { regex: /^.{3,50}$/, mensaje: 'Nombre requerido (3-50 caracteres)' },
+    descripcion: { regex: /^.{5,200}$/, mensaje: 'Descripción requerida (mínimo 5 caracteres)' },
+    precio: { regex: /^\d+(\.\d{1,2})?$/, mensaje: 'Precio inválido (hasta 2 decimales)' },
+  };
+
+  type CampoValidable = keyof typeof validaciones;
 
   useEffect(() => {
     if (id) {
@@ -36,7 +49,34 @@ export default function ServicioDetalle() {
     }
   }, [id]);
 
+  const handleChange = (campo: CampoValidable, valor: string) => {
+    if (campo === 'nombre') setNombre(valor);
+    if (campo === 'descripcion') setDescripcion(valor);
+    if (campo === 'precio') setPrecio(valor);
+
+    const { regex, mensaje } = validaciones[campo];
+    setErrores(prev => ({
+      ...prev,
+      [campo]: regex.test(valor) ? '' : mensaje,
+    }));
+  };
+
   const actualizar = async () => {
+    const nuevosErrores: Partial<Record<CampoValidable, string>> = {};
+    (Object.keys(validaciones) as CampoValidable[]).forEach((campo) => {
+      const valor = { nombre, descripcion, precio }[campo];
+      const { regex, mensaje } = validaciones[campo];
+      if (!regex.test(valor)) {
+        nuevosErrores[campo] = mensaje;
+      }
+    });
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores);
+      Alert.alert('Error', 'Revisa los campos con errores');
+      return;
+    }
+
     try {
       await api.put(`/Servicio/Actualizar/${id}`, {
         id: Number(id),
@@ -44,7 +84,7 @@ export default function ServicioDetalle() {
         descripcion,
         precio: parseFloat(precio),
         disponible,
-        fechaCreacion: new Date().toISOString(), // puedes enviar la misma u omitirlo si el backend no lo requiere
+        fechaCreacion: new Date().toISOString(),
       });
 
       Alert.alert('Éxito', 'Servicio actualizado');
@@ -85,17 +125,51 @@ export default function ServicioDetalle() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Editar Servicio</Text>
 
-      <TextInput value={nombre} onChangeText={setNombre} placeholder="Nombre" style={styles.input} />
-      <TextInput value={descripcion} onChangeText={setDescripcion} placeholder="Descripción" style={styles.input} />
-      <TextInput value={precio} onChangeText={setPrecio} placeholder="Precio" keyboardType="decimal-pad" style={styles.input} />
+      {/* Nombre */}
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Nombre</Text>
+        <TextInput
+          value={nombre}
+          onChangeText={(text) => handleChange('nombre', text)}
+          style={[styles.input, errores.nombre && styles.inputError]}
+          placeholder="Nombre del servicio"
+        />
+        {errores.nombre && <Text style={styles.errorText}>{errores.nombre}</Text>}
+      </View>
 
+      {/* Descripción */}
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Descripción</Text>
+        <TextInput
+          value={descripcion}
+          onChangeText={(text) => handleChange('descripcion', text)}
+          style={[styles.input, errores.descripcion && styles.inputError]}
+          placeholder="Descripción detallada"
+        />
+        {errores.descripcion && <Text style={styles.errorText}>{errores.descripcion}</Text>}
+      </View>
+
+      {/* Precio */}
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Precio</Text>
+        <TextInput
+          value={precio}
+          onChangeText={(text) => handleChange('precio', text)}
+          style={[styles.input, errores.precio && styles.inputError]}
+          keyboardType="decimal-pad"
+          placeholder="Precio en pesos"
+        />
+        {errores.precio && <Text style={styles.errorText}>{errores.precio}</Text>}
+      </View>
+
+      {/* Disponible */}
       <View style={styles.switchRow}>
-        <Text>Disponible</Text>
+        <Text style={styles.label}>Disponible</Text>
         <Switch value={disponible} onValueChange={setDisponible} />
       </View>
 
+      {/* Botones */}
       <TouchableOpacity style={styles.button} onPress={actualizar}>
         <Text style={styles.buttonText}>Actualizar</Text>
       </TouchableOpacity>
@@ -108,20 +182,37 @@ export default function ServicioDetalle() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
   title: { fontSize: 22, marginBottom: 15, fontWeight: 'bold' },
+  fieldContainer: { marginBottom: 15 },
+  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 5 },
   input: {
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
-    padding: 10, marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: '#fff',
   },
+  inputError: { borderColor: 'red' },
+  errorText: { color: 'red', fontSize: 12, marginTop: 4 },
   switchRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   button: {
-    backgroundColor: '#00b894', padding: 15, borderRadius: 6, alignItems: 'center', marginBottom: 10,
+    backgroundColor: '#00b894',
+    padding: 15,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   deleteButton: {
-    backgroundColor: '#d63031', padding: 15, borderRadius: 6, alignItems: 'center',
+    backgroundColor: '#d63031',
+    padding: 15,
+    borderRadius: 6,
+    alignItems: 'center',
   },
   buttonText: { color: 'white', fontWeight: 'bold' },
 });

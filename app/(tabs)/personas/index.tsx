@@ -48,14 +48,13 @@ export default function ListaPersonas() {
       <Text style={styles.itemText}>
         👤 {item.nombre} {item.apellido}
       </Text>
-      <Text style={styles.subText}>📧 {item.email}</Text>
+      <Text style={styles.subText}>
+        📱 {item.celular}</Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Personas</Text>
-
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : (
@@ -71,7 +70,7 @@ export default function ListaPersonas() {
         style={styles.addButton}
         onPress={() => router.push('/personas/crear')}
       >
-        <Text style={styles.addText}>+ Agregar Persona</Text>
+        <Text style={styles.addText}>+ Agregar persona</Text>
       </TouchableOpacity>
     </View>
   );

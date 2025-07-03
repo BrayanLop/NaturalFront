@@ -24,7 +24,6 @@ export default function ListaRegistros() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Registros de Servicios</Text>
 
       <FlatList
         data={registros}

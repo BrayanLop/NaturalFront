@@ -26,7 +26,6 @@ export default function ListaServicios() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Servicios</Text>
 
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />

@@ -1,9 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert, StyleSheet,
+  Alert,
+  ScrollView,
+  StyleSheet,
   Switch,
-  Text, TextInput, TouchableOpacity, View
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -39,37 +44,92 @@ export default function CrearServicio() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Nuevo Servicio</Text>
+    <ScrollView contentContainerStyle={styles.container}>
 
-      <TextInput placeholder="Nombre" value={nombre} onChangeText={setNombre} style={styles.input} />
-      <TextInput placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} style={styles.input} />
-      <TextInput placeholder="Precio" value={precio} onChangeText={setPrecio} style={styles.input} keyboardType="decimal-pad" />
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Nombre</Text>
+        <TextInput
+          value={nombre}
+          onChangeText={setNombre}
+          style={styles.input}
+          placeholder="Nombre del servicio"
+        />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Descripción</Text>
+        <TextInput
+          value={descripcion}
+          onChangeText={setDescripcion}
+          style={styles.input}
+          placeholder="Descripción opcional"
+        />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Precio</Text>
+        <TextInput
+          value={precio}
+          onChangeText={setPrecio}
+          style={styles.input}
+          placeholder="Ej: 15000"
+          keyboardType="decimal-pad"
+        />
+      </View>
 
       <View style={styles.switchRow}>
-        <Text>Disponible</Text>
+        <Text style={styles.label}>Disponible</Text>
         <Switch value={disponible} onValueChange={setDisponible} />
       </View>
 
       <TouchableOpacity style={styles.button} onPress={guardar}>
         <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, marginBottom: 15, fontWeight: 'bold' },
+  container: {
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: '#f2f2f2',
+  },
+  title: {
+    fontSize: 22,
+    marginBottom: 20,
+    fontWeight: 'bold',
+  },
+  fieldContainer: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
   input: {
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
-    padding: 10, marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: '#fff',
   },
   switchRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   button: {
-    backgroundColor: '#00b894', padding: 15, borderRadius: 6, alignItems: 'center',
+    backgroundColor: '#00b894',
+    padding: 15,
+    borderRadius: 6,
+    alignItems: 'center',
   },
-  buttonText: { color: 'white', fontWeight: 'bold' },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 });

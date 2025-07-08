@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
 
 export default function ServicioDetalle() {
@@ -26,7 +27,7 @@ export default function ServicioDetalle() {
   const validaciones = {
     nombre: { regex: /^.{3,50}$/, mensaje: 'Nombre requerido (3-50 caracteres)' },
     descripcion: { regex: /^.{5,200}$/, mensaje: 'Descripción requerida (mínimo 5 caracteres)' },
-    precio: { regex: /^\d+(\.\d{1,2})?$/, mensaje: 'Precio inválido (hasta 2 decimales)' },
+    precio: { regex: /^\d+$/, mensaje: 'Precio inválido (solo números)' },
   };
 
   type CampoValidable = keyof typeof validaciones;
@@ -82,7 +83,7 @@ export default function ServicioDetalle() {
         id: Number(id),
         nombre,
         descripcion,
-        precio: parseFloat(precio),
+        precio: parseInt(precio),
         disponible,
         fechaCreacion: new Date().toISOString(),
       });
@@ -125,7 +126,6 @@ export default function ServicioDetalle() {
 
   return (
     <View style={styles.container}>
-
       {/* Nombre */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Nombre</Text>
@@ -153,11 +153,18 @@ export default function ServicioDetalle() {
       {/* Precio */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Precio</Text>
-        <TextInput
+        <MaskedTextInput
+          type="currency"
+          options={{
+            prefix: '$',
+            decimalSeparator: ',',
+            groupSeparator: '.',
+            precision: 0,
+          }}
           value={precio}
-          onChangeText={(text) => handleChange('precio', text)}
+          onChangeText={(_, unmasked) => handleChange('precio', unmasked)}
           style={[styles.input, errores.precio && styles.inputError]}
-          keyboardType="decimal-pad"
+          keyboardType="numeric"
           placeholder="Precio en pesos"
         />
         {errores.precio && <Text style={styles.errorText}>{errores.precio}</Text>}
@@ -183,7 +190,6 @@ export default function ServicioDetalle() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
-  title: { fontSize: 22, marginBottom: 15, fontWeight: 'bold' },
   fieldContainer: { marginBottom: 15 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 5 },
   input: {

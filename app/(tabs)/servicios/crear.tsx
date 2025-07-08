@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
 
 export default function CrearServicio() {
@@ -30,7 +31,7 @@ export default function CrearServicio() {
       await api.post('/Servicio/Crear', {
         nombre,
         descripcion,
-        precio: parseFloat(precio),
+        precio: parseInt(precio), // Enviamos sin formato ($ ni puntos)
         disponible,
         fechaCreacion: new Date().toISOString(),
       });
@@ -46,6 +47,7 @@ export default function CrearServicio() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
 
+      {/* Nombre */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Nombre</Text>
         <TextInput
@@ -56,6 +58,7 @@ export default function CrearServicio() {
         />
       </View>
 
+      {/* Descripción */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Descripción</Text>
         <TextInput
@@ -66,22 +69,32 @@ export default function CrearServicio() {
         />
       </View>
 
+      {/* Precio */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Precio</Text>
-        <TextInput
+        <MaskedTextInput
+          type="currency"
+          options={{
+            prefix: '$',
+            decimalSeparator: ',',
+            groupSeparator: '.',
+            precision: 0,
+          }}
           value={precio}
-          onChangeText={setPrecio}
+          onChangeText={(_, unmasked) => setPrecio(unmasked)}
           style={styles.input}
-          placeholder="Ej: 15000"
-          keyboardType="decimal-pad"
+          keyboardType="numeric"
+          placeholder="Ej: $15.000"
         />
       </View>
 
+      {/* Disponible */}
       <View style={styles.switchRow}>
         <Text style={styles.label}>Disponible</Text>
         <Switch value={disponible} onValueChange={setDisponible} />
       </View>
 
+      {/* Guardar */}
       <TouchableOpacity style={styles.button} onPress={guardar}>
         <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
@@ -94,11 +107,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     backgroundColor: '#f2f2f2',
-  },
-  title: {
-    fontSize: 22,
-    marginBottom: 20,
-    fontWeight: 'bold',
   },
   fieldContainer: {
     marginBottom: 15,

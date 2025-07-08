@@ -85,13 +85,14 @@ export default function CrearPersona() {
     }
   };
 
-  const onChangeFecha = (_: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const iso = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      handleChange('fechaNacimiento', iso);
-    }
-  };
+const onChangeFecha = (_: any, selectedDate?: Date) => {
+  if (Platform.OS === 'android') setShowDatePicker(false); // 👈 Solo cerrar en Android
+
+  if (selectedDate) {
+    const iso = selectedDate.toISOString().split('T')[0];
+    handleChange('fechaNacimiento', iso);
+  }
+};
 
   const campos: {
     key: keyof typeof persona;

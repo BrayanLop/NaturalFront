@@ -1,32 +1,47 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 
 export default function ListaServicios() {
   const router = useRouter();
   const [servicios, setServicios] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    api.get('/Servicio/Obtener')
-      .then(response => {
-        setServicios(response.data);
-      })
-      .catch(error => {
-        console.error('Error al cargar servicios:', error);
-        Alert.alert('Error', 'No se pudieron cargar los servicios');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+  const cargarServicios = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/Servicio/Obtener');
+      setServicios(response.data);
+    } catch (error) {
+      console.error('Error al cargar servicios:', error);
+      Alert.alert('Error', 'No se pudieron cargar los servicios');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarServicios();
+    }, [])
+  );
+
+  const formatearPesos = (valor: number) => {
+    return `$${valor.toLocaleString('es-CO')}`;
+  };
 
   return (
     <View style={styles.container}>
-
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : (
@@ -41,12 +56,11 @@ export default function ListaServicios() {
               }
             >
               <Text style={styles.nombre}>{item.nombre}</Text>
-              <Text>💰 ${item.precio.toFixed(2)}</Text>
-              <Text>
-                {item.disponible ? '✅ Disponible' : '❌ No disponible'}
-              </Text>
+              <Text>💰 {formatearPesos(item.precio)}</Text>
+              <Text>{item.disponible ? '✅ Disponible' : '❌ No disponible'}</Text>
             </TouchableOpacity>
           )}
+          ListEmptyComponent={<Text>No hay servicios disponibles.</Text>}
         />
       )}
 
@@ -62,7 +76,6 @@ export default function ListaServicios() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, marginBottom: 20, fontWeight: 'bold' },
   item: {
     padding: 15,
     borderBottomWidth: 1,

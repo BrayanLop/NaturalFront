@@ -15,9 +15,10 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from 'react-native';
 import { useAuth } from '../context/authContext';
+import { api } from './api/api';
 
 export default function Login() {
   const { login } = useAuth();
@@ -51,17 +52,31 @@ export default function Login() {
   }, []);
 
   const handleLogin = async () => {
-    setLoading(true);
+    if (!email || !password) return;
 
-    setTimeout(() => {
+    setLoading(true);
+    try {
+      const res = await api.post('/Login/Autenticar', {
+        Email: email,
+        Password: password,
+      });
+
+      const datosUsuario = {
+        id: res.data.id,
+        nombre: res.data.nombre,
+        empresaId: res.data.empresaId,
+      };
+
+      console.log('Datos del login:', res.data);
+
+      await login(datosUsuario);
+      router.replace('/home');
+    } catch (error) {
+      console.log('Error de login:', error);
+      Alert.alert('Error', 'Credenciales incorrectas o servidor no disponible');
+    } finally {
       setLoading(false);
-      if (email === 'admin' && password === '1234') {
-        login();
-        router.replace('/(tabs)/home');
-      } else {
-        Alert.alert('Error', 'Credenciales incorrectas');
-      }
-    }, 1200);
+    }
   };
 
   return (
@@ -185,14 +200,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#14534c',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonDisabled: {
-    backgroundColor: '#A5D6A7',
+    backgroundColor: '#cccccc',
   },
   buttonText: {
     color: '#fff',

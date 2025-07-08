@@ -1,6 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const API_URL = 'https://d4cd-181-128-27-245.ngrok-free.app/api';
+const API_URL = 'https://77a6-181-128-27-245.ngrok-free.app/api';
 //const API_URL = 'https://localhost:7049';
 
 export const api = axios.create({
@@ -8,4 +9,15 @@ export const api = axios.create({
    headers: {
     'ngrok-skip-browser-warning': 'true',
   },
+});
+
+// Interceptor para agregar empresaId a cada request si existe
+api.interceptors.request.use(async (config) => {
+  const empresaId = await AsyncStorage.getItem('empresaId');
+
+  if (empresaId) {
+    config.headers['empresaId'] = empresaId; // puedes usar otro nombre si tu backend lo espera distinto
+  }
+
+  return config;
 });

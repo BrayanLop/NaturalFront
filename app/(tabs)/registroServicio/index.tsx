@@ -1,41 +1,61 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { api } from '../../api/api';
+
 
 export default function ListaRegistros() {
   const router = useRouter();
+  const { persona } = useLocalSearchParams();
   const [registros, setRegistros] = useState<any[]>([]);
-  const { persona, servicios } = useLocalSearchParams();
+  const [loading, setLoading] = useState(false);
+
+  const cargarRegistros = async () => {
+    if (!persona) return;
+    setLoading(true);
+    try {
+      const response = await api.get(`/RegistroServicio/ObtenerPorPersona/${persona}`);
+      setRegistros(response.data);
+    } catch (error) {
+      console.error('Error al cargar registros:', error);
+      Alert.alert('Error', 'No se pudieron cargar los registros');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      if (persona && servicios) {
-        setRegistros((prev) => [
-          ...prev,
-          {
-            persona,
-            servicios: (servicios as string).split(','),
-            fecha: new Date().toLocaleString(),
-          },
-        ]);
-      }
-    }, [persona, servicios])
+      cargarRegistros();
+    }, [persona])
   );
 
   return (
     <View style={styles.container}>
-
-      <FlatList
-        data={registros}
-        keyExtractor={(_, i) => i.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text>🧍 Persona: {item.persona}</Text>
-            <Text>🧾 Servicios: {item.servicios.join(', ')}</Text>
-            <Text>🕒 Fecha: {item.fecha}</Text>
-          </View>
-        )}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#00b894" />
+      ) : (
+        <FlatList
+          data={registros}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.item}>
+              <Text>🧍 Persona: {item.nombrePersona}</Text>
+              <Text>🧾 Servicios: {item.nombreServicio.join(', ')}</Text>
+              <Text>🕒 Fecha: {new Date(item.fecha).toLocaleString()}</Text>
+            </View>
+          )}
+          ListEmptyComponent={<Text>No hay registros disponibles.</Text>}
+        />
+      )}
 
       <TouchableOpacity
         style={styles.button}
@@ -49,7 +69,6 @@ export default function ListaRegistros() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, marginBottom: 10 },
   item: {
     backgroundColor: '#dfe6e9',
     padding: 15,
@@ -61,6 +80,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginTop: 10,
   },
   buttonText: { color: 'white', fontWeight: 'bold' },
 });

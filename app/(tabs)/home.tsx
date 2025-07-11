@@ -16,7 +16,7 @@ export default function Home() {
     { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
     { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
     { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
-    { title: 'Configuración general', route: '../configuracion' as const, icon: 'cogs' },
+    { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
   ];
 
   return (

@@ -172,7 +172,7 @@ export default function ServicioDetalle() {
 
       {/* Disponible */}
       <View style={styles.switchRow}>
-        <Text style={styles.label}>Disponible</Text>
+        <Text style={styles.label}>Estado</Text>
         <Switch value={disponible} onValueChange={setDisponible} />
       </View>
 

@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -28,29 +30,40 @@ export default function ConfiguracionDetalle() {
 
   const [loading, setLoading] = useState(true);
   const [errores, setErrores] = useState<{ [campo: string]: string }>({});
+  const [servicios, setServicios] = useState<{ id: number; nombre: string }[]>([]);
 
-  useEffect(() => {
-    if (id) {
-      api
-        .get(`ConfiguracionServicio/Obtener/${id}`)
-        .then((res) => {
-          const data = res.data;
-          setConfiguracion({
-            id: data.id,
-            nombreServicio: data.nombreServicio,
-            servicioId: data.servicioId.toString(),
-            porcentajeTrabajador: data.porcentajeTrabajador.toString(),
-            porcentajeEmpresa: data.porcentajeEmpresa.toString(),
-            estado: data.estado,
-          });
-        })
-        .catch((err) => {
-          console.error(err);
-          Alert.alert('Error', 'No se pudo cargar la configuración');
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [id]);
+useEffect(() => {
+  if (id) {
+    // Cargar la configuración
+    api
+      .get(`ConfiguracionServicio/Obtener/${id}`)
+      .then((res) => {
+        const data = res.data;
+        setConfiguracion({
+          id: data.id,
+          nombreServicio: data.nombreServicio,
+          servicioId: data.servicioId.toString(),
+          porcentajeTrabajador: data.porcentajeTrabajador.toString(),
+          porcentajeEmpresa: data.porcentajeEmpresa.toString(),
+          estado: data.estado,
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        Alert.alert('Error', 'No se pudo cargar la configuración');
+      })
+      .finally(() => setLoading(false));
+
+    // 🔥 Aquí cargas los servicios
+    api
+      .get('/Servicio/Obtener')
+      .then((res) => setServicios(res.data))
+      .catch((err) => {
+        console.error('Error al cargar servicios', err);
+        Alert.alert('Error', 'No se pudieron cargar los servicios');
+      });
+  }
+}, [id]);
 
   const handleChange = (campo: string, valor: string) => {
     setConfiguracion((prev) => ({ ...prev, [campo]: valor }));
@@ -102,17 +115,41 @@ export default function ConfiguracionDetalle() {
       </View>
     );
   }
+  
+    const seleccionarServicio = () => {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: ['Cancelar', ...servicios.map((s) => s.nombre)],
+            cancelButtonIndex: 0,
+          },
+          (buttonIndex) => {
+            if (buttonIndex > 0) {
+              const servicioSeleccionado = servicios[buttonIndex - 1];
+              handleChange('servicioId', servicioSeleccionado.id.toString());
+            }
+          }
+        );
+      }
+    };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Servicio</Text>
-        <TextInput
-          value={configuracion.nombreServicio}
-          keyboardType="numeric"
-          onChangeText={(text) => handleChange('nombreServicio', text)}
-          style={styles.input}
-        />
+          <TouchableOpacity
+            style={[styles.input, errores.servicioId && styles.inputError]}
+            onPress={seleccionarServicio}
+          >
+            <Text style={{ color: configuracion.servicioId ? '#000' : '#888' }}>
+              {
+                configuracion.servicioId
+                  ? servicios.find((s) => s.id === parseInt(configuracion.servicioId))?.nombre
+                  : 'Selecciona un servicio'
+              }
+            </Text>
+          </TouchableOpacity>
       </View>
 
       <View style={styles.fieldContainer}>
@@ -136,7 +173,7 @@ export default function ConfiguracionDetalle() {
       </View>
 
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Estado Activo</Text>
+        <Text style={styles.label}>Estado</Text>
         <Switch
           value={configuracion.estado}
           onValueChange={(value) => setConfiguracion((prev) => ({ ...prev, estado: value }))}
@@ -184,4 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: 'white', fontWeight: 'bold' },
+    inputError: {
+    borderColor: 'red',
+  }
 });

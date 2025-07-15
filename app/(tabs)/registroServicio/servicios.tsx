@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { api } from '../../api/api'; // ajusta si tu ruta es diferente
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { api } from '../../api/api';
 
 export default function RegistroServicio() {
   const [servicios, setServicios] = useState<any[]>([]);
@@ -17,25 +17,34 @@ export default function RegistroServicio() {
 
   const toggleServicio = (id: string) => {
     setSeleccionados((prev) =>
-      prev.includes(id)
-        ? prev.filter((s) => s !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
   };
 
-  const confirmar = () => {
-    router.push({
-      pathname: '/(tabs)/registroServicio',
-      params: {
-        persona: persona as string,
-        servicios: seleccionados.join(','),
-      },
-    });
+  const confirmar = async () => {
+    if (!persona || seleccionados.length === 0) {
+      Alert.alert('Faltan datos', 'Debes seleccionar al menos un servicio');
+      return;
+    }
+
+    const registros = seleccionados.map((servicioId) => ({
+      personaId: parseInt(persona as string),
+      servicioId: parseInt(servicioId),
+    }));
+
+    try {
+      await api.post('/RegistroServicio/Guardar', registros);
+      Alert.alert('Éxito', 'Servicios registrados correctamente');
+      router.replace('/(tabs)/registroServicio'); // ✅ Regresa al listado
+    } catch (error) {
+      console.error('Error al guardar registros:', error);
+      Alert.alert('Error', 'No se pudieron guardar los servicios');
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Servicios para {persona}</Text>
+      <Text style={styles.title}>Servicios para Persona #{persona}</Text>
 
       <FlatList
         data={servicios}

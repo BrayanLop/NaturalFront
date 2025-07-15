@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { api } from '../../api/api'; // Ajusta si la ruta es diferente
+import { api } from '../../api/api';
 
 export default function SeleccionarPersona() {
   const [personas, setPersonas] = useState<any[]>([]);
@@ -16,13 +16,12 @@ export default function SeleccionarPersona() {
   const seleccionarPersona = (persona: any) => {
     router.push({
       pathname: '/(tabs)/registroServicio/servicios',
-      params: { persona: persona.nombre }, // o persona.id si prefieres
+      params: { persona: persona.id.toString() }, // ✅ Usa el ID
     });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Selecciona una Persona</Text>
       <FlatList
         data={personas}
         keyExtractor={(item) => item.id.toString()}

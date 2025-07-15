@@ -5,7 +5,7 @@ export default function RegistroServicioLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false, // 👈 Oculta el header completamente
+        headerShown: false,
       }}
     />
   );

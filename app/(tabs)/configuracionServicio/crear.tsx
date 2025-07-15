@@ -110,7 +110,6 @@ export default function CrearConfiguracion() {
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Servicio</Text>
 
-        {Platform.OS === 'ios' ? (
           <TouchableOpacity
             style={[styles.input, errores.servicioId && styles.inputError]}
             onPress={seleccionarServicio}
@@ -123,20 +122,6 @@ export default function CrearConfiguracion() {
               }
             </Text>
           </TouchableOpacity>
-        ) : (
-          <View style={[styles.pickerContainer, errores.servicioId && styles.inputError]}>
-            <TextInput
-              placeholder="Selecciona el ID del servicio"
-              value={
-                configuracion.servicioId
-                  ? servicios.find((s) => s.id === parseInt(configuracion.servicioId))?.nombre ?? ''
-                  : ''
-              }
-              style={{ padding: 12 }}
-              editable={false}
-            />
-          </View>
-        )}
         {errores.servicioId ? <Text style={styles.errorText}>{errores.servicioId}</Text> : null}
       </View>
 
@@ -167,7 +152,7 @@ export default function CrearConfiguracion() {
       </View>
 
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Estado Activo</Text>
+        <Text style={styles.label}>Estado</Text>
         <Switch
           value={configuracion.estado}
           onValueChange={(value) =>

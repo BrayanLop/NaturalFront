@@ -44,8 +44,6 @@ export default function RegistroServicio() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Servicios para Persona #{persona}</Text>
-
       <FlatList
         data={servicios}
         keyExtractor={(item) => item.id.toString()}

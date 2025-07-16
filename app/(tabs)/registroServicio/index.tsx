@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,23 +15,22 @@ import { api } from '../../api/api';
 export default function ListaRegistros() {
   const router = useRouter();
   const [registros, setRegistros] = useState<any[]>([]);
+  const [consolidado, setConsolidado] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const cargarRegistros = async () => {
-    console.log('[ListaRegistros] Cargando registros...');
+  const cargarDatos = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/RegistroServicio/ObtenerRegistros');
-      console.log('[ListaRegistros] Respuesta del backend:', response.data);
+      const [resRegistros, resConsolidado] = await Promise.all([
+        api.get('/RegistroServicio/ObtenerRegistros'),
+        api.get('/RegistroServicio/ObtenerConsolidadoDia', {
+        }),
+      ]);
 
-      if (Array.isArray(response.data)) {
-        setRegistros(response.data);
-      } else {
-        console.warn('⚠️ Los datos recibidos no son un array:', response.data);
-        Alert.alert('Error', 'Respuesta inesperada del servidor');
-      }
+      if (Array.isArray(resRegistros.data)) setRegistros(resRegistros.data);
+      if (Array.isArray(resConsolidado.data)) setConsolidado(resConsolidado.data);
     } catch (error) {
-      console.error('❌ Error al cargar registros:', error);
+      console.error('❌ Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los registros');
     } finally {
       setLoading(false);
@@ -39,7 +39,7 @@ export default function ListaRegistros() {
 
   useFocusEffect(
     useCallback(() => {
-      cargarRegistros();
+      cargarDatos();
     }, [])
   );
 
@@ -56,12 +56,31 @@ export default function ListaRegistros() {
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : (
-        <FlatList
-          data={registros}
-          keyExtractor={(item, i) => i.toString()}
-          renderItem={renderItem}
-          ListEmptyComponent={<Text>No hay registros disponibles.</Text>}
-        />
+        <ScrollView>
+          {/* Consolidado */}
+          <View style={styles.tableContainer}>
+            <Text style={styles.tableTitle}>📊 Consolidado del día</Text>
+            {consolidado.length === 0 ? (
+              <Text style={styles.emptyText}>No hay datos del día actual.</Text>
+            ) : (
+              consolidado.map((item, index) => (
+                <View key={index} style={styles.row}>
+                  <Text style={styles.cellNombre}>{item.nombrePersona}</Text>
+                  <Text style={styles.cellCantidad}>{item.cantidadServicios} servicio(s)</Text>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* Lista de registros */}
+          <FlatList
+            data={registros}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={renderItem}
+            ListEmptyComponent={<Text style={styles.emptyText}>No hay registros disponibles.</Text>}
+            scrollEnabled={false} // Usamos ScrollView padre
+          />
+        </ScrollView>
       )}
 
       <TouchableOpacity
@@ -75,12 +94,40 @@ export default function ListaRegistros() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
+
+  tableContainer: {
+    marginBottom: 20,
+    backgroundColor: '#dfe6e9',
+    borderRadius: 8,
+    padding: 12,
+  },
+  tableTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#2d3436',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderColor: '#b2bec3',
+  },
+  cellNombre: { fontSize: 14, color: '#2d3436' },
+  cellCantidad: { fontSize: 14, fontWeight: '600', color: '#0984e3' },
+
   item: {
     backgroundColor: '#dfe6e9',
     padding: 15,
     marginBottom: 10,
     borderRadius: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#636e72',
+    paddingVertical: 10,
   },
   button: {
     backgroundColor: '#00b894',

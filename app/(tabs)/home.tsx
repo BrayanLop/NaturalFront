@@ -17,6 +17,7 @@ export default function Home() {
     { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
     { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
     { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
+    { title: 'Liquidar', route: '../contabilidad' as const, icon: 'file-invoice-dollar' }
   ];
 
   return (

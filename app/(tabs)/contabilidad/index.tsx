@@ -1,17 +1,25 @@
-import { useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 
+type ServicioRealizado = {
+  nombre: string;
+  cantidad: number;
+};
+
 type PagoPersona = {
+  personaId: number;
   nombrePersona: string;
   totalPagado: number;
+  servicios: ServicioRealizado[];
 };
 
 export default function PagosPorPersona() {
@@ -45,10 +53,28 @@ export default function PagosPorPersona() {
       ) : (
         <ScrollView>
           {pagos.map((pago, index) => (
-            <View key={index} style={styles.card}>
-              <Text style={styles.nombre}>👤 {pago.nombrePersona}</Text>
-              <Text style={styles.monto}>💵 Total: ${pago.totalPagado.toFixed(0)}</Text>
-            </View>
+            <Link
+              key={index}
+              href={{
+                pathname: '/(tabs)/contabilidad/detalleServicioPersona/[id]',
+                params: { id: String(pago.personaId) },
+              }}
+              asChild
+            >
+              <TouchableOpacity>
+                <View style={styles.card}>
+                  <Text style={styles.nombre}>👤 {pago.nombrePersona}</Text>
+                  <Text style={styles.monto}>
+                    💵 Total: ${pago.totalPagado.toFixed(0)}
+                  </Text>
+                  {pago.servicios.map((servicio, idx) => (
+                    <Text key={idx} style={styles.servicio}>
+                      - {servicio.nombre}: {servicio.cantidad}
+                    </Text>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </Link>
           ))}
         </ScrollView>
       )}
@@ -58,13 +84,13 @@ export default function PagosPorPersona() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   card: {
     backgroundColor: '#dfe6e9',
     padding: 15,
     borderRadius: 10,
-    marginBottom: 10,
+    marginBottom: 15,
   },
-  nombre: { fontSize: 16, fontWeight: '500' },
-  monto: { fontSize: 16, color: '#2d3436' },
+  nombre: { fontSize: 16, fontWeight: 'bold' },
+  monto: { fontSize: 15, color: '#2d3436', marginBottom: 10 },
+  servicio: { fontSize: 14, color: '#636e72' },
 });

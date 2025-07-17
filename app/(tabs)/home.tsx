@@ -13,10 +13,10 @@ export default function Home() {
   };
 
   const menuItems = [
-    { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
     { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
     { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
     { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
+    { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
     { title: 'Liquidar', route: '../contabilidad' as const, icon: 'file-invoice-dollar' }
   ];
 

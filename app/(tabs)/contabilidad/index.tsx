@@ -53,12 +53,9 @@ export default function PagosPorPersona() {
       ) : (
         <ScrollView>
           {pagos.map((pago, index) => (
-            <Link
+          <Link
               key={index}
-              href={{
-                pathname: '/(tabs)/contabilidad/detalleServicioPersona/[id]',
-                params: { id: String(pago.personaId) },
-              }}
+              href={`/contabilidad/detalleServicioPersona/${pago.personaId}`}
               asChild
             >
               <TouchableOpacity>
@@ -74,13 +71,10 @@ export default function PagosPorPersona() {
                   ))}
                 </View>
               </TouchableOpacity>
-            </Link>
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  );
-}
+          </Link>))}
+        </ScrollView>)}
+    </View>);
+  }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },

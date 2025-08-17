@@ -1,24 +1,48 @@
 import { FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 
 export default function Home() {
   const { logout } = useAuth();
   const router = useRouter();
+  const [rol, setRol] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRol = async () => {
+      const value = await AsyncStorage.getItem('rol');
+      setRol(value);
+    };
+    fetchRol();
+  }, []);
 
   const handleLogout = () => {
     logout();
     router.replace('/login');
   };
 
-  const menuItems = [
-    { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
-    { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
-    { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
-    { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
-    { title: 'Liquidar', route: '../contabilidad' as const, icon: 'file-invoice-dollar' }
-  ];
+  if (rol === null) {
+    return (
+      <View style={styles.container}>
+        <Text>Cargando menú...</Text>
+      </View>
+    );
+  }
+
+  const menuItems =
+    rol === '2' //Empleado
+      ? [
+          { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
+        ]
+      : [
+          { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
+          { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
+          { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
+          { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
+          { title: 'Liquidar', route: '../contabilidad' as const, icon: 'file-invoice-dollar' },
+        ];
 
   return (
     <View style={styles.container}>
@@ -27,7 +51,7 @@ export default function Home() {
           <TouchableOpacity
             key={index}
             style={styles.menuButton}
-            onPress={() => router.push({ pathname: item.route })}
+            onPress={() => router.push(item.route)}
           >
             <FontAwesome5 name={item.icon} size={30} color="white" />
             <Text style={styles.menuText}>{item.title}</Text>

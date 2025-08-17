@@ -5,6 +5,7 @@ type Usuario = {
   id: number;
   nombre: string;
   empresaId: number;
+  rol: string
 };
 
 type AuthContextType = {
@@ -32,13 +33,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (datos: Usuario) => {
     setUsuario(datos);
     await AsyncStorage.setItem('usuario', JSON.stringify(datos));
-    await AsyncStorage.setItem('empresaId', String(datos.empresaId)); // ✅ se guarda aquí
+    await AsyncStorage.setItem('empresaId', String(datos.empresaId));
+    await AsyncStorage.setItem('rol', String(datos.rol));
   };
 
   const logout = async () => {
     setUsuario(null);
     await AsyncStorage.removeItem('usuario');
-    await AsyncStorage.removeItem('empresaId'); // ✅ se elimina aquí
+    await AsyncStorage.removeItem('empresaId');
+    await AsyncStorage.removeItem('rol');
   };
 
   return (

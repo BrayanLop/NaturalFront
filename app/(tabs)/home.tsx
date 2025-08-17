@@ -1,29 +1,19 @@
 import { FontAwesome5 } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 
+type MenuItem = {
+  title: string;
+  route: string;
+  icon: string;
+};
+
 export default function Home() {
-  const { logout } = useAuth();
+  const { usuario, logout, cargando } = useAuth();
   const router = useRouter();
-  const [rol, setRol] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchRol = async () => {
-      const value = await AsyncStorage.getItem('rol');
-      setRol(value);
-    };
-    fetchRol();
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/login');
-  };
-
-  if (rol === null) {
+  if (cargando) {
     return (
       <View style={styles.container}>
         <Text>Cargando menú...</Text>
@@ -31,17 +21,49 @@ export default function Home() {
     );
   }
 
-  const menuItems =
-    rol === '2' //Empleado
+  if (!usuario) {
+    return (
+      <View style={styles.container}>
+        <Text>No hay usuario en sesión</Text>
+      </View>
+    );
+  }
+
+  const rol = usuario.rol; // ✅ directamente del context
+  const personaId = usuario.id; // si necesitas el id
+
+  const menuItems: MenuItem[] =
+    rol === '2'
       ? [
-          { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
+          {
+            title: 'Registrar servicios',
+            route: '../registroServicio',
+            icon: 'clipboard-check',
+          },
+          {
+            title: 'Liquidación',
+            route: `../contabilidad/detallePersona/${personaId}`,
+            icon: 'file-invoice-dollar',
+          },
         ]
       : [
-          { title: 'Personas', route: '../personas' as const, icon: 'user-plus' },
-          { title: 'Servicios', route: '../servicios' as const, icon: 'tools' },
-          { title: 'Configuración general', route: '../configuracionServicio' as const, icon: 'cogs' },
-          { title: 'Registrar servicios', route: '../registroServicio' as const, icon: 'clipboard-check' },
-          { title: 'Liquidar', route: '../contabilidad' as const, icon: 'file-invoice-dollar' },
+          { title: 'Personas', route: '../personas', icon: 'user-plus' },
+          { title: 'Servicios', route: '../servicios', icon: 'tools' },
+          {
+            title: 'Configuración general',
+            route: '../configuracionServicio',
+            icon: 'cogs',
+          },
+          {
+            title: 'Registrar servicios',
+            route: '../registroServicio',
+            icon: 'clipboard-check',
+          },
+          {
+            title: 'Liquidar',
+            route: '../contabilidad',
+            icon: 'file-invoice-dollar',
+          },
         ];
 
   return (
@@ -51,7 +73,7 @@ export default function Home() {
           <TouchableOpacity
             key={index}
             style={styles.menuButton}
-            onPress={() => router.push(item.route)}
+            onPress={() => router.push(item.route as any)}
           >
             <FontAwesome5 name={item.icon} size={30} color="white" />
             <Text style={styles.menuText}>{item.title}</Text>
@@ -59,7 +81,7 @@ export default function Home() {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
         <Text style={styles.logoutText}>Salir</Text>
       </TouchableOpacity>
     </View>
@@ -68,7 +90,6 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 60, alignItems: 'center' },
-  title: { fontSize: 24, marginBottom: 20 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

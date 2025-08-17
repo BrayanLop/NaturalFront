@@ -11,12 +11,11 @@ export const api = axios.create({
   },
 });
 
-// Interceptor para agregar empresaId a cada request si existe
 api.interceptors.request.use(async (config) => {
   const empresaId = await AsyncStorage.getItem('empresaId');
 
   if (empresaId) {
-    config.headers['empresaId'] = empresaId; // puedes usar otro nombre si tu backend lo espera distinto
+    config.headers['empresaId'] = empresaId;
   }
 
   return config;

@@ -65,6 +65,7 @@ export default function Login() {
         id: res.data.id,
         nombre: res.data.nombre,
         empresaId: res.data.empresaId,
+        rol: res.data.rol
       };
 
       console.log('Datos del login:', res.data);

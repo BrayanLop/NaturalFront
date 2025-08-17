@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem('usuario', JSON.stringify(datos));
     await AsyncStorage.setItem('empresaId', String(datos.empresaId));
     await AsyncStorage.setItem('rol', String(datos.rol));
+    await AsyncStorage.setItem('personaId', String(datos.rol));
   };
 
   const logout = async () => {
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem('usuario');
     await AsyncStorage.removeItem('empresaId');
     await AsyncStorage.removeItem('rol');
+    await AsyncStorage.removeItem('personaId');
   };
 
   return (

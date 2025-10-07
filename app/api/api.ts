@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const API_URL = 'https://2a2e3a781967.ngrok-free.app/api';
+const API_URL = 'http://natural-gestion.duckdns.org/api';
 //const API_URL = 'https://localhost:7049';
 
 export const api = axios.create({

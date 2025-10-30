@@ -75,6 +75,7 @@ export default function CrearPersona() {
       await api.post('/Persona/Crear', {
         ...persona,
         edad: parseInt(persona.edad),
+        rol: "02"
       });
 
       Alert.alert('Éxito', 'Persona creada correctamente');
@@ -85,14 +86,13 @@ export default function CrearPersona() {
     }
   };
 
-const onChangeFecha = (_: any, selectedDate?: Date) => {
-  if (Platform.OS === 'android') setShowDatePicker(false); // 👈 Solo cerrar en Android
-
-  if (selectedDate) {
-    const iso = selectedDate.toISOString().split('T')[0];
-    handleChange('fechaNacimiento', iso);
-  }
-};
+  const onChangeFecha = (_: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) {
+      const iso = selectedDate.toISOString().split('T')[0];
+      handleChange('fechaNacimiento', iso);
+    }
+  };
 
   const campos: {
     key: keyof typeof persona;
@@ -112,28 +112,46 @@ const onChangeFecha = (_: any, selectedDate?: Date) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-
       {campos.map(({ key, label, keyboardType, isDate }) => (
         <View key={key} style={styles.fieldContainer}>
           <Text style={styles.label}>{label}</Text>
 
           {isDate ? (
             <>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                style={[styles.input, errores[key] && styles.inputError]}>
-                <Text style={{ color: persona[key] ? '#000' : '#888' }}>
-                  {persona[key] || 'Selecciona una fecha'}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={persona.fechaNacimiento ? new Date(persona.fechaNacimiento) : new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onChangeFecha}
-                  maximumDate={new Date()}
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={persona.fechaNacimiento}
+                  onChange={(e) => handleChange('fechaNacimiento', e.target.value)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: errores[key] ? 'red' : '#ccc',
+                    borderRadius: 6,
+                    padding: 12,
+                    backgroundColor: '#fff',
+                    width: '100%',
+                    fontSize: 16,
+                  }}
                 />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(true)}
+                    style={[styles.input, errores[key] && styles.inputError]}>
+                    <Text style={{ color: persona[key] ? '#000' : '#888' }}>
+                      {persona[key] || 'Selecciona una fecha'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={persona.fechaNacimiento ? new Date(persona.fechaNacimiento) : new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onChangeFecha}
+                      maximumDate={new Date()}
+                    />
+                  )}
+                </>
               )}
             </>
           ) : (
@@ -145,6 +163,7 @@ const onChangeFecha = (_: any, selectedDate?: Date) => {
               keyboardType={keyboardType}
             />
           )}
+
           {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
         </View>
       ))}
@@ -161,11 +180,6 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f2f2f2',
     flexGrow: 1,
-  },
-  title: {
-    fontSize: 22,
-    marginBottom: 20,
-    fontWeight: 'bold',
   },
   fieldContainer: {
     marginBottom: 15,

@@ -96,25 +96,32 @@ export default function ServicioDetalle() {
     }
   };
 
-  const eliminar = async () => {
-    Alert.alert('Confirmar', '¿Eliminar este servicio?', [
-      { text: 'Cancelar', style: 'cancel' },
+const eliminar = () => {
+  Alert.alert(
+    "Confirmar",
+    "¿Eliminar este servicio?",
+    [
+      { text: "Cancelar", style: "cancel" },
       {
-        text: 'Eliminar',
-        style: 'destructive',
+        text: "Eliminar",
+        style: "destructive",
         onPress: async () => {
           try {
+            console.log("Eliminando servicio con id:", id);
+
             await api.delete(`/Servicio/Eliminar/${id}`);
-            Alert.alert('Eliminado', 'Servicio eliminado');
+
+            Alert.alert("Eliminado", "Servicio eliminado correctamente");
             router.back();
           } catch (error) {
-            console.error('Error al eliminar:', error);
-            Alert.alert('Error', 'No se pudo eliminar');
+            console.error("Error al eliminar:", error);
+            Alert.alert("Error", "No se pudo eliminar el servicio");
           }
-        },
-      },
-    ]);
-  };
+        }
+      }
+    ]
+  );
+};
 
   if (loading) {
     return (

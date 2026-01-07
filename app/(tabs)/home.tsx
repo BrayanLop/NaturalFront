@@ -32,18 +32,14 @@ export default function Home() {
   const rol = usuario.rol; // ✅ directamente del context
   const personaId = usuario.id; // si necesitas el id
 
+  // Usuarios con rol '02' o '2' sólo pueden ver Registrar servicios
   const menuItems: MenuItem[] =
-    rol === '2'
+    rol === '02' || rol === '2'
       ? [
           {
             title: 'Registrar servicios',
             route: '../registroServicio',
             icon: 'clipboard-check',
-          },
-          {
-            title: 'Liquidación',
-            route: `../contabilidad/detallePersona/${personaId}`,
-            icon: 'file-invoice-dollar',
           },
         ]
       : [

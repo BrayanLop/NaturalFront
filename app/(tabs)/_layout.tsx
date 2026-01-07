@@ -1,3 +1,4 @@
+import BackButton from '@/components/BackButton';
 import { Stack } from 'expo-router';
 
 export default function Layout() {
@@ -12,10 +13,12 @@ export default function Layout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        headerLeft: () => <BackButton />,
+        headerBackTitleVisible: false,
       }}
     >
       {/* Personalizamos los títulos */}
-      <Stack.Screen name="home" options={{ title: 'Natural' }} />
+      <Stack.Screen name="home" options={{ title: 'Natural', headerLeft: () => null }} />
       <Stack.Screen name="personas/index" options={{ title: 'Personas' }} />
       <Stack.Screen name="personas/crear" options={{ title: 'Crear persona' }} />
       <Stack.Screen name="personas/[id]" options={{ title: 'Editar persona' }} />

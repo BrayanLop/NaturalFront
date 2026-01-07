@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Usuario = {
@@ -18,6 +19,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
 
@@ -35,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem('usuario', JSON.stringify(datos));
     await AsyncStorage.setItem('empresaId', String(datos.empresaId));
     await AsyncStorage.setItem('rol', String(datos.rol));
-    await AsyncStorage.setItem('personaId', String(datos.rol));
+    await AsyncStorage.setItem('personaId', String(datos.id));
   };
 
   const logout = async () => {
@@ -44,6 +46,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem('empresaId');
     await AsyncStorage.removeItem('rol');
     await AsyncStorage.removeItem('personaId');
+    try {
+      router.replace('/login');
+    } catch (e) {
+      // ignore routing errors
+    }
   };
 
   return (

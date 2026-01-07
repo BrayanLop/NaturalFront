@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/authContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -14,16 +15,21 @@ import { api } from '../../api/api';
 
 export default function ListaRegistros() {
   const router = useRouter();
+  const { usuario } = useAuth();
   const [registros, setRegistros] = useState<any[]>([]);
   const [consolidado, setConsolidado] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     setLoading(true);
     try {
+      const personaId = usuario?.id ?? null;
       const [resRegistros, resConsolidado] = await Promise.all([
-        api.get('/RegistroServicio/ObtenerRegistros'),
+        api.get('/RegistroServicio/ObtenerRegistros', {
+          params: personaId ? { personaId } : {},
+        }),
         api.get('/RegistroServicio/ObtenerConsolidadoDia', {
+          params: personaId ? { personaId } : {},
         }),
       ]);
 
@@ -35,12 +41,12 @@ export default function ListaRegistros() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [usuario]);
 
   useFocusEffect(
     useCallback(() => {
       cargarDatos();
-    }, [])
+    }, [cargarDatos])
   );
 
   const renderItem = ({ item }: { item: any }) => (
@@ -85,7 +91,20 @@ export default function ListaRegistros() {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.navigate('/(tabs)/registroServicio/personas')}
+        onPress={() => {
+          // Si el usuario tiene rol 02 (barbero), vamos directo a seleccionar servicios
+          const rol = usuario?.rol;
+          const personaId = usuario?.id;
+          if (rol === '02' || rol === '2') {
+            router.push({
+              pathname: '/(tabs)/registroServicio/servicios',
+              params: { persona: personaId?.toString() ?? '' },
+            });
+            return;
+          }
+
+          router.navigate('/(tabs)/registroServicio/personas');
+        }}
       >
         <Text style={styles.buttonText}>Registrar nuevo</Text>
       </TouchableOpacity>

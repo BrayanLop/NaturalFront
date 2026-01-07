@@ -1,9 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActionSheetIOS,
   Alert,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -24,58 +26,37 @@ export default function CrearConfiguracion() {
     estado: true,
   });
 
-  const [errores, setErrores] = useState<Partial<Record<keyof typeof configuracion, string>>>({});
-  const [servicios, setServicios] = useState<{ id: number; nombre: string }[]>([]);
+  const [errores, setErrores] =
+    useState<Partial<Record<keyof typeof configuracion, string>>>({});
+  const [servicios, setServicios] =
+    useState<{ id: number; nombre: string }[]>([]);
+  const [mostrarModal, setMostrarModal] = useState(false);
 
+  /* ===================== CARGAR SERVICIOS ===================== */
   useEffect(() => {
-    api.get(`/Servicio/Obtener`)
+    api
+      .get('/Servicio/Obtener')
       .then((res) => setServicios(res.data))
-      .catch((err) => {
-        console.error('Error cargando servicios', err);
+      .catch(() => {
         Alert.alert('Error', 'No se pudieron cargar los servicios');
       });
   }, []);
 
+  /* ===================== HANDLER ===================== */
   const handleChange = (campo: keyof typeof configuracion, valor: string) => {
     setConfiguracion((prev) => ({ ...prev, [campo]: valor }));
-
-    if ((campo === 'porcentajeTrabajador' || campo === 'porcentajeEmpresa') && valor !== '') {
-      const num = parseFloat(valor);
-      if (isNaN(num) || num < 0 || num > 100) {
-        setErrores((prev) => ({ ...prev, [campo]: 'Debe ser un número entre 0 y 100' }));
-      } else {
-        setErrores((prev) => ({ ...prev, [campo]: '' }));
-      }
-    } else {
-      setErrores((prev) => ({ ...prev, [campo]: '' }));
-    }
+    setErrores((prev) => ({ ...prev, [campo]: '' }));
   };
 
-  const seleccionarServicio = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancelar', ...servicios.map((s) => s.nombre)],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex > 0) {
-            const servicioSeleccionado = servicios[buttonIndex - 1];
-            handleChange('servicioId', servicioSeleccionado.id.toString());
-          }
-        }
-      );
-    }
-  };
-
+  /* ===================== GUARDAR ===================== */
   const guardar = async () => {
     const pt = parseFloat(configuracion.porcentajeTrabajador);
     const pe = parseFloat(configuracion.porcentajeEmpresa);
     const servicioId = parseInt(configuracion.servicioId);
 
-    if (isNaN(servicioId)) {
-      setErrores((prev) => ({ ...prev, servicioId: 'Servicio no válido' }));
-      Alert.alert('Error', 'Selecciona un servicio válido');
+    if (!configuracion.servicioId) {
+      setErrores((prev) => ({ ...prev, servicioId: 'Seleccione un servicio' }));
+      Alert.alert('Error', 'Seleccione un servicio');
       return;
     }
 
@@ -85,57 +66,111 @@ export default function CrearConfiguracion() {
     }
 
     if (pt + pe !== 100) {
-      Alert.alert('Error', 'La suma de los porcentajes debe ser 100%');
+      Alert.alert('Error', 'La suma de porcentajes debe ser 100%');
       return;
     }
 
     try {
-      await api.post('ConfiguracionServicio/Crear', {
+      await api.post('/ConfiguracionServicio/Crear', {
         servicioId,
         porcentajeTrabajador: pt,
         porcentajeEmpresa: pe,
         estado: configuracion.estado,
       });
 
-      Alert.alert('Éxito', 'Configuración guardada');
+      Alert.alert('Éxito', 'Configuración creada');
       router.back();
     } catch (error) {
-      console.error('Error al guardar:', error);
+      console.error('Error al guardar', error);
       Alert.alert('Error', 'No se pudo guardar la configuración');
     }
   };
 
+  const servicioSeleccionado = servicios.find(
+    (s) => s.id === parseInt(configuracion.servicioId)
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* ===================== SERVICIO ===================== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Servicio</Text>
 
-          <TouchableOpacity
-            style={[styles.input, errores.servicioId && styles.inputError]}
-            onPress={seleccionarServicio}
+        {/* WEB */}
+        {Platform.OS === 'web' ? (
+          <select
+            value={configuracion.servicioId}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              handleChange('servicioId', e.target.value)
+            }
+            style={styles.webSelect as unknown as React.CSSProperties}
           >
-            <Text style={{ color: configuracion.servicioId ? '#000' : '#888' }}>
-              {
-                configuracion.servicioId
-                  ? servicios.find((s) => s.id === parseInt(configuracion.servicioId))?.nombre
-                  : 'Selecciona un servicio'
-              }
-            </Text>
-          </TouchableOpacity>
-        {errores.servicioId ? <Text style={styles.errorText}>{errores.servicioId}</Text> : null}
+            <option value="">Seleccione un servicio</option>
+            {servicios.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <>
+            {/* MOBILE */}
+            <TouchableOpacity
+              style={[
+                styles.select,
+                errores.servicioId && styles.inputError,
+              ]}
+              onPress={() => setMostrarModal(true)}
+            >
+              <Text
+                style={[
+                  styles.selectText,
+                  !configuracion.servicioId && styles.placeholder,
+                ]}
+              >
+                {servicioSeleccionado?.nombre || 'Seleccione un servicio'}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color="#6c757d" />
+            </TouchableOpacity>
+
+            <Modal transparent visible={mostrarModal} animationType="fade">
+              <Pressable
+                style={styles.overlay}
+                onPress={() => setMostrarModal(false)}
+              >
+                <Pressable style={styles.modal}>
+                  {servicios.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      style={styles.modalItem}
+                      onPress={() => {
+                        handleChange('servicioId', s.id.toString());
+                        setMostrarModal(false);
+                      }}
+                    >
+                      <Text>{s.nombre}</Text>
+                    </Pressable>
+                  ))}
+                </Pressable>
+              </Pressable>
+            </Modal>
+          </>
+        )}
+
+        {errores.servicioId && (
+          <Text style={styles.errorText}>{errores.servicioId}</Text>
+        )}
       </View>
 
+      {/* ===================== PORCENTAJES ===================== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>% Trabajador</Text>
         <TextInput
           value={configuracion.porcentajeTrabajador}
           keyboardType="numeric"
           onChangeText={(text) => handleChange('porcentajeTrabajador', text)}
-          style={[styles.input, errores.porcentajeTrabajador && styles.inputError]}
+          style={styles.input}
         />
-        {errores.porcentajeTrabajador ? (
-          <Text style={styles.errorText}>{errores.porcentajeTrabajador}</Text>
-        ) : null}
       </View>
 
       <View style={styles.fieldContainer}>
@@ -144,13 +179,11 @@ export default function CrearConfiguracion() {
           value={configuracion.porcentajeEmpresa}
           keyboardType="numeric"
           onChangeText={(text) => handleChange('porcentajeEmpresa', text)}
-          style={[styles.input, errores.porcentajeEmpresa && styles.inputError]}
+          style={styles.input}
         />
-        {errores.porcentajeEmpresa ? (
-          <Text style={styles.errorText}>{errores.porcentajeEmpresa}</Text>
-        ) : null}
       </View>
 
+      {/* ===================== ESTADO ===================== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Estado</Text>
         <Switch
@@ -161,6 +194,7 @@ export default function CrearConfiguracion() {
         />
       </View>
 
+      {/* ===================== BOTÓN ===================== */}
       <TouchableOpacity style={styles.button} onPress={guardar}>
         <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
@@ -168,6 +202,7 @@ export default function CrearConfiguracion() {
   );
 }
 
+/* ===================== STYLES ===================== */
 const styles = StyleSheet.create({
   container: {
     padding: 20,
@@ -175,23 +210,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   fieldContainer: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
     fontWeight: '600',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    backgroundColor: '#fff',
+    marginBottom: 6,
+    color: '#212529',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ced4da',
     borderRadius: 6,
     padding: 12,
     backgroundColor: '#fff',
@@ -204,6 +233,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+
+  /* SELECT MOBILE */
+  select: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+  },
+  selectText: {
+    color: '#212529',
+  },
+  placeholder: {
+    color: '#6c757d',
+  },
+
+  /* SELECT WEB */
+  webSelect: {
+    width: '100%',
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    backgroundColor: '#fff',
+  },
+
+  /* MODAL */
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
+  modalItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+
   button: {
     backgroundColor: '#00b894',
     padding: 15,
@@ -212,7 +289,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   buttonText: {
-    color: 'white',
+    color: '#fff',
     fontWeight: 'bold',
   },
 });

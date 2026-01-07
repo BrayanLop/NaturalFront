@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { api } from "../../../api/api";
 
 type ServicioDetalleItem = {
@@ -19,17 +19,24 @@ export default function DetallePersona() {
   const personaId = Array.isArray(id) ? id[0] : id;
 
   const [detalle, setDetalle] = useState<DetalleServicioPorDiaViewModel[]>([]);
+  const empresaId = 1; // ⚡ Aquí pones la empresa actual, o la tomas de un estado global/contexto
 
   useEffect(() => {
     const fetchData = async () => {
       if (!personaId) return;
       try {
         const res = await api.get(
-          `Contabilidad/DetalleServiciosPorPersona/${personaId}`
+          `Contabilidad/DetalleServiciosPorPersona/${personaId}`,
+          {
+            headers: {
+              empresaId: empresaId.toString(),
+            },
+          }
         );
         setDetalle(res.data);
       } catch (e) {
         console.error("❌ Error cargando detalle", e);
+        Alert.alert("Error", "No se pudo cargar el detalle de servicios.");
       }
     };
     fetchData();

@@ -46,8 +46,13 @@ export default function Home() {
           { title: 'Personas', route: '../personas', icon: 'user-plus' },
           { title: 'Servicios', route: '../servicios', icon: 'tools' },
           {
-            title: 'Configuración general',
+            title: 'Configurar servicios',
             route: '../configuracionServicio',
+            icon: 'cog',
+          },
+          {
+            title: 'Configuración general',
+            route: '../configuracion',
             icon: 'cogs',
           },
           {

@@ -75,6 +75,11 @@ export default function Home() {
             route: '../contabilidad/historico',
             icon: 'history',
           },
+          {
+            title: 'Ingresos',
+            route: '../ingresos',
+            icon: 'dollar-sign',
+          },
         ];
 
   return (

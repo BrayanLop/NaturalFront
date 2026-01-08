@@ -37,6 +37,7 @@ export default function Layout() {
       <Stack.Screen name="contabilidad/index" options={{ title: 'Liquidación' }} />
       <Stack.Screen name="contabilidad/historico" options={{ title: 'Histórico liquidaciones' }} />
       <Stack.Screen name="contabilidad/detalleServicioPersona/[id]" options={{ title: 'Detalle liquidación' }} />
+      <Stack.Screen name="ingresos/index" options={{ title: 'Ingresos' }} />
     </Stack>
   );
 }

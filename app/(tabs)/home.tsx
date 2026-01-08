@@ -41,6 +41,11 @@ export default function Home() {
             route: '../registroServicio',
             icon: 'clipboard-check',
           },
+          {
+            title: 'Histórico liquidaciones',
+            route: '../contabilidad/historico',
+            icon: 'history',
+          },
         ]
       : [
           { title: 'Personas', route: '../personas', icon: 'user-plus' },
@@ -64,6 +69,11 @@ export default function Home() {
             title: 'Liquidar',
             route: '../contabilidad',
             icon: 'file-invoice-dollar',
+          },
+          {
+            title: 'Histórico liquidaciones',
+            route: '../contabilidad/historico',
+            icon: 'history',
           },
         ];
 

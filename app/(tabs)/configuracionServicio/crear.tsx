@@ -48,6 +48,18 @@ export default function CrearConfiguracion() {
     setErrores((prev) => ({ ...prev, [campo]: '' }));
   };
 
+  const setPorcentajeEmpresa = (valor: string) => {
+    const numero = parseFloat(valor);
+    const empresa = isNaN(numero) ? '' : Math.min(100, Math.max(0, numero)).toString();
+    const trabajador = empresa === '' ? '' : (100 - parseFloat(empresa)).toString();
+    setConfiguracion((prev) => ({
+      ...prev,
+      porcentajeEmpresa: valor,
+      porcentajeTrabajador: trabajador,
+    }));
+    setErrores((prev) => ({ ...prev, porcentajeEmpresa: '', porcentajeTrabajador: '' }));
+  };
+
   /* ===================== GUARDAR ===================== */
   const guardar = async () => {
     const pt = parseFloat(configuracion.porcentajeTrabajador);
@@ -164,24 +176,25 @@ export default function CrearConfiguracion() {
 
       {/* ===================== PORCENTAJES ===================== */}
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>% Trabajador</Text>
+        <Text style={styles.label}>% Empresa</Text>
         <TextInput
-          value={configuracion.porcentajeTrabajador}
+          value={configuracion.porcentajeEmpresa}
           keyboardType="numeric"
-          onChangeText={(text) => handleChange('porcentajeTrabajador', text)}
+          onChangeText={setPorcentajeEmpresa}
           style={styles.input}
         />
       </View>
 
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>% Empresa</Text>
+        <Text style={styles.label}>% Trabajador</Text>
         <TextInput
-          value={configuracion.porcentajeEmpresa}
+          value={configuracion.porcentajeTrabajador}
           keyboardType="numeric"
-          onChangeText={(text) => handleChange('porcentajeEmpresa', text)}
-          style={styles.input}
+          editable={false}
+          style={[styles.input, styles.inputDisabled]}
         />
       </View>
+
 
       {/* ===================== ESTADO ===================== */}
       <View style={styles.fieldContainer}>
@@ -291,5 +304,9 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  inputDisabled: {
+    backgroundColor: '#e9ecef',
+    color: '#6c757d',
   },
 });

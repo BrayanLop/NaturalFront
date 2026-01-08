@@ -3,14 +3,14 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -18,6 +18,16 @@ type ConfiguracionGeneral = {
   periodicidad: string;
   valorPeriodicidad: number;
   empresaId?: number | null;
+};
+
+const webSelectStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 10px',
+  borderRadius: 6,
+  border: '1px solid #ced4da',
+  backgroundColor: '#fff',
+  fontSize: 16,
+  color: '#212529',
 };
 
 export default function ConfiguracionGeneral() {
@@ -121,11 +131,12 @@ export default function ConfiguracionGeneral() {
 
         {Platform.OS === 'web' ? (
           <select
+            className="form-select"
             value={config.periodicidad}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               setConfig((p) => ({ ...p, periodicidad: e.target.value }))
             }
-            style={styles.webSelect as unknown as React.CSSProperties}
+            style={webSelectStyle}
           >
             <option value="">Seleccione periodicidad</option>
             <option value="M">Mensual</option>

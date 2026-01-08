@@ -63,6 +63,17 @@ export default function ConfiguracionDetalle() {
     setConfiguracion((prev) => ({ ...prev, [campo]: valor }));
   };
 
+  const setPorcentajeEmpresa = (valor: string) => {
+    const numero = parseFloat(valor);
+    const empresa = isNaN(numero) ? '' : Math.min(100, Math.max(0, numero)).toString();
+    const trabajador = empresa === '' ? '' : (100 - parseFloat(empresa)).toString();
+    setConfiguracion((prev) => ({
+      ...prev,
+      porcentajeEmpresa: valor,
+      porcentajeTrabajador: trabajador,
+    }));
+  };
+
   /* ===================== ACTUALIZAR ===================== */
   const actualizarConfiguracion = async () => {
     if (!id) return;
@@ -222,22 +233,22 @@ const eliminarConfiguracion = () => {
 
       {/* ===================== PORCENTAJES ===================== */}
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Porcentaje trabajador</Text>
+        <Text style={styles.label}>Porcentaje empresa</Text>
         <TextInput
-          value={configuracion.porcentajeTrabajador}
+          value={configuracion.porcentajeEmpresa}
           keyboardType="numeric"
-          onChangeText={(text) => handleChange('porcentajeTrabajador', text)}
+          onChangeText={setPorcentajeEmpresa}
           style={styles.input}
         />
       </View>
 
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Porcentaje empresa</Text>
+        <Text style={styles.label}>Porcentaje trabajador</Text>
         <TextInput
-          value={configuracion.porcentajeEmpresa}
+          value={configuracion.porcentajeTrabajador}
           keyboardType="numeric"
-          onChangeText={(text) => handleChange('porcentajeEmpresa', text)}
-          style={styles.input}
+          editable={false}
+          style={[styles.input, styles.inputDisabled]}
         />
       </View>
 
@@ -349,5 +360,9 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  inputDisabled: {
+    backgroundColor: '#e9ecef',
+    color: '#6c757d',
   },
 });

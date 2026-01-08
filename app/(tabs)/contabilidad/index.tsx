@@ -46,6 +46,12 @@ export default function PagosPorPersona() {
 
   return (
     <View style={styles.container}>
+      <Link href="/contabilidad/historico" asChild>
+        <TouchableOpacity style={styles.historicoButton}>
+          <Text style={styles.historicoText}>📅 Histórico liquidaciones</Text>
+        </TouchableOpacity>
+      </Link>
+
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : pagos.length === 0 ? (
@@ -78,6 +84,14 @@ export default function PagosPorPersona() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  historicoButton: {
+    backgroundColor: '#00b894',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  historicoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   card: {
     backgroundColor: '#dfe6e9',
     padding: 15,

@@ -53,8 +53,8 @@ export default function ListaConfiguraciones() {
       }
     >
       <Text style={styles.itemText}>⚙️ Servicio: {item.nombreServicio}</Text>
-      <Text style={styles.subText}>👷 Trabajador: {item.porcentajeTrabajador}%</Text>
       <Text style={styles.subText}>🏢 Empresa: {item.porcentajeEmpresa}%</Text>
+      <Text style={styles.subText}>👷 Trabajador: {item.porcentajeTrabajador}%</Text>
       <Text style={styles.subText}>
         {item.estado ? '✅' : '❌'} Estado: {item.estado ? 'Activo' : 'Inactivo'}
       </Text>

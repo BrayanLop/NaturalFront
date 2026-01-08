@@ -35,6 +35,7 @@ export default function Layout() {
       <Stack.Screen name="configuracionServicio/crear" options={{ title: 'Crear configuración' }} />
       <Stack.Screen name="configuracionServicio/[id]" options={{ title: 'Editar configuración' }} />
       <Stack.Screen name="contabilidad/index" options={{ title: 'Liquidación' }} />
+      <Stack.Screen name="contabilidad/historico" options={{ title: 'Histórico liquidaciones' }} />
       <Stack.Screen name="contabilidad/detalleServicioPersona/[id]" options={{ title: 'Detalle liquidación' }} />
     </Stack>
   );

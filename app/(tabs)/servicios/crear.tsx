@@ -1,3 +1,5 @@
+import FormField from '@/components/FormField';
+import PrimaryButton from '@/components/PrimaryButton';
 import { commonStyles } from '@/constants/theme';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
@@ -8,7 +10,6 @@ import {
     Switch,
     Text,
     TextInput,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
@@ -21,6 +22,7 @@ export default function CrearServicio() {
   const [descripcion, setDescripcion] = useState('');
   const [precio, setPrecio] = useState('');
   const [disponible, setDisponible] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const guardar = async () => {
     if (!nombre || !precio) {
@@ -28,6 +30,7 @@ export default function CrearServicio() {
       return;
     }
 
+    setLoading(true);
     try {
       await api.post('/Servicio/Crear', {
         nombre,
@@ -42,37 +45,32 @@ export default function CrearServicio() {
     } catch (error) {
       logger.error('Error al crear servicio:', error);
       showError('No se pudo crear el servicio');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-
-      {/* Nombre */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Nombre</Text>
+      <FormField label="Nombre">
         <TextInput
           value={nombre}
           onChangeText={setNombre}
-          style={styles.input}
+          style={commonStyles.input}
           placeholder="Nombre del servicio"
         />
-      </View>
+      </FormField>
 
-      {/* Descripción */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Descripción</Text>
+      <FormField label="Descripción">
         <TextInput
           value={descripcion}
           onChangeText={setDescripcion}
-          style={styles.input}
+          style={commonStyles.input}
           placeholder="Descripción opcional"
         />
-      </View>
+      </FormField>
 
-      {/* Precio */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Precio</Text>
+      <FormField label="Precio">
         <MaskedTextInput
           type="currency"
           options={{
@@ -83,22 +81,22 @@ export default function CrearServicio() {
           }}
           value={precio}
           onChangeText={(_, unmasked) => setPrecio(unmasked)}
-          style={styles.input}
+          style={commonStyles.input}
           keyboardType="numeric"
           placeholder="Ej: $15.000"
         />
-      </View>
+      </FormField>
 
-      {/* Disponible */}
       <View style={styles.switchRow}>
-        <Text style={styles.label}>Disponible</Text>
+        <Text style={commonStyles.label}>Disponible</Text>
         <Switch value={disponible} onValueChange={setDisponible} />
       </View>
 
-      {/* Guardar */}
-      <TouchableOpacity style={styles.button} onPress={guardar}>
-        <Text style={styles.buttonText}>Guardar</Text>
-      </TouchableOpacity>
+      <PrimaryButton
+        title="Guardar"
+        onPress={guardar}
+        loading={loading}
+      />
     </ScrollView>
   );
 }
@@ -107,25 +105,10 @@ const styles = StyleSheet.create({
   container: {
     ...commonStyles.scrollContainer,
   },
-  fieldContainer: {
-    ...commonStyles.fieldContainer,
-  },
-  label: {
-    ...commonStyles.label,
-  },
-  input: {
-    ...commonStyles.input,
-  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-  },
-  button: {
-    ...commonStyles.button,
-  },
-  buttonText: {
-    ...commonStyles.buttonText,
   },
 });

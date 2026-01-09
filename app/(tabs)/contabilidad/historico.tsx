@@ -6,11 +6,10 @@ import {
     FlatList,
     Modal,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -212,15 +211,19 @@ export default function HistoricoLiquidaciones() {
       ) : historial.length === 0 ? (
         <Text style={styles.emptyText}>No hay historial para el rango seleccionado.</Text>
       ) : (
-        <ScrollView>
-          {historial.map((item, index) => (
-            <View key={index} style={styles.card}>
+        <FlatList
+          data={historial}
+          keyExtractor={(item, index) => index.toString()}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
               <Text style={styles.persona}>{item.nombrePersona}</Text>
               <Text style={styles.fecha}>📅 {formatFecha(item.fechaLiquidacion)}</Text>
               <Text style={styles.total}>💵 {formatMonto(item.totalPagado)}</Text>
             </View>
-          ))}
-        </ScrollView>
+          )}
+          columnWrapperStyle={styles.columnWrapper}
+        />
       )}
     </View>
   );
@@ -253,11 +256,17 @@ const styles = StyleSheet.create({
   buscarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   infoRol: { fontSize: 12, color: '#0984e3' },
   emptyText: { textAlign: 'center', marginTop: 24, color: '#636e72' },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: '#dfe6e9',
     padding: 14,
     borderRadius: 10,
-    marginBottom: 12,
+    flex: 1,
+    marginHorizontal: 4,
+    maxWidth: '48%',
   },
   persona: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
   fecha: { fontSize: 14, color: '#2d3436' },

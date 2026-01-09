@@ -22,7 +22,7 @@ export default function ListaRegistros() {
   const [loading, setLoading] = useState(false);
   const [personas, setPersonas] = useState<{ id: number; nombre: string; apellido?: string }[]>([]);
   const [personaFiltro, setPersonaFiltro] = useState<string>('');
-  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados'>('todos');
+  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
   
   // Fechas por defecto: día actual
@@ -83,6 +83,13 @@ export default function ListaRegistros() {
         break;
       case 'confirmados':
         if (!item.confirmado) return false;
+        break;
+      case 'noLiquidados':
+        if (item.liquidado) return false;
+        break;
+      case 'noConfirmados':
+        // No confirmados: ni confirmado ni liquidado (porque liquidado implica confirmado)
+        if (item.confirmado || item.liquidado) return false;
         break;
       case 'todos':
       default:
@@ -303,6 +310,8 @@ export default function ListaRegistros() {
               { key: 'todos', label: 'Todos' },
               { key: 'liquidados', label: 'Liquidados' },
               { key: 'confirmados', label: 'Confirmados' },
+              { key: 'noLiquidados', label: 'No liquidados' },
+              { key: 'noConfirmados', label: 'No confirmados' },
             ].map((opt) => (
               <TouchableOpacity
                 key={opt.key}

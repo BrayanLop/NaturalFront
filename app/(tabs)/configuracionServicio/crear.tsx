@@ -30,15 +30,28 @@ export default function CrearConfiguracion() {
     useState<Partial<Record<keyof typeof configuracion, string>>>({});
   const [servicios, setServicios] =
     useState<{ id: number; nombre: string }[]>([]);
+  const [configuracionesExistentes, setConfiguracionesExistentes] = useState<number[]>([]);
   const [mostrarModal, setMostrarModal] = useState(false);
 
-  /* ===================== CARGAR SERVICIOS ===================== */
+  /* ===================== CARGAR SERVICIOS Y CONFIGURACIONES ===================== */
   useEffect(() => {
+    // Cargar servicios
     api
       .get('/Servicio/Obtener')
       .then((res) => setServicios(res.data))
       .catch(() => {
         Alert.alert('Error', 'No se pudieron cargar los servicios');
+      });
+
+    // Cargar configuraciones existentes
+    api
+      .get('/ConfiguracionServicio/Obtener')
+      .then((res) => {
+        const serviciosConfigurados = res.data.map((config: any) => config.servicioId);
+        setConfiguracionesExistentes(serviciosConfigurados);
+      })
+      .catch(() => {
+        console.error('No se pudieron cargar las configuraciones existentes');
       });
   }, []);
 
@@ -72,6 +85,12 @@ export default function CrearConfiguracion() {
       return;
     }
 
+    // Validar si el servicio ya está configurado
+    if (configuracionesExistentes.includes(servicioId)) {
+      Alert.alert('Error', 'Este servicio ya está configurado. Edítelo desde la lista de configuraciones.');
+      return;
+    }
+
     if (isNaN(pt) || isNaN(pe)) {
       Alert.alert('Error', 'Porcentajes inválidos');
       return;
@@ -102,6 +121,11 @@ export default function CrearConfiguracion() {
     (s) => s.id === parseInt(configuracion.servicioId)
   );
 
+  // Filtrar servicios que no están configurados
+  const serviciosDisponibles = servicios.filter(
+    (s) => !configuracionesExistentes.includes(s.id)
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* ===================== SERVICIO ===================== */}
@@ -118,7 +142,7 @@ export default function CrearConfiguracion() {
             style={styles.webSelect as unknown as React.CSSProperties}
           >
             <option value="">Seleccione un servicio</option>
-            {servicios.map((s) => (
+            {serviciosDisponibles.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
               </option>
@@ -151,18 +175,24 @@ export default function CrearConfiguracion() {
                 onPress={() => setMostrarModal(false)}
               >
                 <Pressable style={styles.modal}>
-                  {servicios.map((s) => (
-                    <Pressable
-                      key={s.id}
-                      style={styles.modalItem}
-                      onPress={() => {
-                        handleChange('servicioId', s.id.toString());
-                        setMostrarModal(false);
-                      }}
-                    >
-                      <Text>{s.nombre}</Text>
-                    </Pressable>
-                  ))}
+                  {serviciosDisponibles.length === 0 ? (
+                    <View style={styles.modalItem}>
+                      <Text style={styles.placeholder}>Todos los servicios ya están configurados</Text>
+                    </View>
+                  ) : (
+                    serviciosDisponibles.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        style={styles.modalItem}
+                        onPress={() => {
+                          handleChange('servicioId', s.id.toString());
+                          setMostrarModal(false);
+                        }}
+                      >
+                        <Text>{s.nombre}</Text>
+                      </Pressable>
+                    ))
+                  )}
                 </Pressable>
               </Pressable>
             </Modal>

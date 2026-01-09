@@ -130,33 +130,53 @@ export default function ConfiguracionGeneral() {
         <Text style={styles.label}>Periodicidad</Text>
 
         {Platform.OS === 'web' ? (
-          <select
-            className="form-select"
-            value={config.periodicidad}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              setConfig((p) => ({ ...p, periodicidad: e.target.value }))
-            }
-            style={webSelectStyle}
-          >
-            <option value="">Seleccione periodicidad</option>
-            <option value="M">Mensual</option>
-            <option value="Q">Quincenal</option>
-            <option value="S">Semanal</option>
-            <option value="D">Dias</option>
-          </select>
-        ) : (
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={config.periodicidad}
-              onValueChange={(v) => setConfig((p) => ({ ...p, periodicidad: v }))}
+          <>
+            <select
+              className="form-select"
+              value={config.periodicidad}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setConfig((p) => ({ ...p, periodicidad: e.target.value }))
+              }
+              style={webSelectStyle}
             >
-              <Picker.Item label="Seleccione periodicidad" value="" />
-              <Picker.Item label="Mensual" value="M" />
-              <Picker.Item label="Quincenal" value="Q" />
-              <Picker.Item label="Semanal" value="S" />
-              <Picker.Item label="Dias" value="D" />
-            </Picker>
-          </View>
+              <option value="">Seleccione periodicidad</option>
+              <option value="M">Mensual (30 días)</option>
+              <option value="Q">Quincenal (15 días)</option>
+              <option value="S">Semanal (7 días)</option>
+              <option value="D">Dias (personalizado)</option>
+            </select>
+            {config.periodicidad && (
+              <Text style={styles.helperText}>
+                {config.periodicidad === 'M' && '📅 Liquidación cada 30 días'}
+                {config.periodicidad === 'Q' && '📅 Liquidación cada 15 días'}
+                {config.periodicidad === 'S' && '📅 Liquidación cada 7 días'}
+                {config.periodicidad === 'D' && '📅 Liquidación personalizada'}
+              </Text>
+            )}
+          </>
+        ) : (
+          <>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={config.periodicidad}
+                onValueChange={(v) => setConfig((p) => ({ ...p, periodicidad: v }))}
+              >
+                <Picker.Item label="Seleccione periodicidad" value="" />
+                <Picker.Item label="Mensual (30 días)" value="M" />
+                <Picker.Item label="Quincenal (15 días)" value="Q" />
+                <Picker.Item label="Semanal (7 días)" value="S" />
+                <Picker.Item label="Dias (personalizado)" value="D" />
+              </Picker>
+            </View>
+            {config.periodicidad && (
+              <Text style={styles.helperText}>
+                {config.periodicidad === 'M' && '📅 Liquidación cada 30 días'}
+                {config.periodicidad === 'Q' && '📅 Liquidación cada 15 días'}
+                {config.periodicidad === 'S' && '📅 Liquidación cada 7 días'}
+                {config.periodicidad === 'D' && '📅 Liquidación personalizada'}
+              </Text>
+            )}
+          </>
         )}
       </View>
 
@@ -208,6 +228,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 12,
     backgroundColor: '#fff',
+  },
+  helperText: {
+    fontSize: 13,
+    color: '#0984e3',
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   button: { backgroundColor: '#00b894', padding: 14, borderRadius: 8, alignItems: 'center', width: '100%' },
   buttonText: { color: '#fff', fontWeight: 'bold' },

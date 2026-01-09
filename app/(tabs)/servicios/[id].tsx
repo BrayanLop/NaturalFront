@@ -27,7 +27,6 @@ export default function ServicioDetalle() {
 
   const validaciones = {
     nombre: { regex: /^.{3,50}$/, mensaje: 'Nombre requerido (3-50 caracteres)' },
-    descripcion: { regex: /^.{5,200}$/, mensaje: 'Descripción requerida (mínimo 5 caracteres)' },
     precio: { regex: /^\d+$/, mensaje: 'Precio inválido (solo números)' },
   };
 
@@ -53,7 +52,6 @@ export default function ServicioDetalle() {
 
   const handleChange = (campo: CampoValidable, valor: string) => {
     if (campo === 'nombre') setNombre(valor);
-    if (campo === 'descripcion') setDescripcion(valor);
     if (campo === 'precio') setPrecio(valor);
 
     const { regex, mensaje } = validaciones[campo];
@@ -66,7 +64,7 @@ export default function ServicioDetalle() {
   const actualizar = async () => {
     const nuevosErrores: Partial<Record<CampoValidable, string>> = {};
     (Object.keys(validaciones) as CampoValidable[]).forEach((campo) => {
-      const valor = { nombre, descripcion, precio }[campo];
+      const valor = { nombre, precio }[campo];
       const { regex, mensaje } = validaciones[campo];
       if (!regex.test(valor)) {
         nuevosErrores[campo] = mensaje;
@@ -162,11 +160,10 @@ const eliminar = async () => {
         <Text style={styles.label}>Descripción</Text>
         <TextInput
           value={descripcion}
-          onChangeText={(text) => handleChange('descripcion', text)}
-          style={[styles.input, errores.descripcion && styles.inputError]}
-          placeholder="Descripción detallada"
+          onChangeText={setDescripcion}
+          style={styles.input}
+          placeholder="Descripción detallada (opcional)"
         />
-        {errores.descripcion && <Text style={styles.errorText}>{errores.descripcion}</Text>}
       </View>
 
       {/* Precio */}

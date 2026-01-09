@@ -6,7 +6,6 @@ import {
   Alert,
   Animated,
   Image,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +13,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useAuth } from '../context/authContext';
@@ -91,15 +89,14 @@ export default function Login() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-            <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }] }]}>
-              <Image
-                source={require('../assets/images/logo1.png')}
-                style={styles.logo}
-              />
-            </Animated.View>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+          <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }] }]}>
+            <Image
+              source={require('../assets/images/logo1.png')}
+              style={styles.logo}
+            />
+          </Animated.View>
 
             <TextInput
               style={[
@@ -158,9 +155,8 @@ export default function Login() {
             <TouchableOpacity onPress={() => alert('Recuperación no implementada')}>
               <Text style={styles.forgotPassword}>¿Olvidó su contraseña?</Text>
             </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

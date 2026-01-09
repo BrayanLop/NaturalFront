@@ -21,7 +21,7 @@ import { useAuth } from '../context/authContext';
 import { api } from './api/api';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, usuario, cargando } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
@@ -34,6 +34,13 @@ export default function Login() {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   const passwordRef = useRef<TextInput>(null);
+
+  // Redirigir si ya hay sesión
+  useEffect(() => {
+    if (!cargando && usuario) {
+      router.replace('/home');
+    }
+  }, [cargando, usuario]);
 
   useEffect(() => {
     Animated.parallel([

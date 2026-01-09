@@ -1,7 +1,31 @@
 import BackButton from '@/components/BackButton';
-import { Stack } from 'expo-router';
+import { useAuth } from '@/context/authContext';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function Layout() {
+  const { usuario, cargando } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!cargando && !usuario) {
+      router.replace('/login');
+    }
+  }, [cargando, usuario]);
+
+  if (cargando) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00b894" />
+      </View>
+    );
+  }
+
+  if (!usuario) {
+    return null; // Se redirige al login
+  }
+
   return (
     <Stack
       screenOptions={{

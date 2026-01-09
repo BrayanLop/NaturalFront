@@ -53,8 +53,6 @@ export default function DetallePersona() {
         // Debug: Ver qué propiedades vienen en los servicios
         if (items.length > 0 && items[0].servicios.length > 0) {
           const firstService = items[0].servicios[0];
-          console.log("🔍 Primer servicio recibido (completo):", JSON.stringify(firstService, null, 2));
-          console.log("🔍 Propiedades disponibles:", Object.keys(firstService));
         }
         
         setDetalle(items);
@@ -196,9 +194,9 @@ const handleLiquidar = async () => {
 
     setConfirmandoServicio(registroServicioId);
     try {
-      console.log("📤 Enviando PATCH a /Contabilidad/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
+      console.log("📤 Enviando PATCH a /RegistroServicio/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
       const response = await api.patch(
-        `/Contabilidad/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
+        `/RegistroServicio/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
         {},
         { headers: { empresaId: empresaId.toString() } }
       );

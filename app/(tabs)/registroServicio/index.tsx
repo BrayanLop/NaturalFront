@@ -1,13 +1,15 @@
 import { useAuth } from '@/context/authContext';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -17,11 +19,17 @@ export default function ListaRegistros() {
   const router = useRouter();
   const { usuario } = useAuth();
   const [registros, setRegistros] = useState<any[]>([]);
-  const [consolidado, setConsolidado] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [personas, setPersonas] = useState<{ id: number; nombre: string; apellido?: string }[]>([]);
   const [personaFiltro, setPersonaFiltro] = useState<string>('');
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados'>('todos');
+  const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+  
+  // Fechas por defecto: día actual
+  const hoy = new Date();
+  const fechaActual = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+  const [fechaInicio, setFechaInicio] = useState<string>(fechaActual);
+  const [fechaFin, setFechaFin] = useState<string>(fechaActual);
 
   const esRol01 = usuario?.rol === '01' || usuario?.rol === '1';
 
@@ -37,29 +45,31 @@ export default function ListaRegistros() {
     setLoading(true);
     try {
       const personaId = usuario?.id ?? null;
-      const [resRegistros, resConsolidado] = await Promise.all([
-        api.get('/RegistroServicio/ObtenerRegistros', {
-          params: personaId ? { personaId } : {},
-        }),
-        api.get('/RegistroServicio/ObtenerConsolidadoDia', {
-          params: personaId ? { personaId } : {},
-        }),
-      ]);
+      const params: any = {};
+      
+      if (personaId) params.personaId = personaId;
+      if (fechaInicio) params.fechaInicio = `${fechaInicio}T00:00:00`;
+      if (fechaFin) params.fechaFin = `${fechaFin}T23:59:59`;
+      
+      console.log('📅 Parámetros enviados:', params);
+      
+      const resRegistros = await api.get('/RegistroServicio/ObtenerRegistros', { params });
 
-      if (Array.isArray(resRegistros.data)) setRegistros(resRegistros.data);
-      if (Array.isArray(resConsolidado.data)) setConsolidado(resConsolidado.data);
+      if (Array.isArray(resRegistros.data)) {
+        setRegistros(resRegistros.data);
+      }
     } catch (error) {
       console.error('❌ Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los registros');
     } finally {
       setLoading(false);
     }
-  }, [usuario]);
+  }, [usuario, fechaInicio, fechaFin]);
 
   useFocusEffect(
     useCallback(() => {
       cargarDatos();
-    }, [cargarDatos])
+    }, [usuario])
   );
 
   const registrosFiltrados = registros.filter((item) => {
@@ -82,6 +92,73 @@ export default function ListaRegistros() {
     return true;
   });
 
+  // Calcular consolidado basado en registros filtrados
+  const consolidado = useMemo(() => {
+    const consolidadoMap = new Map<number, { nombrePersona: string; cantidadServicios: number }>();
+    
+    registrosFiltrados.forEach((registro: any) => {
+      const personaId = registro.personaId;
+      const nombrePersona = registro.nombrePersona || 'Sin nombre';
+      
+      if (consolidadoMap.has(personaId)) {
+        consolidadoMap.get(personaId)!.cantidadServicios++;
+      } else {
+        consolidadoMap.set(personaId, { nombrePersona, cantidadServicios: 1 });
+      }
+    });
+    
+    return Array.from(consolidadoMap.values());
+  }, [registrosFiltrados]);
+
+  const handleConfirmarRegistro = async (registroServicioId: number) => {
+    if (!esRol01) return;
+
+    let confirmar = false;
+    if (Platform.OS === 'web') {
+      confirmar = window.confirm('¿Desea confirmar este registro?');
+      if (!confirmar) return;
+    } else {
+      confirmar = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          'Confirmar registro',
+          '¿Desea confirmar este registro?',
+          [
+            { text: 'Cancelar', onPress: () => resolve(false), style: 'cancel' },
+            { text: 'Confirmar', onPress: () => resolve(true), style: 'default' },
+          ]
+        );
+      });
+      if (!confirmar) return;
+    }
+
+    setConfirmandoId(registroServicioId);
+    try {
+      await api.patch(
+        `/RegistroServicio/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
+        {},
+        { headers: { empresaId: '1' } }
+      );
+
+      if (Platform.OS === 'web') {
+        window.alert('Registro confirmado correctamente.');
+      } else {
+        Alert.alert('Éxito', 'Registro confirmado correctamente.');
+      }
+
+      // Recargar datos
+      cargarDatos();
+    } catch (e: any) {
+      console.error('❌ Error confirmando registro:', e);
+      if (Platform.OS === 'web') {
+        window.alert(e?.response?.data?.message || 'No se pudo confirmar el registro.');
+      } else {
+        Alert.alert('Error', e?.response?.data?.message || 'No se pudo confirmar el registro.');
+      }
+    } finally {
+      setConfirmandoId(null);
+    }
+  };
+
   const renderItem = ({ item }: { item: any }) => (
     <View style={styles.item}>
       <View style={styles.itemHeader}>
@@ -99,86 +176,177 @@ export default function ListaRegistros() {
           )}
         </View>
       </View>
-      <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
-      <Text>🕒 Fecha: {item.fechaServicio ? new Date(item.fechaServicio).toLocaleString() : 'Sin fecha'}</Text>
+      
+      <View style={styles.itemContent}>
+        <View style={{ flex: 1 }}>
+          <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
+          <Text>🕒 Fecha: {item.fechaServicio ? new Date(item.fechaServicio).toLocaleString() : 'Sin fecha'}</Text>
+        </View>
+        
+        {esRol01 && !item.confirmado && !item.liquidado && (
+          <View style={styles.confirmContainer}>
+            <TouchableOpacity
+              style={[styles.confirmButton, confirmandoId === item.id && styles.confirmButtonLoading]}
+              onPress={() => handleConfirmarRegistro(item.id)}
+              disabled={confirmandoId === item.id}
+            >
+              <Text style={styles.confirmButtonText}>
+                {confirmandoId === item.id ? '...' : 'Confirmar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
-      ) : (
-        <ScrollView>
-          <View style={styles.filtros}>
-            {esRol01 && (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={styles.filtroLabel}>Persona</Text>
-                <View style={styles.chipsRow}>
-                  <TouchableOpacity
-                    style={[styles.chip, !personaFiltro && styles.chipActive]}
-                    onPress={() => setPersonaFiltro('')}
-                  >
-                    <Text style={[styles.chipText, !personaFiltro && styles.chipTextActive]}>Todas</Text>
-                  </TouchableOpacity>
-                  {personas.slice(0, 6).map((p) => (
-                    <TouchableOpacity
-                      key={p.id}
-                      style={[styles.chip, personaFiltro === String(p.id) && styles.chipActive]}
-                      onPress={() => setPersonaFiltro(String(p.id))}
-                    >
-                      <Text style={[styles.chipText, personaFiltro === String(p.id) && styles.chipTextActive]}>
-                        {p.nombre}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+      <ScrollView>
+        <View style={styles.filtros}>
+          {/* Filtros de fecha */}
+          <View style={{ marginBottom: 10 }}>
+            <Text style={styles.filtroLabel}>Rango de fechas</Text>
+            <View style={styles.fechasRow}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.fechaLabel}>Desde</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    value={fechaInicio}
+                    onChange={(e: any) => setFechaInicio(e.target.value)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#b2bec3',
+                      borderRadius: 6,
+                      padding: 8,
+                      backgroundColor: '#fff',
+                      fontSize: 14,
+                      width: '100%',
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    style={styles.inputFecha}
+                    value={fechaInicio}
+                    onChangeText={setFechaInicio}
+                    placeholder="YYYY-MM-DD"
+                  />
+                )}
               </View>
-            )}
-
-            <Text style={styles.filtroLabel}>Estado</Text>
-            <View style={styles.chipsRow}>
-              {[
-                { key: 'todos', label: 'Todos' },
-                { key: 'liquidados', label: 'Liquidados' },
-                { key: 'confirmados', label: 'Confirmados' },
-              ].map((opt) => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.chip, estadoFiltro === opt.key && styles.chipActive]}
-                  onPress={() => setEstadoFiltro(opt.key as any)}
-                >
-                  <Text style={[styles.chipText, estadoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fechaLabel}>Hasta</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    value={fechaFin}
+                    onChange={(e: any) => setFechaFin(e.target.value)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#b2bec3',
+                      borderRadius: 6,
+                      padding: 8,
+                      backgroundColor: '#fff',
+                      fontSize: 14,
+                      width: '100%',
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    style={styles.inputFecha}
+                    value={fechaFin}
+                    onChangeText={setFechaFin}
+                    placeholder="YYYY-MM-DD"
+                  />
+                )}
+              </View>
             </View>
+            <TouchableOpacity
+              style={styles.btnBuscar}
+              onPress={cargarDatos}
+              disabled={loading}
+            >
+              <Text style={styles.btnBuscarText}>
+                {loading ? 'Buscando...' : '🔍 Buscar'}
+              </Text>
+            </TouchableOpacity>
           </View>
+          
+          {esRol01 && (
+            <View style={{ marginBottom: 10 }}>
+              <Text style={styles.filtroLabel}>Persona</Text>
+              <View style={styles.chipsRow}>
+                <TouchableOpacity
+                  style={[styles.chip, !personaFiltro && styles.chipActive]}
+                  onPress={() => setPersonaFiltro('')}
+                >
+                  <Text style={[styles.chipText, !personaFiltro && styles.chipTextActive]}>Todas</Text>
+                </TouchableOpacity>
+                {personas.slice(0, 6).map((p) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[styles.chip, personaFiltro === String(p.id) && styles.chipActive]}
+                    onPress={() => setPersonaFiltro(String(p.id))}
+                  >
+                    <Text style={[styles.chipText, personaFiltro === String(p.id) && styles.chipTextActive]}>
+                      {p.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
-          {/* Consolidado */}
-          <View style={styles.tableContainer}>
-            <Text style={styles.tableTitle}>📊 Consolidado del día</Text>
-            {consolidado.length === 0 ? (
-              <Text style={styles.emptyText}>No hay datos del día actual.</Text>
-            ) : (
-              consolidado.map((item, index) => (
-                <View key={index} style={styles.row}>
-                  <Text style={styles.cellNombre}>{item.nombrePersona}</Text>
-                  <Text style={styles.cellCantidad}>{item.cantidadServicios} servicio(s)</Text>
-                </View>
-              ))
-            )}
+          <Text style={styles.filtroLabel}>Estado</Text>
+          <View style={styles.chipsRow}>
+            {[
+              { key: 'todos', label: 'Todos' },
+              { key: 'liquidados', label: 'Liquidados' },
+              { key: 'confirmados', label: 'Confirmados' },
+            ].map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.chip, estadoFiltro === opt.key && styles.chipActive]}
+                onPress={() => setEstadoFiltro(opt.key as any)}
+              >
+                <Text style={[styles.chipText, estadoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
 
-          {/* Lista de registros */}
-          <FlatList
-            data={registrosFiltrados}
-            keyExtractor={(_, i) => i.toString()}
-            renderItem={renderItem}
-            ListEmptyComponent={<Text style={styles.emptyText}>No hay registros disponibles.</Text>}
-            scrollEnabled={false} // Usamos ScrollView padre
-          />
-        </ScrollView>
-      )}
+        {loading ? (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#00b894" />
+          </View>
+        ) : (
+          <>
+            {/* Consolidado */}
+            <View style={styles.tableContainer}>
+              <Text style={styles.tableTitle}>📊 Consolidado</Text>
+              {consolidado.length === 0 ? (
+                <Text style={styles.emptyText}>No hay datos</Text>
+              ) : (
+                consolidado.map((item, index) => (
+                  <View key={index} style={styles.row}>
+                    <Text style={styles.cellNombre}>{item.nombrePersona}</Text>
+                    <Text style={styles.cellCantidad}>{item.cantidadServicios} servicio(s)</Text>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Lista de registros */}
+            <FlatList
+              data={registrosFiltrados}
+              keyExtractor={(_, i) => i.toString()}
+              renderItem={renderItem}
+              ListEmptyComponent={<Text style={styles.emptyText}>No hay registros disponibles.</Text>}
+              scrollEnabled={false} // Usamos ScrollView padre
+            />
+          </>
+        )}
+      </ScrollView>
 
       <TouchableOpacity
         style={styles.button}
@@ -246,6 +414,10 @@ const styles = StyleSheet.create({
     color: '#2d3436',
     flex: 1,
   },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   badges: {
     flexDirection: 'row',
     gap: 6,
@@ -267,6 +439,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  confirmContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    marginLeft: 8,
+  },
   filtros: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -279,6 +456,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 6,
     color: '#2d3436',
+  },
+  fechasRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  fechaLabel: {
+    fontSize: 12,
+    color: '#636e72',
+    marginBottom: 4,
+  },
+  inputFecha: {
+    borderWidth: 1,
+    borderColor: '#b2bec3',
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: '#fff',
+    fontSize: 14,
+  },
+  btnBuscar: {
+    backgroundColor: '#00b894',
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  btnBuscarText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -318,4 +524,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   buttonText: { color: 'white', fontWeight: 'bold' },
+  confirmButton: {
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: '#0d6efd',
+  },
+  confirmButtonLoading: {
+    opacity: 0.6,
+  },
+  confirmButtonText: {
+    color: '#0d6efd',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
 });

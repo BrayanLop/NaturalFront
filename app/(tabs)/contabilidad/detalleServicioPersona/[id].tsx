@@ -257,7 +257,7 @@ const handleLiquidar = async () => {
       {Platform.OS === "web" ? (
         <div style={{ marginBottom: 16 }}>
           <button
-            className="btn btn-danger"
+            className="btn btn-primary"
             onClick={handleLiquidar}
             disabled={loadingLiquidar}
             style={{ width: "100%" }}

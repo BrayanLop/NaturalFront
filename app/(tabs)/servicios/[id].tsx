@@ -194,7 +194,7 @@ const eliminar = async () => {
 
       {/* Botones */}
       <TouchableOpacity style={styles.button} onPress={actualizar}>
-        <Text style={styles.buttonText}>Actualizar</Text>
+        <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.deleteButton} onPress={eliminar}>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   button: {
-    backgroundColor: '#00b894',
+    backgroundColor: '#0984e3',
     padding: 15,
     borderRadius: 6,
     alignItems: 'center',

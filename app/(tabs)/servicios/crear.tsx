@@ -96,6 +96,7 @@ export default function CrearServicio() {
         title="Guardar"
         onPress={guardar}
         loading={loading}
+        variant="blue"
       />
     </ScrollView>
   );

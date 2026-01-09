@@ -1,9 +1,9 @@
+import { showError } from '@/utils/logger';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -13,7 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
@@ -77,9 +77,11 @@ export default function Login() {
 
       await login(datosUsuario);
       router.replace('/home');
-    } catch (error) {
-      console.log('Error de login:', error);
-      Alert.alert('Error', 'Credenciales incorrectas o servidor no disponible');
+    } catch (error: any) {
+      // Mensaje de error genérico para cualquier problema de login
+      const mensaje = error?.response?.data?.message || 
+                      'No se pudo iniciar sesión. Verifica tus credenciales e intenta nuevamente.';
+      showError(mensaje, 'Error de inicio de sesión');
     } finally {
       setLoading(false);
     }

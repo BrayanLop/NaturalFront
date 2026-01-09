@@ -206,12 +206,12 @@ export default function ConfiguracionGeneral() {
       {Platform.OS === 'web' ? (
         <div style={{ marginTop: 10 }}>
           <button className="btn btn-primary w-100" onClick={guardar} disabled={loading}>
-            {config.empresaId ? 'Actualizar' : 'Crear'}
+            Guardar
           </button>
         </div>
       ) : (
         <TouchableOpacity style={styles.button} onPress={guardar} disabled={loading}>
-          <Text style={styles.buttonText}>{config.empresaId ? 'Actualizar' : 'Crear'}</Text>
+          <Text style={styles.buttonText}>Guardar</Text>
         </TouchableOpacity>
       )}
     </ScrollView>

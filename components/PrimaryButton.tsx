@@ -7,7 +7,7 @@ interface PrimaryButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'blue';
 }
 
 export default function PrimaryButton({
@@ -25,6 +25,8 @@ export default function PrimaryButton({
         return commonStyles.buttonDanger;
       case 'outline':
         return commonStyles.buttonOutline;
+      case 'blue':
+        return { ...commonStyles.button, backgroundColor: '#0984e3' };
       default:
         return commonStyles.button;
     }

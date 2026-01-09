@@ -210,7 +210,7 @@ export default function EditarPersona() {
       </View>
 
       <TouchableOpacity style={styles.button} onPress={guardarCambios}>
-        <Text style={styles.buttonText}>Guardar cambios</Text>
+        <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
     </ScrollView>
   );

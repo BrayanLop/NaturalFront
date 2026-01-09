@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -11,7 +12,6 @@ import {
     View,
 } from 'react-native';
 import { api } from '../../api/api';
-import EmptyState from '@/components/EmptyState';
 
 interface Persona {
   id: number;

@@ -14,10 +14,12 @@ const BADGE_COLORS = {
   info: '#636e72',
 };
 
-export default function StatusBadge({ label, type }: StatusBadgeProps) {
+const StatusBadge = React.memo(function StatusBadge({ label, type }: StatusBadgeProps) {
   return (
     <View style={[commonStyles.badge, { backgroundColor: BADGE_COLORS[type] }]}>
       <Text style={commonStyles.badgeText}>{label}</Text>
     </View>
   );
-}
+});
+
+export default StatusBadge;

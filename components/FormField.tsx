@@ -8,7 +8,7 @@ interface FormFieldProps {
   children: ReactNode;
 }
 
-export default function FormField({ label, error, children }: FormFieldProps) {
+const FormField = React.memo(function FormField({ label, error, children }: FormFieldProps) {
   return (
     <View style={commonStyles.fieldContainer}>
       <Text style={commonStyles.label}>{label}</Text>
@@ -16,4 +16,6 @@ export default function FormField({ label, error, children }: FormFieldProps) {
       {error && <Text style={commonStyles.errorText}>{error}</Text>}
     </View>
   );
-}
+});
+
+export default FormField;

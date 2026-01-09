@@ -11,7 +11,7 @@ interface ListCardProps {
   rightContent?: React.ReactNode;
 }
 
-export default function ListCard({
+const ListCard = React.memo(function ListCard({
   title,
   subtitle,
   description,
@@ -42,7 +42,9 @@ export default function ListCard({
   }
 
   return Content;
-}
+});
+
+export default ListCard;
 
 const styles = StyleSheet.create({
   card: {

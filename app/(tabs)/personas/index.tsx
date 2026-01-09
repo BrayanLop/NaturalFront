@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -49,16 +49,44 @@ export default function ListaPersonas() {
     }, [])
   );
 
-  const renderItem = ({ item }: { item: Persona }) => (
-    <TouchableOpacity
-      style={styles.item}
-      onPress={() =>
-        router.push({ pathname: '/personas/[id]', params: { id: item.id } })
-      }
-    >
-      <Text style={styles.itemText}>👤 {item.nombre} {item.apellido}</Text>
-      <Text style={styles.subText}>📱 {item.celular}</Text>
-    </TouchableOpacity>
+  const handleNavegar = useCallback(
+    (id: number) => {
+      router.push({ pathname: '/personas/[id]', params: { id } });
+    },
+    [router]
+  );
+
+  const handleCrear = useCallback(() => {
+    router.push('/personas/crear');
+  }, [router]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Persona }) => (
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => handleNavegar(item.id)}
+      >
+        <Text style={styles.itemText}>👤 {item.nombre} {item.apellido}</Text>
+        <Text style={styles.subText}>📱 {item.celular}</Text>
+      </TouchableOpacity>
+    ),
+    [handleNavegar]
+  );
+
+  const keyExtractor = useCallback((item: Persona) => item.id.toString(), []);
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: 60,
+      offset: 60 * index,
+      index,
+    }),
+    []
+  );
+
+  const emptyComponent = useMemo(
+    () => <Text>No hay personas registradas.</Text>,
+    []
   );
 
   return (
@@ -68,15 +96,20 @@ export default function ListaPersonas() {
       ) : (
         <FlatList
           data={personas}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
-          ListEmptyComponent={<Text>No hay personas registradas.</Text>}
+          getItemLayout={getItemLayout}
+          ListEmptyComponent={emptyComponent}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
         />
       )}
 
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => router.push('/personas/crear')}
+        onPress={handleCrear}
       >
         <Text style={styles.addText}>+ Agregar persona</Text>
       </TouchableOpacity>

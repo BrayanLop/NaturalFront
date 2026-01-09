@@ -7,13 +7,15 @@ interface LoadingViewProps {
   color?: string;
 }
 
-export default function LoadingView({ size = 'large', color = COLORS.primary }: LoadingViewProps) {
+const LoadingView = React.memo(function LoadingView({ size = 'large', color = COLORS.primary }: LoadingViewProps) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size={size} color={color} />
     </View>
   );
-}
+});
+
+export default LoadingView;
 
 const styles = StyleSheet.create({
   container: {

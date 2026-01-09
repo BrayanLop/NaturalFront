@@ -3,7 +3,7 @@ import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters
 import { logger } from '@/utils/logger';
 import { isTrabajador } from '@/utils/roles';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -41,7 +41,7 @@ export default function HistoricoLiquidaciones() {
 
   const esRol02 = isTrabajador(usuario?.rol);
 
-  const cargarHistorial = async () => {
+  const cargarHistorial = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, unknown> = {
@@ -60,7 +60,7 @@ export default function HistoricoLiquidaciones() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fechaDesde, fechaHasta, personaId, personaSeleccionada]);
 
   useEffect(() => {
     cargarHistorial();
@@ -89,13 +89,29 @@ export default function HistoricoLiquidaciones() {
   const [pickerVisible, setPickerVisible] = useState<null | 'desde' | 'hasta'>(null);
   const currentPickerDate = pickerVisible === 'desde' ? new Date(fechaDesde) : new Date(fechaHasta);
 
-  const onChangeFecha = (_: DateTimePickerEvent, selectedDate?: Date) => {
+  const onChangeFecha = useCallback((_: DateTimePickerEvent, selectedDate?: Date) => {
     if (!selectedDate || !pickerVisible) return;
     const value = toDateInputValue(selectedDate);
     if (pickerVisible === 'desde') setFechaDesde(value);
     if (pickerVisible === 'hasta') setFechaHasta(value);
     if (Platform.OS !== 'ios') setPickerVisible(null);
-  };
+  }, [pickerVisible]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: HistorialLiquidacion }) => (
+      <View style={styles.card}>
+        <Text style={styles.persona}>{item.nombrePersona}</Text>
+        <Text style={styles.fecha}>📅 {formatDate(item.fechaLiquidacion)}</Text>
+        <Text style={styles.total}>💵 {formatCurrency(item.totalPagado)}</Text>
+      </View>
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback(
+    (_: HistorialLiquidacion, index: number) => index.toString(),
+    []
+  );
 
   return (
     <View style={styles.container}>
@@ -199,15 +215,9 @@ export default function HistoricoLiquidaciones() {
       ) : (
         <FlatList
           data={historial}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={keyExtractor}
           numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.persona}>{item.nombrePersona}</Text>
-              <Text style={styles.fecha}>📅 {formatDate(item.fechaLiquidacion)}</Text>
-              <Text style={styles.total}>💵 {formatCurrency(item.totalPagado)}</Text>
-            </View>
-          )}
+          renderItem={renderItem}
           columnWrapperStyle={styles.columnWrapper}
         />
       )}

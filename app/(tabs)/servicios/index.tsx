@@ -7,7 +7,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -41,6 +41,50 @@ export default function ListaServicios() {
     }, [])
   );
 
+  const handleNavegar = useCallback(
+    (id: number) => {
+      router.push({ pathname: '/(tabs)/servicios/[id]', params: { id } });
+    },
+    [router]
+  );
+
+  const handleCrear = useCallback(() => {
+    router.push('/(tabs)/servicios/crear');
+  }, [router]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Servicio }) => (
+      <ListCard
+        title={item.nombre}
+        description={`💰 ${formatCurrency(item.precio)}`}
+        badges={
+          <StatusBadge
+            label={item.disponible ? 'Disponible' : 'No disponible'}
+            type={item.disponible ? 'disponible' : 'info'}
+          />
+        }
+        onPress={() => handleNavegar(item.id)}
+      />
+    ),
+    [handleNavegar]
+  );
+
+  const keyExtractor = useCallback((item: Servicio) => item.id.toString(), []);
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: 90,
+      offset: 90 * index,
+      index,
+    }),
+    []
+  );
+
+  const emptyComponent = useMemo(
+    () => <EmptyState message="No hay servicios disponibles" icon="💼" />,
+    []
+  );
+
   return (
     <View style={styles.container}>
       {loading ? (
@@ -48,29 +92,20 @@ export default function ListaServicios() {
       ) : (
         <FlatList
           data={servicios}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <ListCard
-              title={item.nombre}
-              description={`💰 ${formatCurrency(item.precio)}`}
-              badges={
-                <StatusBadge
-                  label={item.disponible ? 'Disponible' : 'No disponible'}
-                  type={item.disponible ? 'disponible' : 'info'}
-                />
-              }
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/servicios/[id]', params: { id: item.id } })
-              }
-            />
-          )}
-          ListEmptyComponent={<EmptyState message="No hay servicios disponibles" icon="💼" />}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          ListEmptyComponent={emptyComponent}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
         />
       )}
 
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => router.push('/(tabs)/servicios/crear')}
+        onPress={handleCrear}
       >
         <Text style={styles.addText}>+ Agregar servicio</Text>
       </TouchableOpacity>

@@ -75,7 +75,8 @@ export default function ListaRegistros() {
     }, [usuario])
   );
 
-  const registrosFiltrados = registros.filter((item) => {
+  const registrosFiltrados = useMemo(() => {
+    return registros.filter((item) => {
     if (esRol01 && personaFiltro) {
       if (String(item.personaId) !== personaFiltro) return false;
     }
@@ -100,7 +101,8 @@ export default function ListaRegistros() {
     }
 
     return true;
-  });
+    });
+  }, [registros, esRol01, personaFiltro, estadoFiltro]);
 
   // Calcular consolidado basado en registros filtrados
   const consolidado = useMemo(() => {
@@ -120,7 +122,7 @@ export default function ListaRegistros() {
     return Array.from(consolidadoMap.values());
   }, [registrosFiltrados]);
 
-  const handleConfirmarRegistro = async (registroServicioId: number) => {
+  const handleConfirmarRegistro = useCallback(async (registroServicioId: number) => {
     if (!esRol01) return;
 
     const confirmar = await showConfirm('¿Desea confirmar este registro?', 'Confirmar registro');
@@ -142,9 +144,9 @@ export default function ListaRegistros() {
     } finally {
       setConfirmandoId(null);
     }
-  };
+  }, [esRol01, cargarDatos]);
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={styles.item}>
       <View style={styles.itemHeader}>
         <Text style={styles.itemTitle}>🧍 {item.nombrePersona ?? 'N/A'}</Text>
@@ -183,7 +185,9 @@ export default function ListaRegistros() {
         )}
       </View>
     </View>
-  );
+  ), [esRol01, confirmandoId, handleConfirmarRegistro]);
+
+  const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
   return (
     <View style={styles.container}>
@@ -326,7 +330,7 @@ export default function ListaRegistros() {
             {/* Lista de registros */}
             <FlatList
               data={registrosFiltrados}
-              keyExtractor={(_, i) => i.toString()}
+              keyExtractor={keyExtractor}
               renderItem={renderItem}
               ListEmptyComponent={<Text style={styles.emptyText}>No hay registros disponibles.</Text>}
               scrollEnabled={false} // Usamos ScrollView padre

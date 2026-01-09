@@ -4,7 +4,7 @@ import LoadingView from '@/components/LoadingView';
 import StatusBadge from '@/components/StatusBadge';
 import { COLORS } from '@/constants/theme';
 import { formatCurrency } from '@/utils/formatters';
-import { handleApiError } from '@/utils/logger';
+import { logger } from '@/utils/logger';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -29,7 +29,7 @@ export default function ListaServicios() {
       const response = await api.get('/Servicio/Obtener');
       setServicios(response.data);
     } catch (error) {
-      handleApiError(error);
+      logger.error('Error al cargar servicios:', error);
     } finally {
       setLoading(false);
     }

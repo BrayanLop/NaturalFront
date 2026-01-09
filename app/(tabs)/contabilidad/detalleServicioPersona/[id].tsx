@@ -6,6 +6,10 @@ import { api } from "../../../api/api";
 type ServicioDetalleItem = {
   nombreServicio: string;
   hora: string;
+  confirmado?: boolean;
+  registroServicioId?: number;
+  RegistroServicioId?: number;
+  valorTrabajador?: number;
 };
 
 type DetalleServicioPorDiaViewModel = {
@@ -27,6 +31,7 @@ export default function DetallePersona() {
   const [loadingLiquidar, setLoadingLiquidar] = useState(false);
   const [totalPorLiquidar, setTotalPorLiquidar] = useState<number | null>(null);
   const [cargandoTotal, setCargandoTotal] = useState(false);
+  const [confirmandoServicio, setConfirmandoServicio] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +49,14 @@ export default function DetallePersona() {
         const items: DetalleServicioPorDiaViewModel[] = Array.isArray(data)
           ? data
           : (data?.detalle ?? data?.detalles ?? data?.items ?? data?.registros ?? data?.dias ?? data?.servicios ?? []);
+        
+        // Debug: Ver qué propiedades vienen en los servicios
+        if (items.length > 0 && items[0].servicios.length > 0) {
+          const firstService = items[0].servicios[0];
+          console.log("🔍 Primer servicio recibido (completo):", JSON.stringify(firstService, null, 2));
+          console.log("🔍 Propiedades disponibles:", Object.keys(firstService));
+        }
+        
         setDetalle(items);
         // Sumar LiquidacionServicios de todos los items
         setCargandoTotal(true);
@@ -154,6 +167,89 @@ const handleLiquidar = async () => {
     });
   };
 
+  const handleConfirmarServicio = async (registroServicioId?: number) => {
+    console.log("🔵 handleConfirmarServicio llamado con ID:", registroServicioId);
+    
+    if (!registroServicioId) {
+      console.error("❌ registroServicioId es undefined o null");
+      Alert.alert("Error", "No se puede confirmar este servicio.");
+      return;
+    }
+
+    let confirmar = false;
+    if (Platform.OS === "web") {
+      confirmar = window.confirm("¿Desea confirmar este servicio?");
+      if (!confirmar) return;
+    } else {
+      confirmar = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          "Confirmar servicio",
+          "¿Desea confirmar este servicio?",
+          [
+            { text: "Cancelar", onPress: () => resolve(false), style: "cancel" },
+            { text: "Confirmar", onPress: () => resolve(true), style: "default" },
+          ]
+        );
+      });
+      if (!confirmar) return;
+    }
+
+    setConfirmandoServicio(registroServicioId);
+    try {
+      console.log("📤 Enviando PATCH a /Contabilidad/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
+      const response = await api.patch(
+        `/Contabilidad/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
+        {},
+        { headers: { empresaId: empresaId.toString() } }
+      );
+      console.log("✅ Respuesta PATCH:", response.data);
+      
+      // Recargar datos después de confirmar
+      const res = await api.get(
+        `Contabilidad/DetalleServiciosPorPersona/${personaId}`,
+        {
+          headers: {
+            empresaId: empresaId.toString(),
+          },
+        }
+      );
+      const data = res.data as any;
+      const items: DetalleServicioPorDiaViewModel[] = Array.isArray(data)
+        ? data
+        : (data?.detalle ?? data?.detalles ?? data?.items ?? data?.registros ?? data?.dias ?? data?.servicios ?? []);
+      setDetalle(items);
+      
+      // Recalcular total después de confirmar
+      const total = items.reduce((acc, it) => {
+        const raw = (it?.LiquidacionServicios ?? it?.liquidacionServicios ?? 0) as any;
+        if (typeof raw === 'string') {
+          const cleaned = raw
+            .replace(/[^0-9.,-]/g, '')
+            .replace(/,(?=\d{2}$)/, '.')
+            .replace(/\.(?=.*\.)/g, '');
+          return acc + (Number(cleaned) || 0);
+        }
+        return acc + (Number(raw) || 0);
+      }, 0);
+      setTotalPorLiquidar(total);
+      
+      if (Platform.OS === "web") {
+        window.alert("Servicio confirmado correctamente.");
+      } else {
+        Alert.alert("Éxito", "Servicio confirmado correctamente.");
+      }
+    } catch (e: any) {
+      console.error("❌ Error confirmando servicio:", e);
+      if (Platform.OS === "web") {
+        window.alert(e?.response?.data?.message || "No se pudo confirmar el servicio.");
+      } else {
+        Alert.alert("Error", e?.response?.data?.message || "No se pudo confirmar el servicio.");
+      }
+    } finally {
+      setConfirmandoServicio(null);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.resumen}>
@@ -198,8 +294,31 @@ const handleLiquidar = async () => {
 
               {item.servicios.map((s, i) => (
                 <View key={i} style={styles.servicioItem}>
-                  <Text style={styles.hora}>{formatHora(s.hora)} ⏰</Text>
-                  <Text style={styles.nombre}>{s.nombreServicio}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.hora}>{formatHora(s.hora)} ⏰</Text>
+                    <Text style={styles.nombre}>{s.nombreServicio}</Text>
+                    <Text style={styles.valor}>💰 {formatMonto(s.valorTrabajador)}</Text>
+                  </View>
+                  <View style={styles.estadoContainer}>
+                    {!s.confirmado && (
+                      <TouchableOpacity
+                        style={[styles.confirmButton, confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) && styles.confirmButtonLoading]}
+                        onPress={() => {
+                          const id = s.registroServicioId || s.RegistroServicioId;
+                          console.log("🟡 TouchableOpacity presionado. ID:", id);
+                          handleConfirmarServicio(id);
+                        }}
+                        disabled={confirmandoServicio === (s.registroServicioId || s.RegistroServicioId)}
+                      >
+                        <Text style={styles.confirmButtonText}>
+                          {confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) ? "..." : "Confirmar"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {s.confirmado && (
+                      <Text style={styles.estadoConfirmado}>✓ Confirmado</Text>
+                    )}
+                  </View>
                 </View>
               ))}
             </View>
@@ -257,6 +376,44 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 14,
     color: "#212529",
+  },
+  valor: {
+    fontSize: 13,
+    color: "#27ae60",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  estadoContainer: {
+    flexDirection: "column",
+    alignItems: "flex-end",
+    marginLeft: 8,
+  },
+  estadoText: {
+    fontSize: 12,
+    color: "#e17055",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  estadoConfirmado: {
+    color: "#00b894",
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  confirmButton: {
+    backgroundColor: "#0d6efd",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#0d6efd",
+  },
+  confirmButtonLoading: {
+    opacity: 0.6,
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 12,
   },
   liquidarButton: {
     backgroundColor: "#dc3545",

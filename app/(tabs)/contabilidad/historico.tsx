@@ -166,7 +166,6 @@ export default function HistoricoLiquidaciones() {
         <TouchableOpacity style={styles.buscarButton} onPress={cargarHistorial} disabled={loading}>
           <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
         </TouchableOpacity>
-        {personaId ? <Text style={styles.infoRol}>Filtro por persona (rol 02) activo.</Text> : null}
       </View>
 
       <View style={styles.resumen}>

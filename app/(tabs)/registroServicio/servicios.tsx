@@ -1,9 +1,11 @@
+import { useAuth } from '@/context/authContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../../api/api';
 
 export default function RegistroServicio() {
+  const { usuario } = useAuth();
   const [servicios, setServicios] = useState<any[]>([]);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const router = useRouter();
@@ -27,9 +29,12 @@ export default function RegistroServicio() {
       return;
     }
 
+    const esRol01 = usuario?.rol === '01' || usuario?.rol === '1';
+
     const registros = seleccionados.map((servicioId) => ({
       personaId: parseInt(persona as string),
       servicioId: parseInt(servicioId),
+      confirmado: esRol01,
     }));
 
     try {

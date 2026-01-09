@@ -19,6 +19,7 @@ type PagoPersona = {
   personaId: number;
   nombrePersona: string;
   totalPagado: number;
+  totalSinConfirmar: number;
   servicios: ServicioRealizado[];
 };
 
@@ -67,9 +68,14 @@ export default function PagosPorPersona() {
               <TouchableOpacity>
                 <View style={styles.card}>
                   <Text style={styles.nombre}>👤 {pago.nombrePersona}</Text>
-                  <Text style={styles.monto}>
-                    💵 Total: ${pago.totalPagado.toFixed(0)}
-                  </Text>
+                  <View style={styles.totalesContainer}>
+                    <Text style={styles.monto}>
+                      💵 Total: ${pago.totalPagado.toFixed(0)}
+                    </Text>
+                    <Text style={styles.montoSinConfirmar}>
+                      ⏳ Sin confirmar: ${pago.totalSinConfirmar.toFixed(0)}
+                    </Text>
+                  </View>
                   {pago.servicios.map((servicio, idx) => (
                     <Text key={idx} style={styles.servicio}>
                       - {servicio.nombre}: {servicio.cantidad}
@@ -99,6 +105,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   nombre: { fontSize: 16, fontWeight: 'bold' },
-  monto: { fontSize: 15, color: '#2d3436', marginBottom: 10 },
+  totalesContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, gap: 10 },
+  monto: { fontSize: 15, color: '#2d3436', flex: 1 },
+  montoSinConfirmar: { fontSize: 15, color: '#e17055', flex: 1, fontWeight: '600' },
   servicio: { fontSize: 14, color: '#636e72' },
 });

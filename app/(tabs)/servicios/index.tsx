@@ -68,7 +68,7 @@ export default function ListaServicios() {
         style={styles.addButton}
         onPress={() => router.push('/(tabs)/servicios/crear')}
       >
-        <Text style={styles.addText}>+ Agregar Servicio</Text>
+        <Text style={styles.addText}>+ Agregar servicio</Text>
       </TouchableOpacity>
     </View>
   );

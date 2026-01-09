@@ -10,7 +10,7 @@ interface StatusBadgeProps {
 const BADGE_COLORS = {
   confirmado: '#00b894',
   liquidado: '#0984e3',
-  disponible: '#00b894',
+  disponible: '#1e8449', // Verde más oscuro y fuerte
   info: '#636e72',
 };
 

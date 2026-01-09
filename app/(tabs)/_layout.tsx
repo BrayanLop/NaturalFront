@@ -38,7 +38,6 @@ export default function Layout() {
           fontWeight: 'bold',
         },
         headerLeft: () => <BackButton />,
-        headerBackTitleVisible: false,
       }}
     >
       {/* Personalizamos los títulos */}

@@ -6,15 +6,15 @@ import { isAdmin } from '@/utils/roles';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
@@ -76,7 +76,7 @@ export default function ListaRegistros() {
   );
 
   const registrosFiltrados = useMemo(() => {
-    return registros.filter((item) => {
+    const filtrados = registros.filter((item) => {
     if (esRol01 && personaFiltro) {
       if (String(item.personaId) !== personaFiltro) return false;
     }
@@ -101,6 +101,13 @@ export default function ListaRegistros() {
     }
 
     return true;
+    });
+    
+    // Ordenar del más reciente primero
+    return filtrados.sort((a, b) => {
+      const fechaA = new Date(a.fechaServicio).getTime();
+      const fechaB = new Date(b.fechaServicio).getTime();
+      return fechaB - fechaA; // Descendente (más reciente primero)
     });
   }, [registros, esRol01, personaFiltro, estadoFiltro]);
 

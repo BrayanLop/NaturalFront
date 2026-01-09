@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -96,31 +97,42 @@ export default function ServicioDetalle() {
     }
   };
 
-const eliminar = () => {
-  Alert.alert(
-    "Confirmar",
-    "¿Eliminar este servicio?",
-    [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            console.log("Eliminando servicio con id:", id);
+const eliminar = async () => {
+  const confirmar = Platform.OS === 'web' 
+    ? window.confirm('¿Eliminar este servicio?')
+    : await new Promise((resolve) => {
+        Alert.alert(
+          "Confirmar",
+          "¿Eliminar este servicio?",
+          [
+            { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+            { text: "Eliminar", style: "destructive", onPress: () => resolve(true) }
+          ]
+        );
+      });
 
-            await api.delete(`/Servicio/Eliminar/${id}`);
+  if (!confirmar) return;
 
-            Alert.alert("Eliminado", "Servicio eliminado correctamente");
-            router.back();
-          } catch (error) {
-            console.error("Error al eliminar:", error);
-            Alert.alert("Error", "No se pudo eliminar el servicio");
-          }
-        }
-      }
-    ]
-  );
+  try {
+    console.log("Eliminando servicio con id:", id);
+    await api.delete(`/Servicio/Eliminar/${id}`);
+    
+    if (Platform.OS === 'web') {
+      window.alert("Servicio eliminado correctamente");
+    } else {
+      Alert.alert("Eliminado", "Servicio eliminado correctamente");
+    }
+    
+    router.back();
+  } catch (error) {
+    console.error("Error al eliminar:", error);
+    
+    if (Platform.OS === 'web') {
+      window.alert("No se pudo eliminar el servicio");
+    } else {
+      Alert.alert("Error", "No se pudo eliminar el servicio");
+    }
+  }
 };
 
   if (loading) {

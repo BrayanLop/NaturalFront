@@ -151,7 +151,11 @@ export default function IngresosEmpresa() {
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : historial.length === 0 ? (
-        <Text style={styles.emptyText}>No hay ingresos para el rango seleccionado.</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>💰</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436', textAlign: 'center' }}>No hay ingresos en este rango</Text>
+          <Text style={{ fontSize: 14, color: '#636e72', textAlign: 'center', marginTop: 8 }}>Intenta con otras fechas</Text>
+        </View>
       ) : (
         <ScrollView>
           {historial.map((item, index) => (

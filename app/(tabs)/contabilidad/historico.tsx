@@ -211,7 +211,11 @@ export default function HistoricoLiquidaciones() {
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : historial.length === 0 ? (
-        <Text style={styles.emptyText}>No hay historial para el rango seleccionado.</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>📅</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436', textAlign: 'center' }}>No hay historial en este rango</Text>
+          <Text style={{ fontSize: 14, color: '#636e72', textAlign: 'center', marginTop: 8 }}>Intenta con otras fechas</Text>
+        </View>
       ) : (
         <FlatList
           data={historial}
@@ -366,7 +370,12 @@ function PersonaModal({ visible, personas, onSelect, onClose, onClear }: Persona
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: '#ececec' }} />}
-            ListEmptyComponent={<Text>No hay personas.</Text>}
+            ListEmptyComponent={
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ fontSize: 32, marginBottom: 8 }}>👤</Text>
+                <Text style={{ fontSize: 14, color: '#636e72' }}>No hay personas</Text>
+              </View>
+            }
           />
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
             <TouchableOpacity style={[styles.closeModal, { backgroundColor: '#b2bec3' }]} onPress={onClear}>

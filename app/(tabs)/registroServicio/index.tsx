@@ -263,7 +263,7 @@ export default function ListaRegistros() {
               disabled={loading}
             >
               <Text style={styles.btnBuscarText}>
-                {loading ? 'Buscando...' : '🔍 Buscar'}
+                {loading ? 'Buscando...' : 'Buscar'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -323,7 +323,10 @@ export default function ListaRegistros() {
             <View style={styles.tableContainer}>
               <Text style={styles.tableTitle}>📊 Consolidado</Text>
               {consolidado.length === 0 ? (
-                <Text style={styles.emptyText}>No hay datos</Text>
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay registros disponibles</Text>
+                </View>
               ) : (
                 consolidado.map((item, index) => (
                   <View key={index} style={styles.row}>
@@ -339,7 +342,12 @@ export default function ListaRegistros() {
               data={registrosFiltrados}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              ListEmptyComponent={<Text style={styles.emptyText}>No hay registros disponibles.</Text>}
+              ListEmptyComponent={
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay registros disponibles</Text>
+                </View>
+              }
               scrollEnabled={false} // Usamos ScrollView padre
             />
           </>

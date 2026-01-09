@@ -56,7 +56,10 @@ export default function PagosPorPersona() {
       {loading ? (
         <ActivityIndicator size="large" color="#00b894" />
       ) : pagos.length === 0 ? (
-        <Text>No hay pagos recientes.</Text>
+        <View style={{ padding: 40, alignItems: 'center' }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>📊</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay pagos recientes</Text>
+        </View>
       ) : (
         <ScrollView>
           {pagos.map((pago, index) => (

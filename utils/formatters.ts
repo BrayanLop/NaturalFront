@@ -1,5 +1,6 @@
 // Formateo de moneda a pesos colombianos
 export function formatCurrency(value: number): string {
+  if (value === null || value === undefined) return '$0';
   return value.toLocaleString('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -9,8 +10,13 @@ export function formatCurrency(value: number): string {
 
 // Formateo de fecha a formato local
 export function formatDate(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('es-CO');
+  if (typeof date === 'string') {
+    // Si es string en formato YYYY-MM-DD, parsearlo como fecha local
+    const [year, month, day] = date.split('T')[0].split('-');
+    const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return dateObj.toLocaleDateString('es-CO');
+  }
+  return date.toLocaleDateString('es-CO');
 }
 
 // Formateo de fecha y hora

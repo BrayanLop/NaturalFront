@@ -61,6 +61,8 @@ export default function Layout() {
       <Stack.Screen name="contabilidad/historico" options={{ title: 'Histórico liquidaciones' }} />
       <Stack.Screen name="contabilidad/detalleServicioPersona/[id]" options={{ title: 'Detalle liquidación' }} />
       <Stack.Screen name="ingresos/index" options={{ title: 'Ingresos' }} />
+      <Stack.Screen name="egresos/index" options={{ title: 'Egresos' }} />
+      <Stack.Screen name="egresos/crear" options={{ title: 'Registrar egreso' }} />
     </Stack>
   );
 }

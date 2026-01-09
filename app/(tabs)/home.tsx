@@ -80,6 +80,11 @@ export default function Home() {
             route: '../ingresos',
             icon: 'dollar-sign',
           },
+          {
+            title: 'Egresos',
+            route: '../egresos',
+            icon: 'money-bill-wave',
+          },
         ];
 
   return (

@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { api } from '../../api/api';
+import EmptyState from '@/components/EmptyState';
 
 interface Persona {
   id: number;
@@ -85,7 +86,7 @@ export default function ListaPersonas() {
   );
 
   const emptyComponent = useMemo(
-    () => <Text>No hay personas registradas.</Text>,
+    () => <EmptyState message="No hay personas registradas" icon="👥" subtitle="Comienza agregando una nueva persona" />,
     []
   );
 

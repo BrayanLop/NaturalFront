@@ -1,4 +1,8 @@
+import { COLORS, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import { formatDateTime } from '@/utils/formatters';
+import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
+import { isAdmin } from '@/utils/roles';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -13,12 +17,8 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
-import { RegistroServicio } from '../../api/modelos/registroServicio';
 import { Persona } from '../../api/modelos/persona';
-import { COLORS, commonStyles } from '@/constants/theme';
-import { formatDateTime } from '@/utils/formatters';
-import { logger, showError, showSuccess, showConfirm } from '@/utils/logger';
-import { isAdmin } from '@/utils/roles';
+import { RegistroServicio } from '../../api/modelos/registroServicio';
 
 export default function ListaRegistros() {
   const router = useRouter();

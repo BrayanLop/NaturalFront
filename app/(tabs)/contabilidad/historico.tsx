@@ -1,4 +1,7 @@
 import { useAuth } from '@/context/authContext';
+import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
+import { logger } from '@/utils/logger';
+import { isTrabajador } from '@/utils/roles';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -14,10 +17,6 @@ import {
 import { api } from '../../api/api';
 import { HistorialLiquidacion } from '../../api/modelos/contabilidad';
 import { Persona } from '../../api/modelos/persona';
-import { COLORS } from '@/constants/theme';
-import { formatDate, formatCurrency, toDateInputValue } from '@/utils/formatters';
-import { logger } from '@/utils/logger';
-import { isTrabajador } from '@/utils/roles';
 
 export default function HistoricoLiquidaciones() {
   const { usuario } = useAuth();

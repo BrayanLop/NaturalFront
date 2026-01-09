@@ -1,4 +1,4 @@
-import { Platform, Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 // Configuración de logging
 const isDevelopment = __DEV__;

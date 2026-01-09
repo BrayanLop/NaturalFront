@@ -1,19 +1,18 @@
+import { commonStyles } from '@/constants/theme';
+import { logger, showError, showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
-import { COLORS, commonStyles } from '@/constants/theme';
-import { servicioValidations } from '@/utils/validators';
-import { showError, showSuccess, logger } from '@/utils/logger';
 
 export default function CrearServicio() {
   const router = useRouter();

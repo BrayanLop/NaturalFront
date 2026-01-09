@@ -1,3 +1,6 @@
+import { COLORS } from '@/constants/theme';
+import { formatCurrency } from '@/utils/formatters';
+import { handleApiError } from '@/utils/logger';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -11,9 +14,6 @@ import {
 } from 'react-native';
 import { api } from '../../api/api';
 import { Servicio } from '../../api/modelos/servicio';
-import { COLORS, commonStyles } from '@/constants/theme';
-import { formatCurrency } from '@/utils/formatters';
-import { logger, handleApiError } from '@/utils/logger';
 
 export default function ListaServicios() {
   const router = useRouter();

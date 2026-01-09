@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 
 // Constantes de roles
 export const ROLES = {

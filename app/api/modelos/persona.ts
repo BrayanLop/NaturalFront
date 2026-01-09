@@ -6,6 +6,24 @@ export interface Persona {
   residencia: string;
   email: string;
   edad: number;
-  celular?: string; // Opcional, igual que en .NET
-  fechaNacimiento: string; // Se recibe como string en JSON (ISO date)
+  celular?: string;
+  fechaNacimiento: string;
+  rol?: string;
+  empresaId?: number;
+}
+
+export interface PersonaCreate {
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  residencia: string;
+  email: string;
+  edad: number;
+  celular: string;
+  fechaNacimiento: string;
+  rol: string;
+}
+
+export interface PersonaUpdate extends PersonaCreate {
+  id: number;
 }

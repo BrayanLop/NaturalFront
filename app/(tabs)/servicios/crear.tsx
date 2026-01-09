@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,6 +11,9 @@ import {
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
+import { COLORS, commonStyles } from '@/constants/theme';
+import { servicioValidations } from '@/utils/validators';
+import { showError, showSuccess, logger } from '@/utils/logger';
 
 export default function CrearServicio() {
   const router = useRouter();
@@ -23,7 +25,7 @@ export default function CrearServicio() {
 
   const guardar = async () => {
     if (!nombre || !precio) {
-      Alert.alert('Campos obligatorios', 'Nombre y precio son requeridos');
+      showError('Nombre y precio son requeridos', 'Campos obligatorios');
       return;
     }
 
@@ -31,16 +33,16 @@ export default function CrearServicio() {
       await api.post('/Servicio/Crear', {
         nombre,
         descripcion,
-        precio: parseInt(precio), // Enviamos sin formato ($ ni puntos)
+        precio: parseInt(precio),
         disponible,
         fechaCreacion: new Date().toISOString(),
       });
 
-      Alert.alert('Éxito', 'Servicio creado correctamente');
+      showSuccess('Servicio creado correctamente');
       router.back();
     } catch (error) {
-      console.error('Error al crear servicio:', error);
-      Alert.alert('Error', 'No se pudo crear el servicio');
+      logger.error('Error al crear servicio:', error);
+      showError('No se pudo crear el servicio');
     }
   };
 
@@ -104,25 +106,16 @@ export default function CrearServicio() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#f2f2f2',
+    ...commonStyles.scrollContainer,
   },
   fieldContainer: {
-    marginBottom: 15,
+    ...commonStyles.fieldContainer,
   },
   label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-    fontWeight: '600',
+    ...commonStyles.label,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    backgroundColor: '#fff',
+    ...commonStyles.input,
   },
   switchRow: {
     flexDirection: 'row',
@@ -131,13 +124,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#00b894',
-    padding: 15,
-    borderRadius: 6,
-    alignItems: 'center',
+    ...commonStyles.button,
   },
   buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    ...commonStyles.buttonText,
   },
 });

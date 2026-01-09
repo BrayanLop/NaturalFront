@@ -12,22 +12,18 @@ import {
     View
 } from 'react-native';
 import { api } from '../../api/api';
-
-// Datos flexibles para no romper en caso de cambios del backend
-export type HistorialLiquidacion = {
-  personaId: number;
-  nombrePersona: string;
-  fechaLiquidacion: string;
-  totalPagado: number;
-};
-
-const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
+import { HistorialLiquidacion } from '../../api/modelos/contabilidad';
+import { Persona } from '../../api/modelos/persona';
+import { COLORS } from '@/constants/theme';
+import { formatDate, formatCurrency, toDateInputValue } from '@/utils/formatters';
+import { logger } from '@/utils/logger';
+import { isTrabajador } from '@/utils/roles';
 
 export default function HistoricoLiquidaciones() {
   const { usuario } = useAuth();
   const [historial, setHistorial] = useState<HistorialLiquidacion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [personas, setPersonas] = useState<{ id: number; nombre: string; apellido?: string }[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaSeleccionada, setPersonaSeleccionada] = useState<number | undefined>(undefined);
   const [personaModal, setPersonaModal] = useState(false);
   const [fechaDesde, setFechaDesde] = useState(() => {
@@ -38,13 +34,13 @@ export default function HistoricoLiquidaciones() {
   });
   const [fechaHasta, setFechaHasta] = useState(() => toDateInputValue(new Date()));
   const personaId = useMemo(() => {
-    if (usuario?.rol === '02') return usuario.id;
+    if (isTrabajador(usuario?.rol)) return usuario.id;
     return undefined;
   }, [usuario]);
 
   const isWeb = Platform.OS === 'web';
 
-  const esRol02 = usuario?.rol === '02' || usuario?.rol === '2';
+  const esRol02 = isTrabajador(usuario?.rol);
 
   const cargarHistorial = async () => {
     setLoading(true);
@@ -61,7 +57,7 @@ export default function HistoricoLiquidaciones() {
       });
       setHistorial(response.data || []);
     } catch (error) {
-      console.error('❌ Error al cargar historial:', error);
+      logger.error('Error al cargar historial:', error);
     } finally {
       setLoading(false);
     }
@@ -79,20 +75,11 @@ export default function HistoricoLiquidaciones() {
         const res = await api.get('Persona/Obtener');
         setPersonas(res.data || []);
       } catch (error) {
-        console.error('❌ Error al cargar personas:', error);
+        logger.error('Error al cargar personas:', error);
       }
     };
     cargarPersonas();
   }, [esRol02]);
-
-  const formatFecha = (valor: string) => {
-    const date = new Date(valor);
-    return date.toLocaleDateString('es-CO');
-  };
-
-  const formatMonto = (valor: number) => {
-    return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-  };
 
   const totalPagado = useMemo(
     () => historial.reduce((acc, item) => acc + (item.totalPagado || 0), 0),
@@ -169,7 +156,7 @@ export default function HistoricoLiquidaciones() {
 
       <View style={styles.resumen}>
         <Text style={styles.resumenLabel}>Total pagado en rango</Text>
-        <Text style={styles.resumenMonto}>{formatMonto(totalPagado)}</Text>
+        <Text style={styles.resumenMonto}>{formatCurrency(totalPagado)}</Text>
       </View>
 
       {!isWeb && pickerVisible && (
@@ -218,8 +205,8 @@ export default function HistoricoLiquidaciones() {
           renderItem={({ item }) => (
             <View style={styles.card}>
               <Text style={styles.persona}>{item.nombrePersona}</Text>
-              <Text style={styles.fecha}>📅 {formatFecha(item.fechaLiquidacion)}</Text>
-              <Text style={styles.total}>💵 {formatMonto(item.totalPagado)}</Text>
+              <Text style={styles.fecha}>📅 {formatDate(item.fechaLiquidacion)}</Text>
+              <Text style={styles.total}>💵 {formatCurrency(item.totalPagado)}</Text>
             </View>
           )}
           columnWrapperStyle={styles.columnWrapper}

@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -11,10 +10,14 @@ import {
   View
 } from 'react-native';
 import { api } from '../../api/api';
+import { Servicio } from '../../api/modelos/servicio';
+import { COLORS, commonStyles } from '@/constants/theme';
+import { formatCurrency } from '@/utils/formatters';
+import { logger, handleApiError } from '@/utils/logger';
 
 export default function ListaServicios() {
   const router = useRouter();
-  const [servicios, setServicios] = useState<any[]>([]);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
   const [loading, setLoading] = useState(false);
 
   const cargarServicios = async () => {
@@ -23,8 +26,7 @@ export default function ListaServicios() {
       const response = await api.get('/Servicio/Obtener');
       setServicios(response.data);
     } catch (error) {
-      console.error('Error al cargar servicios:', error);
-      Alert.alert('Error', 'No se pudieron cargar los servicios');
+      handleApiError(error);
     } finally {
       setLoading(false);
     }
@@ -36,14 +38,10 @@ export default function ListaServicios() {
     }, [])
   );
 
-  const formatearPesos = (valor: number) => {
-    return `$${valor.toLocaleString('es-CO')}`;
-  };
-
   return (
     <View style={styles.container}>
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       ) : (
         <FlatList
           data={servicios}
@@ -56,7 +54,7 @@ export default function ListaServicios() {
               }
             >
               <Text style={styles.nombre}>{item.nombre}</Text>
-              <Text>💰 {formatearPesos(item.precio)}</Text>
+              <Text>💰 {formatCurrency(item.precio)}</Text>
               <Text>{item.disponible ? '✅ Disponible' : '❌ No disponible'}</Text>
             </TouchableOpacity>
           )}
@@ -75,14 +73,14 @@ export default function ListaServicios() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.surface },
   item: {
     padding: 15,
     borderBottomWidth: 1,
-    borderColor: '#ccc',
+    borderColor: COLORS.border,
     marginBottom: 10,
     borderRadius: 6,
-    backgroundColor: '#f1f2f6',
+    backgroundColor: COLORS.background,
   },
   nombre: {
     fontSize: 18,
@@ -91,13 +89,13 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 20,
-    backgroundColor: '#00b894',
+    backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   addText: {
-    color: 'white',
+    color: COLORS.white,
     fontWeight: 'bold',
   },
 });

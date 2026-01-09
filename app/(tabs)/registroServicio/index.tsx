@@ -3,7 +3,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Platform,
   ScrollView,
@@ -14,13 +13,19 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { RegistroServicio } from '../../api/modelos/registroServicio';
+import { Persona } from '../../api/modelos/persona';
+import { COLORS, commonStyles } from '@/constants/theme';
+import { formatDateTime } from '@/utils/formatters';
+import { logger, showError, showSuccess, showConfirm } from '@/utils/logger';
+import { isAdmin } from '@/utils/roles';
 
 export default function ListaRegistros() {
   const router = useRouter();
   const { usuario } = useAuth();
-  const [registros, setRegistros] = useState<any[]>([]);
+  const [registros, setRegistros] = useState<RegistroServicio[]>([]);
   const [loading, setLoading] = useState(false);
-  const [personas, setPersonas] = useState<{ id: number; nombre: string; apellido?: string }[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaFiltro, setPersonaFiltro] = useState<string>('');
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
@@ -31,14 +36,14 @@ export default function ListaRegistros() {
   const [fechaInicio, setFechaInicio] = useState<string>(fechaActual);
   const [fechaFin, setFechaFin] = useState<string>(fechaActual);
 
-  const esRol01 = usuario?.rol === '01' || usuario?.rol === '1';
+  const esRol01 = isAdmin(usuario?.rol);
 
   useEffect(() => {
     if (!esRol01) return;
     api
       .get('/Persona/Obtener')
       .then((res) => setPersonas(res.data || []))
-      .catch((err) => console.error('Error al cargar personas:', err));
+      .catch((err) => logger.error('Error al cargar personas:', err));
   }, [esRol01]);
 
   const cargarDatos = useCallback(async () => {
@@ -51,16 +56,14 @@ export default function ListaRegistros() {
       if (fechaInicio) params.fechaInicio = `${fechaInicio}T00:00:00`;
       if (fechaFin) params.fechaFin = `${fechaFin}T23:59:59`;
       
-      console.log('📅 Parámetros enviados:', params);
-      
       const resRegistros = await api.get('/RegistroServicio/ObtenerRegistros', { params });
 
       if (Array.isArray(resRegistros.data)) {
         setRegistros(resRegistros.data);
       }
     } catch (error) {
-      console.error('❌ Error al cargar datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los registros');
+      logger.error('Error al cargar datos:', error);
+      showError('No se pudieron cargar los registros');
     } finally {
       setLoading(false);
     }
@@ -120,23 +123,8 @@ export default function ListaRegistros() {
   const handleConfirmarRegistro = async (registroServicioId: number) => {
     if (!esRol01) return;
 
-    let confirmar = false;
-    if (Platform.OS === 'web') {
-      confirmar = window.confirm('¿Desea confirmar este registro?');
-      if (!confirmar) return;
-    } else {
-      confirmar = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          'Confirmar registro',
-          '¿Desea confirmar este registro?',
-          [
-            { text: 'Cancelar', onPress: () => resolve(false), style: 'cancel' },
-            { text: 'Confirmar', onPress: () => resolve(true), style: 'default' },
-          ]
-        );
-      });
-      if (!confirmar) return;
-    }
+    const confirmar = await showConfirm('¿Desea confirmar este registro?', 'Confirmar registro');
+    if (!confirmar) return;
 
     setConfirmandoId(registroServicioId);
     try {
@@ -146,21 +134,11 @@ export default function ListaRegistros() {
         { headers: { empresaId: '1' } }
       );
 
-      if (Platform.OS === 'web') {
-        window.alert('Registro confirmado correctamente.');
-      } else {
-        Alert.alert('Éxito', 'Registro confirmado correctamente.');
-      }
-
-      // Recargar datos
+      showSuccess('Registro confirmado correctamente');
       cargarDatos();
     } catch (e: any) {
-      console.error('❌ Error confirmando registro:', e);
-      if (Platform.OS === 'web') {
-        window.alert(e?.response?.data?.message || 'No se pudo confirmar el registro.');
-      } else {
-        Alert.alert('Error', e?.response?.data?.message || 'No se pudo confirmar el registro.');
-      }
+      logger.error('Error confirmando registro:', e);
+      showError(e?.response?.data?.message || 'No se pudo confirmar el registro');
     } finally {
       setConfirmandoId(null);
     }
@@ -187,7 +165,7 @@ export default function ListaRegistros() {
       <View style={styles.itemContent}>
         <View style={{ flex: 1 }}>
           <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
-          <Text>🕒 Fecha: {item.fechaServicio ? new Date(item.fechaServicio).toLocaleString() : 'Sin fecha'}</Text>
+          <Text>🕒 Fecha: {item.fechaServicio ? formatDateTime(item.fechaServicio) : 'Sin fecha'}</Text>
         </View>
         
         {esRol01 && !item.confirmado && !item.liquidado && (
@@ -381,11 +359,13 @@ export default function ListaRegistros() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
+  container: { 
+    ...commonStyles.container,
+  },
 
   tableContainer: {
     marginBottom: 20,
-    backgroundColor: '#dfe6e9',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 8,
     padding: 12,
   },
@@ -393,7 +373,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#2d3436',
+    color: COLORS.text,
   },
   row: {
     flexDirection: 'row',

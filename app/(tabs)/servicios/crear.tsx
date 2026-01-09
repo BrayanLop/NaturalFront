@@ -5,12 +5,12 @@ import { logger, showError, showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';

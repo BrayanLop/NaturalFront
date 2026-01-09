@@ -69,13 +69,41 @@ export async function showConfirm(
   }
 }
 
-// Manejo de errores de API
+// Manejo de errores de API con códigos HTTP específicos
 export function handleApiError(error: any): void {
   logger.error('API Error:', error);
   
-  const message = error?.response?.data?.message || 
-                  error?.message || 
-                  'Ocurrió un error inesperado';
+  const status = error?.response?.status;
+  const message = error?.response?.data?.message || error?.message;
   
-  showError(message);
+  // Mensajes específicos por código HTTP
+  switch (status) {
+    case 400:
+      showError(message || 'Solicitud inválida. Verifica los datos ingresados.', 'Error de validación');
+      break;
+    case 401:
+      showError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'Sesión expirada');
+      break;
+    case 403:
+      showError('No tienes permisos para realizar esta acción.', 'Acceso denegado');
+      break;
+    case 404:
+      showError(message || 'El recurso solicitado no fue encontrado.', 'No encontrado');
+      break;
+    case 422:
+      showError(message || 'Datos inválidos. Verifica la información.', 'Error de validación');
+      break;
+    case 500:
+      showError('Error interno del servidor. Intenta nuevamente más tarde.', 'Error del servidor');
+      break;
+    case 503:
+      showError('El servicio no está disponible. Intenta más tarde.', 'Servicio no disponible');
+      break;
+    default:
+      if (!status) {
+        showError('No se pudo conectar al servidor. Verifica tu conexión a internet.', 'Error de conexión');
+      } else {
+        showError(message || 'Ocurrió un error inesperado. Intenta nuevamente.', 'Error');
+      }
+  }
 }

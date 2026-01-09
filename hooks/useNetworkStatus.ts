@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { logger, showError } from '@/utils/logger';
+import { useEffect, useState } from 'react';
 
 export interface NetworkStatus {
   isConnected: boolean;

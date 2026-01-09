@@ -1,5 +1,5 @@
-import { AxiosError, AxiosRequestConfig } from 'axios';
 import { logger } from '@/utils/logger';
+import { AxiosError } from 'axios';
 
 interface RetryConfig {
   maxRetries?: number;

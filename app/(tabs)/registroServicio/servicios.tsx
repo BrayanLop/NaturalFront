@@ -23,28 +23,19 @@ export default function RegistroServicio() {
     );
   };
 
-  const confirmar = async () => {
+  const continuar = () => {
     if (!persona || seleccionados.length === 0) {
       Alert.alert('Faltan datos', 'Debes seleccionar al menos un servicio');
       return;
     }
 
-    const esRol01 = usuario?.rol === '01' || usuario?.rol === '1';
-
-    const registros = seleccionados.map((servicioId) => ({
-      personaId: parseInt(persona as string),
-      servicioId: parseInt(servicioId),
-      confirmado: esRol01,
-    }));
-
-    try {
-      await api.post('/RegistroServicio/Guardar', registros);
-      Alert.alert('Éxito', 'Servicios registrados correctamente');
-      router.replace('/(tabs)/registroServicio'); // ✅ Regresa al listado
-    } catch (error) {
-      console.error('Error al guardar registros:', error);
-      Alert.alert('Error', 'No se pudieron guardar los servicios');
-    }
+    router.push({
+      pathname: '/(tabs)/registroServicio/formaPago',
+      params: { 
+        persona: persona as string,
+        servicios: JSON.stringify(seleccionados),
+      },
+    });
   };
 
   return (
@@ -65,8 +56,8 @@ export default function RegistroServicio() {
         )}
       />
 
-      <TouchableOpacity style={styles.button} onPress={confirmar}>
-        <Text style={styles.buttonText}>Confirmar</Text>
+      <TouchableOpacity style={styles.button} onPress={continuar}>
+        <Text style={styles.buttonText}>Continuar</Text>
       </TouchableOpacity>
     </View>
   );

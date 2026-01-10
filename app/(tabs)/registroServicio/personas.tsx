@@ -16,7 +16,7 @@ export default function SeleccionarPersona() {
   const seleccionarPersona = (persona: any) => {
     router.push({
       pathname: '/(tabs)/registroServicio/servicios',
-      params: { persona: persona.id.toString() }, // ✅ Usa el ID
+      params: { persona: persona.id.toString() },
     });
   };
 

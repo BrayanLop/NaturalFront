@@ -28,6 +28,7 @@ export default function ListaRegistros() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaFiltro, setPersonaFiltro] = useState<string>('');
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados'>('todos');
+  const [formaPagoFiltro, setFormaPagoFiltro] = useState<'todos' | 'T' | 'E'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
   
   // Fechas por defecto: día actual
@@ -59,6 +60,7 @@ export default function ListaRegistros() {
       const resRegistros = await api.get('/RegistroServicio/ObtenerRegistros', { params });
 
       if (Array.isArray(resRegistros.data)) {
+
         setRegistros(resRegistros.data);
       }
     } catch (error) {
@@ -100,6 +102,11 @@ export default function ListaRegistros() {
         break;
     }
 
+    // Filtro de forma de pago
+    if (formaPagoFiltro !== 'todos') {
+      if (item.formaPago !== formaPagoFiltro) return false;
+    }
+
     return true;
     });
     
@@ -109,24 +116,41 @@ export default function ListaRegistros() {
       const fechaB = new Date(b.fechaServicio).getTime();
       return fechaB - fechaA; // Descendente (más reciente primero)
     });
-  }, [registros, esRol01, personaFiltro, estadoFiltro]);
+  }, [registros, esRol01, personaFiltro, estadoFiltro, formaPagoFiltro]);
 
   // Calcular consolidado basado en registros filtrados
   const consolidado = useMemo(() => {
-    const consolidadoMap = new Map<number, { nombrePersona: string; cantidadServicios: number }>();
+    const consolidadoMap = new Map<number, { 
+      nombrePersona: string; 
+      servicios: Map<string, { nombreServicio: string; cantidad: number }>
+    }>();
     
     registrosFiltrados.forEach((registro: any) => {
       const personaId = registro.personaId;
       const nombrePersona = registro.nombrePersona || 'Sin nombre';
+      const nombreServicio = registro.nombreServicio || 'Sin servicio';
       
-      if (consolidadoMap.has(personaId)) {
-        consolidadoMap.get(personaId)!.cantidadServicios++;
+      if (!consolidadoMap.has(personaId)) {
+        consolidadoMap.set(personaId, { 
+          nombrePersona, 
+          servicios: new Map() 
+        });
+      }
+      
+      const persona = consolidadoMap.get(personaId)!;
+      const servicioKey = nombreServicio;
+      
+      if (persona.servicios.has(servicioKey)) {
+        persona.servicios.get(servicioKey)!.cantidad++;
       } else {
-        consolidadoMap.set(personaId, { nombrePersona, cantidadServicios: 1 });
+        persona.servicios.set(servicioKey, { nombreServicio, cantidad: 1 });
       }
     });
     
-    return Array.from(consolidadoMap.values());
+    return Array.from(consolidadoMap.values()).map(item => ({
+      nombrePersona: item.nombrePersona,
+      servicios: Array.from(item.servicios.values())
+    }));
   }, [registrosFiltrados]);
 
   const handleConfirmarRegistro = useCallback(async (registroServicioId: number) => {
@@ -175,6 +199,7 @@ export default function ListaRegistros() {
         <View style={{ flex: 1 }}>
           <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
           <Text>🕒 Fecha: {item.fechaServicio ? formatDateTime(item.fechaServicio) : 'Sin fecha'}</Text>
+          <Text>💳 Forma de pago: {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}</Text>
         </View>
         
         {esRol01 && !item.confirmado && !item.liquidado && (
@@ -200,65 +225,68 @@ export default function ListaRegistros() {
     <View style={styles.container}>
       <ScrollView>
         <View style={styles.filtros}>
-          {/* Filtros de fecha */}
-          <View style={{ marginBottom: 10 }}>
-            <Text style={styles.filtroLabel}>Rango de fechas</Text>
-            <View style={styles.fechasRow}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.fechaLabel}>Desde</Text>
-                {Platform.OS === 'web' ? (
-                  <input
-                    type="date"
-                    value={fechaInicio}
-                    onChange={(e: any) => setFechaInicio(e.target.value)}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: '#b2bec3',
-                      borderRadius: 6,
-                      padding: 8,
-                      backgroundColor: '#fff',
-                      fontSize: 14,
-                      width: '100%',
-                    }}
-                  />
-                ) : (
-                  <TextInput
-                    style={styles.inputFecha}
-                    value={fechaInicio}
-                    onChangeText={setFechaInicio}
-                    placeholder="YYYY-MM-DD"
-                  />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fechaLabel}>Hasta</Text>
-                {Platform.OS === 'web' ? (
-                  <input
-                    type="date"
-                    value={fechaFin}
-                    onChange={(e: any) => setFechaFin(e.target.value)}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: '#b2bec3',
-                      borderRadius: 6,
-                      padding: 8,
-                      backgroundColor: '#fff',
-                      fontSize: 14,
-                      width: '100%',
-                    }}
-                  />
-                ) : (
-                  <TextInput
-                    style={styles.inputFecha}
-                    value={fechaFin}
-                    onChangeText={setFechaFin}
-                    placeholder="YYYY-MM-DD"
-                  />
-                )}
+          {/* Fila superior: Fechas y botón buscar */}
+          <View style={styles.filtrosTopRow}>
+            <View style={styles.fechasContainer}>
+              <Text style={styles.filtroLabel}>Rango de fechas</Text>
+              <View style={styles.fechasRow}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.fechaLabel}>Desde</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={fechaInicio}
+                      onChange={(e: any) => setFechaInicio(e.target.value)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#b2bec3',
+                        borderRadius: 6,
+                        padding: 8,
+                        backgroundColor: '#fff',
+                        fontSize: 14,
+                        width: '100%',
+                      }}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.inputFecha}
+                      value={fechaInicio}
+                      onChangeText={setFechaInicio}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fechaLabel}>Hasta</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e: any) => setFechaFin(e.target.value)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#b2bec3',
+                        borderRadius: 6,
+                        padding: 8,
+                        backgroundColor: '#fff',
+                        fontSize: 14,
+                        width: '100%',
+                      }}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.inputFecha}
+                      value={fechaFin}
+                      onChangeText={setFechaFin}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  )}
+                </View>
               </View>
             </View>
+            
             <TouchableOpacity
-              style={styles.btnBuscar}
+              style={styles.btnBuscarCompact}
               onPress={cargarDatos}
               disabled={loading}
             >
@@ -267,49 +295,77 @@ export default function ListaRegistros() {
               </Text>
             </TouchableOpacity>
           </View>
-          
-          {esRol01 && (
-            <View style={{ marginBottom: 10 }}>
-              <Text style={styles.filtroLabel}>Persona</Text>
+
+          {/* Fila inferior: Filtros de chips en dos columnas */}
+          <View style={styles.filtrosBottomRow}>
+            {/* Columna izquierda */}
+            <View style={styles.filtroColumn}>
+              {esRol01 && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={styles.filtroLabel}>Persona</Text>
+                  <View style={styles.chipsRow}>
+                    <TouchableOpacity
+                      style={[styles.chip, !personaFiltro && styles.chipActive]}
+                      onPress={() => setPersonaFiltro('')}
+                    >
+                      <Text style={[styles.chipText, !personaFiltro && styles.chipTextActive]}>Todas</Text>
+                    </TouchableOpacity>
+                    {personas.slice(0, 6).map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[styles.chip, personaFiltro === String(p.id) && styles.chipActive]}
+                        onPress={() => setPersonaFiltro(String(p.id))}
+                      >
+                        <Text style={[styles.chipText, personaFiltro === String(p.id) && styles.chipTextActive]}>
+                          {p.nombre}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View>
+                <Text style={styles.filtroLabel}>Estado</Text>
+                <View style={styles.chipsRow}>
+                  {[
+                    { key: 'todos', label: 'Todos' },
+                    { key: 'liquidados', label: 'Liquidados' },
+                    { key: 'confirmados', label: 'Confirmados' },
+                    { key: 'noLiquidados', label: 'No liquidados' },
+                    { key: 'noConfirmados', label: 'No confirmados' },
+                  ].map((opt) => (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.chip, estadoFiltro === opt.key && styles.chipActive]}
+                      onPress={() => setEstadoFiltro(opt.key as any)}
+                    >
+                      <Text style={[styles.chipText, estadoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Columna derecha */}
+            <View style={styles.filtroColumn}>
+              <Text style={styles.filtroLabel}>Forma de pago</Text>
               <View style={styles.chipsRow}>
-                <TouchableOpacity
-                  style={[styles.chip, !personaFiltro && styles.chipActive]}
-                  onPress={() => setPersonaFiltro('')}
-                >
-                  <Text style={[styles.chipText, !personaFiltro && styles.chipTextActive]}>Todas</Text>
-                </TouchableOpacity>
-                {personas.slice(0, 6).map((p) => (
+                {[
+                  { key: 'todos', label: 'Todas' },
+                  { key: 'T', label: 'Transferencia' },
+                  { key: 'E', label: 'Efectivo' },
+                ].map((opt) => (
                   <TouchableOpacity
-                    key={p.id}
-                    style={[styles.chip, personaFiltro === String(p.id) && styles.chipActive]}
-                    onPress={() => setPersonaFiltro(String(p.id))}
+                    key={opt.key}
+                    style={[styles.chip, formaPagoFiltro === opt.key && styles.chipActive]}
+                    onPress={() => setFormaPagoFiltro(opt.key as any)}
                   >
-                    <Text style={[styles.chipText, personaFiltro === String(p.id) && styles.chipTextActive]}>
-                      {p.nombre}
-                    </Text>
+                    <Text style={[styles.chipText, formaPagoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-          )}
-
-          <Text style={styles.filtroLabel}>Estado</Text>
-          <View style={styles.chipsRow}>
-            {[
-              { key: 'todos', label: 'Todos' },
-              { key: 'liquidados', label: 'Liquidados' },
-              { key: 'confirmados', label: 'Confirmados' },
-              { key: 'noLiquidados', label: 'No liquidados' },
-              { key: 'noConfirmados', label: 'No confirmados' },
-            ].map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.chip, estadoFiltro === opt.key && styles.chipActive]}
-                onPress={() => setEstadoFiltro(opt.key as any)}
-              >
-                <Text style={[styles.chipText, estadoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -328,12 +384,25 @@ export default function ListaRegistros() {
                   <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay registros disponibles</Text>
                 </View>
               ) : (
-                consolidado.map((item, index) => (
-                  <View key={index} style={styles.row}>
-                    <Text style={styles.cellNombre}>{item.nombrePersona}</Text>
-                    <Text style={styles.cellCantidad}>{item.cantidadServicios} servicio(s)</Text>
-                  </View>
-                ))
+                consolidado.map((item, index) => {
+                  const totalServicios = item.servicios.reduce((sum, s) => sum + s.cantidad, 0);
+                  return (
+                    <View key={index} style={styles.consolidadoPersona}>
+                      <View style={styles.consolidadoHeader}>
+                        <Text style={styles.consolidadoNombre}>🧑 {item.nombrePersona}</Text>
+                        <Text style={styles.consolidadoTotal}>{totalServicios} servicio(s)</Text>
+                      </View>
+                      <View style={styles.consolidadoServicios}>
+                        {item.servicios.map((servicio, sIndex) => (
+                          <View key={sIndex} style={styles.consolidadoServicioItem}>
+                            <Text style={styles.consolidadoServicioNombre}>• {servicio.nombreServicio}</Text>
+                            <Text style={styles.consolidadoServicioCantidad}>{servicio.cantidad}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })
               )}
             </View>
 
@@ -403,6 +472,53 @@ const styles = StyleSheet.create({
   },
   cellNombre: { fontSize: 14, color: '#2d3436' },
   cellCantidad: { fontSize: 14, fontWeight: '600', color: '#0984e3' },
+  consolidadoPersona: {
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  consolidadoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  consolidadoNombre: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2d3436',
+  },
+  consolidadoTotal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636e72',
+  },
+  consolidadoServicios: {
+    paddingLeft: 12,
+  },
+  consolidadoServicioItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 3,
+    marginBottom: 3,
+  },
+  consolidadoServicioNombre: {
+    fontSize: 12,
+    color: '#636e72',
+    flex: 1,
+  },
+  consolidadoServicioCantidad: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#00b894',
+    minWidth: 25,
+    textAlign: 'right',
+  },
 
   item: {
     backgroundColor: '#dfe6e9',
@@ -460,6 +576,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#dfe6e9',
   },
+  filtrosTopRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    alignItems: 'flex-end',
+  },
+  filtrosBottomRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  fechasContainer: {
+    flex: 1,
+  },
+  filtroColumn: {
+    flex: 1,
+    minWidth: 200,
+  },
   filtroLabel: {
     fontWeight: '600',
     marginBottom: 6,
@@ -488,6 +621,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     marginTop: 10,
+  },
+  btnBuscarCompact: {
+    backgroundColor: '#00b894',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
   },
   btnBuscarText: {
     color: '#fff',

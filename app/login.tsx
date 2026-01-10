@@ -4,17 +4,17 @@ import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
@@ -82,11 +82,13 @@ export default function Login() {
         Password: hashBase64,
       });
 
+      // El backend devuelve: { token, expiraEn, persona: { id, nombre, empresaId, rol } }
       const datosUsuario = {
-        id: res.data.id,
-        nombre: res.data.nombre,
-        empresaId: res.data.empresaId,
-        rol: res.data.rol
+        id: res.data.persona.id,
+        nombre: res.data.persona.nombre,
+        empresaId: res.data.persona.empresaId,
+        rol: res.data.persona.rol,
+        token: res.data.token // ← Token JWT del backend
       };
 
       console.log('Datos del login:', res.data);

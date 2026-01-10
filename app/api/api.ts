@@ -18,9 +18,18 @@ export const api = axios.create({
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const empresaId = await AsyncStorage.getItem('empresaId');
+    const token = await AsyncStorage.getItem('token');
     
     if (empresaId) {
       config.headers['empresaId'] = empresaId;
+    }
+    
+    // Agregar token JWT si existe
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+      logger.log(`[API] Token incluido: ${token.substring(0, 20)}...`);
+    } else {
+      logger.warn('[API] Sin token JWT');
     }
     
     logger.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);

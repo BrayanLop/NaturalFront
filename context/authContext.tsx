@@ -6,7 +6,8 @@ type Usuario = {
   id: number;
   nombre: string;
   empresaId: number;
-  rol: string
+  rol: string;
+  token?: string; // Token JWT del backend
 };
 
 type AuthContextType = {
@@ -38,6 +39,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem('empresaId', String(datos.empresaId));
     await AsyncStorage.setItem('rol', String(datos.rol));
     await AsyncStorage.setItem('personaId', String(datos.id));
+    
+    // Guardar token JWT si existe
+    if (datos.token) {
+      await AsyncStorage.setItem('token', datos.token);
+    }
   };
 
   const logout = async () => {
@@ -46,6 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem('empresaId');
     await AsyncStorage.removeItem('rol');
     await AsyncStorage.removeItem('personaId');
+    await AsyncStorage.removeItem('token');
     try {
       router.replace('/login');
     } catch (e) {

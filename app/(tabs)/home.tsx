@@ -110,7 +110,7 @@ export default function Home() {
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>Salir</Text>
+        <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
     </View>
   );

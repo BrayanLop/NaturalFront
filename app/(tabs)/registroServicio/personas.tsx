@@ -1,3 +1,4 @@
+import BackButton from '@/components/BackButton';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,8 +21,17 @@ export default function SeleccionarPersona() {
     });
   };
 
+  const volverAtras = () => {
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <BackButton onPress={volverAtras} color="#2d3436" />
+        <Text style={styles.title}>Seleccionar persona</Text>
+      </View>
+      
       <FlatList
         data={personas}
         keyExtractor={(item) => item.id.toString()}
@@ -37,7 +47,17 @@ export default function SeleccionarPersona() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, marginBottom: 10 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  title: { 
+    fontSize: 20, 
+    fontWeight: 'bold',
+    flex: 1,
+  },
   item: {
     backgroundColor: '#dfe6e9',
     padding: 15,

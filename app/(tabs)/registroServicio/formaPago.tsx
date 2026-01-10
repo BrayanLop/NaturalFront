@@ -1,4 +1,5 @@
 import LoadingView from '@/components/LoadingView';
+import BackButton from '@/components/BackButton';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
@@ -92,9 +93,16 @@ export default function ResumenYFormaPago() {
 
   const total = servicios.reduce((sum, s) => sum + s.precio, 0);
 
+  const volverAServicios = () => {
+    router.back();
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Resumen del registro</Text>
+      <View style={styles.header}>
+        <BackButton onPress={volverAServicios} color="#2d3436" />
+        <Text style={styles.title}>Resumen del registro</Text>
+      </View>
 
       {/* Layout en dos columnas principales */}
       <View style={styles.mainRow}>
@@ -178,12 +186,17 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: COLORS.surface,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 24,
-    textAlign: 'center',
+    flex: 1,
   },
   section: {
     marginBottom: 16,

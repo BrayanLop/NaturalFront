@@ -4,11 +4,21 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function BackButton() {
+interface BackButtonProps {
+  onPress?: () => void;
+  color?: string;
+}
+
+export default function BackButton({ onPress, color = '#fff' }: BackButtonProps) {
   const navigation: any = useNavigation();
   const router = useRouter();
 
   const handlePress = () => {
+    if (onPress) {
+      onPress();
+      return;
+    }
+
     try {
       if (navigation?.canGoBack && navigation.canGoBack()) {
         navigation.goBack();
@@ -23,15 +33,22 @@ export default function BackButton() {
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} style={styles.button} accessibilityLabel="Volver">
-      <Ionicons name="chevron-back" size={22} color="#fff" />
+    <TouchableOpacity 
+      onPress={handlePress} 
+      style={[styles.button, color !== '#fff' && styles.buttonDark]} 
+      accessibilityLabel="Volver"
+    >
+      <Ionicons name="chevron-back" size={24} color={color} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    marginLeft: 12,
-    padding: 6,
+    padding: 8,
+  },
+  buttonDark: {
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
 });

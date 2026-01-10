@@ -292,7 +292,7 @@ const handleLiquidar = async () => {
 
               {item.servicios.map((s, i) => (
                 <View key={i} style={styles.servicioItem}>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.servicioContent}>
                     <Text style={styles.hora}>{formatHora(s.hora)} ⏰</Text>
                     <Text style={styles.nombre}>{s.nombreServicio}</Text>
                     <Text style={styles.valor}>💰 {formatMonto(s.valorTrabajador)}</Text>
@@ -340,14 +340,16 @@ const styles = StyleSheet.create({
     color: "#6c757d",
   },
   card: {
-    backgroundColor: "white",
+    backgroundColor: "#e9ecef",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: "#ced4da",
   },
   fecha: {
     fontSize: 18,
@@ -363,7 +365,15 @@ const styles = StyleSheet.create({
   servicioItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#0d6efd",
+  },
+  servicioContent: {
+    flex: 1,
   },
   hora: {
     fontSize: 14,

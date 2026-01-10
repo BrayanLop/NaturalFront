@@ -1,14 +1,15 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { formatCurrency } from '@/utils/formatters';
 
 type ServicioRealizado = {
   nombre: string;
@@ -70,20 +71,38 @@ export default function PagosPorPersona() {
             >
               <TouchableOpacity>
                 <View style={styles.card}>
-                  <Text style={styles.nombre}>👤 {pago.nombrePersona}</Text>
-                  <View style={styles.totalesContainer}>
-                    <Text style={styles.monto}>
-                      💵 Total: ${pago.totalPagado.toFixed(0)}
-                    </Text>
-                    <Text style={styles.montoSinConfirmar}>
-                      ⏳ Sin confirmar: ${pago.totalSinConfirmar.toFixed(0)}
-                    </Text>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.nombre}>🧑 {pago.nombrePersona}</Text>
+                    {pago.totalSinConfirmar > 0 && (
+                      <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>Pendiente</Text>
+                      </View>
+                    )}
                   </View>
-                  {pago.servicios.map((servicio, idx) => (
-                    <Text key={idx} style={styles.servicio}>
-                      - {servicio.nombre}: {servicio.cantidad}
-                    </Text>
-                  ))}
+                  
+                  <View style={styles.totalesContainer}>
+                    <View style={styles.totalBox}>
+                      <Text style={styles.totalLabel}>Total</Text>
+                      <Text style={styles.totalMonto}>{formatCurrency(pago.totalPagado)}</Text>
+                    </View>
+                    {pago.totalSinConfirmar > 0 && (
+                      <View style={styles.sinConfirmarBox}>
+                        <Text style={styles.sinConfirmarLabel}>Sin confirmar</Text>
+                        <Text style={styles.sinConfirmarMonto}>{formatCurrency(pago.totalSinConfirmar)}</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  <View style={styles.serviciosContainer}>
+                    <Text style={styles.serviciosTitle}>Servicios realizados</Text>
+                    {pago.servicios.map((servicio, idx) => (
+                      <View key={idx} style={styles.servicioItem}>
+                        <Text style={styles.servicioPunto}>•</Text>
+                        <Text style={styles.servicioNombre}>{servicio.nombre}</Text>
+                        <Text style={styles.servicioCantidad}>{servicio.cantidad}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               </TouchableOpacity>
           </Link>))}
@@ -102,14 +121,123 @@ const styles = StyleSheet.create({
   },
   historicoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   card: {
-    backgroundColor: '#dfe6e9',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: '#e9ecef',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  nombre: { fontSize: 16, fontWeight: 'bold' },
-  totalesContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, gap: 10 },
-  monto: { fontSize: 15, color: '#2d3436', flex: 1 },
-  montoSinConfirmar: { fontSize: 15, color: '#e17055', flex: 1, fontWeight: '600' },
-  servicio: { fontSize: 14, color: '#636e72' },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  nombre: { 
+    fontSize: 16, 
+    fontWeight: 'bold',
+    color: '#2d3436',
+    flex: 1,
+  },
+  pendingBadge: {
+    backgroundColor: '#fff3cd',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffc107',
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#856404',
+  },
+  totalesContainer: { 
+    flexDirection: 'row', 
+    gap: 8,
+    marginBottom: 12,
+  },
+  totalBox: {
+    flex: 1,
+    backgroundColor: '#e8f8f2',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#00b894',
+  },
+  totalLabel: {
+    fontSize: 11,
+    color: '#636e72',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  totalMonto: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#00b894',
+  },
+  sinConfirmarBox: {
+    flex: 1,
+    backgroundColor: '#fff8e1',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ffc107',
+  },
+  sinConfirmarLabel: {
+    fontSize: 11,
+    color: '#636e72',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  sinConfirmarMonto: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#f39c12',
+  },
+  serviciosContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    paddingTop: 12,
+  },
+  serviciosTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636e72',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  servicioItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  servicioPunto: {
+    fontSize: 14,
+    color: '#00b894',
+    marginRight: 8,
+  },
+  servicioNombre: {
+    fontSize: 14,
+    color: '#2d3436',
+    flex: 1,
+  },
+  servicioCantidad: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00b894',
+    minWidth: 30,
+    textAlign: 'right',
+  },
 });

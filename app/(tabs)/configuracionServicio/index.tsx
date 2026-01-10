@@ -1,9 +1,12 @@
+import EmptyState from '@/components/EmptyState';
+import ListCard from '@/components/ListCard';
+import LoadingView from '@/components/LoadingView';
+import StatusBadge from '@/components/StatusBadge';
+import { COLORS } from '@/constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -33,7 +36,6 @@ export default function ListaConfiguraciones() {
       setConfiguraciones(response.data);
     } catch (error) {
       console.error('Error al cargar configuraciones:', error);
-      Alert.alert('Error', 'No se pudieron cargar las configuraciones');
     } finally {
       setLoading(false);
     }
@@ -45,38 +47,71 @@ export default function ListaConfiguraciones() {
     }, [])
   );
 
-  const renderItem = ({ item }: { item: ConfiguracionServicio }) => (
-    <TouchableOpacity
-      style={styles.item}
-      onPress={() =>
-        router.push({ pathname: '../configuracionServicio/[id]', params: { id: item.id } })
-      }
-    >
-      <Text style={styles.itemText}>⚙️ Servicio: {item.nombreServicio}</Text>
-      <Text style={styles.subText}>🏢 Empresa: {item.porcentajeEmpresa}%</Text>
-      <Text style={styles.subText}>👷 Trabajador: {item.porcentajeTrabajador}%</Text>
-      <Text style={styles.subText}>
-        {item.estado ? '✅' : '❌'} Estado: {item.estado ? 'Activo' : 'Inactivo'}
-      </Text>
-    </TouchableOpacity>
+  const handleNavegar = useCallback(
+    (id: number) => {
+      router.push({ pathname: '../configuracionServicio/[id]', params: { id } });
+    },
+    [router]
+  );
+
+  const handleCrear = useCallback(() => {
+    router.push('../configuracionServicio/crear');
+  }, [router]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ConfiguracionServicio }) => (
+      <ListCard
+        title={item.nombreServicio}
+        description={`🏢 Empresa: ${item.porcentajeEmpresa}% | 👷 Trabajador: ${item.porcentajeTrabajador}%`}
+        badges={
+          <StatusBadge
+            label={item.estado ? 'Activo' : 'Inactivo'}
+            type={item.estado ? 'disponible' : 'info'}
+          />
+        }
+        onPress={() => handleNavegar(item.id)}
+      />
+    ),
+    [handleNavegar]
+  );
+
+  const keyExtractor = useCallback((item: ConfiguracionServicio) => item.id.toString(), []);
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: 90,
+      offset: 90 * index,
+      index,
+    }),
+    []
+  );
+
+  const emptyComponent = useMemo(
+    () => <EmptyState message="No hay configuraciones registradas" icon="⚙️" subtitle="Comienza agregando una nueva configuración" />,
+    []
   );
 
   return (
     <View style={styles.container}>
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <LoadingView />
       ) : (
         <FlatList
           data={configuraciones}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
-          ListEmptyComponent={<Text>No hay configuraciones registradas.</Text>}
+          getItemLayout={getItemLayout}
+          ListEmptyComponent={emptyComponent}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
         />
       )}
 
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => router.push('../configuracionServicio/crear')}
+        onPress={handleCrear}
       >
         <Text style={styles.addText}>+ Agregar configuración</Text>
       </TouchableOpacity>
@@ -85,29 +120,16 @@ export default function ListaConfiguraciones() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-  },
-  itemText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  subText: {
-    fontSize: 14,
-    color: '#636e72',
-  },
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.surface },
   addButton: {
     marginTop: 20,
-    backgroundColor: '#00b894',
+    backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   addText: {
-    color: 'white',
+    color: COLORS.white,
     fontWeight: 'bold',
   },
 });

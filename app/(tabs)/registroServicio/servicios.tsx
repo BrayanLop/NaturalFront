@@ -1,3 +1,4 @@
+import BackButton from '@/components/BackButton';
 import { useAuth } from '@/context/authContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -38,8 +39,17 @@ export default function RegistroServicio() {
     });
   };
 
+  const volverAPersonas = () => {
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <BackButton onPress={volverAPersonas} color="#2d3436" />
+        <Text style={styles.title}>Seleccionar servicios</Text>
+      </View>
+      
       <FlatList
         data={servicios}
         keyExtractor={(item) => item.id.toString()}
@@ -65,7 +75,17 @@ export default function RegistroServicio() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, marginBottom: 10 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  title: { 
+    fontSize: 20, 
+    fontWeight: 'bold',
+    flex: 1,
+  },
   item: {
     backgroundColor: '#dfe6e9',
     padding: 15,

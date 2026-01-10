@@ -1,15 +1,16 @@
 import EmptyState from '@/components/EmptyState';
+import ListCard from '@/components/ListCard';
+import LoadingView from '@/components/LoadingView';
+import { COLORS } from '@/constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -37,7 +38,6 @@ export default function ListaPersonas() {
       setPersonas(response.data);
     } catch (error) {
       console.error('Error al cargar personas:', error);
-      Alert.alert('Error', 'No se pudieron cargar las personas');
     } finally {
       setLoading(false);
     }
@@ -63,13 +63,11 @@ export default function ListaPersonas() {
 
   const renderItem = useCallback(
     ({ item }: { item: Persona }) => (
-      <TouchableOpacity
-        style={styles.item}
+      <ListCard
+        title={`${item.nombre} ${item.apellido}`}
+        description={`📱 ${item.celular || 'Sin celular'}`}
         onPress={() => handleNavegar(item.id)}
-      >
-        <Text style={styles.itemText}>👤 {item.nombre} {item.apellido}</Text>
-        <Text style={styles.subText}>📱 {item.celular}</Text>
-      </TouchableOpacity>
+      />
     ),
     [handleNavegar]
   );
@@ -78,8 +76,8 @@ export default function ListaPersonas() {
 
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
-      length: 60,
-      offset: 60 * index,
+      length: 90,
+      offset: 90 * index,
       index,
     }),
     []
@@ -93,7 +91,7 @@ export default function ListaPersonas() {
   return (
     <View style={styles.container}>
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <LoadingView />
       ) : (
         <FlatList
           data={personas}
@@ -119,29 +117,16 @@ export default function ListaPersonas() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-  },
-  itemText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  subText: {
-    fontSize: 14,
-    color: '#636e72',
-  },
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.surface },
   addButton: {
     marginTop: 20,
-    backgroundColor: '#00b894',
+    backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   addText: {
-    color: 'white',
+    color: COLORS.white,
     fontWeight: 'bold',
   },
 });

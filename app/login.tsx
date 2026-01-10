@@ -1,5 +1,6 @@
 import { showError } from '@/utils/logger';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -61,9 +62,24 @@ export default function Login() {
 
     setLoading(true);
     try {
+      // Convertir contraseña a bytes UTF-8
+      const encoder = new TextEncoder();
+      const passwordBytes = encoder.encode(password);
+      
+      // Hashear con SHA256
+      const hashBytes = await Crypto.digest(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        passwordBytes
+      );
+      
+      // Convertir ArrayBuffer a Base64
+      const hashBase64 = btoa(String.fromCharCode(...new Uint8Array(hashBytes)));
+
+      console.log('Hash generado:', hashBase64); // Para debug
+
       const res = await api.post('/Login/Autenticar', {
         Email: email,
-        Password: password,
+        Password: hashBase64,
       });
 
       const datosUsuario = {

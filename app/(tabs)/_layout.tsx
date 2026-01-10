@@ -1,8 +1,9 @@
 import BackButton from '@/components/BackButton';
 import { useAuth } from '@/context/authContext';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Layout() {
   const { usuario, cargando } = useAuth();
@@ -38,6 +39,17 @@ export default function Layout() {
           fontWeight: 'bold',
         },
         headerLeft: () => <BackButton />,
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/cambiarContrasena')}
+            style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12, gap: 8 }}
+          >
+            <FontAwesome5 name="user-circle" size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+              {usuario?.nombre || 'Usuario'}
+            </Text>
+          </TouchableOpacity>
+        ),
       }}
     >
       {/* Personalizamos los títulos */}
@@ -60,6 +72,7 @@ export default function Layout() {
       <Stack.Screen name="contabilidad/index" options={{ title: 'Pagos' }} />
       <Stack.Screen name="contabilidad/historico" options={{ title: 'Histórico pagos' }} />
       <Stack.Screen name="contabilidad/detalleServicioPersona/[id]" options={{ title: 'Detalle pago' }} />
+      <Stack.Screen name="cambiarContrasena" options={{ title: 'Cambiar contraseña' }} />
       <Stack.Screen name="ingresos/index" options={{ title: 'Ingresos' }} />
       <Stack.Screen name="egresos/index" options={{ title: 'Egresos' }} />
       <Stack.Screen name="egresos/crear" options={{ title: 'Registrar egreso' }} />

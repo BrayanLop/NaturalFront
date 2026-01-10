@@ -5,14 +5,14 @@ import { isTrabajador } from '@/utils/roles';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 import { HistorialLiquidacion } from '../../api/modelos/contabilidad';
@@ -33,7 +33,7 @@ export default function HistoricoLiquidaciones() {
   });
   const [fechaHasta, setFechaHasta] = useState(() => toDateInputValue(new Date()));
   const personaId = useMemo(() => {
-    if (isTrabajador(usuario?.rol)) return usuario.id;
+    if (isTrabajador(usuario?.rol) && usuario) return usuario.id;
     return undefined;
   }, [usuario]);
 

@@ -2,7 +2,7 @@ import { COLORS, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatDateTime } from '@/utils/formatters';
 import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
-import { isAdmin } from '@/utils/roles';
+import { isAdmin, puedeRegistrarServicios } from '@/utils/roles';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -384,25 +384,27 @@ export default function ListaRegistros() {
                   <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay registros disponibles</Text>
                 </View>
               ) : (
-                consolidado.map((item, index) => {
-                  const totalServicios = item.servicios.reduce((sum, s) => sum + s.cantidad, 0);
-                  return (
-                    <View key={index} style={styles.consolidadoPersona}>
-                      <View style={styles.consolidadoHeader}>
-                        <Text style={styles.consolidadoNombre}>🧑 {item.nombrePersona}</Text>
-                        <Text style={styles.consolidadoTotal}>{totalServicios} servicio(s)</Text>
+                <View style={styles.consolidadoGrid}>
+                  {consolidado.map((item, index) => {
+                    const totalServicios = item.servicios.reduce((sum, s) => sum + s.cantidad, 0);
+                    return (
+                      <View key={index} style={styles.consolidadoPersona}>
+                        <View style={styles.consolidadoHeader}>
+                          <Text style={styles.consolidadoNombre}>🧑 {item.nombrePersona}</Text>
+                          <Text style={styles.consolidadoTotal}>{totalServicios} servicio(s)</Text>
+                        </View>
+                        <View style={styles.consolidadoServicios}>
+                          {item.servicios.map((servicio, sIndex) => (
+                            <View key={sIndex} style={styles.consolidadoServicioItem}>
+                              <Text style={styles.consolidadoServicioNombre}>• {servicio.nombreServicio}</Text>
+                              <Text style={styles.consolidadoServicioCantidad}>{servicio.cantidad}</Text>
+                            </View>
+                          ))}
+                        </View>
                       </View>
-                      <View style={styles.consolidadoServicios}>
-                        {item.servicios.map((servicio, sIndex) => (
-                          <View key={sIndex} style={styles.consolidadoServicioItem}>
-                            <Text style={styles.consolidadoServicioNombre}>• {servicio.nombreServicio}</Text>
-                            <Text style={styles.consolidadoServicioCantidad}>{servicio.cantidad}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })
+                    );
+                  })}
+                </View>
               )}
             </View>
 
@@ -426,10 +428,10 @@ export default function ListaRegistros() {
       <TouchableOpacity
         style={styles.button}
         onPress={() => {
-          // Si el usuario tiene rol 02 (barbero), vamos directo a seleccionar servicios
+          // Si el usuario puede registrar servicios (rol 02 o 03), vamos directo a seleccionar servicios
           const rol = usuario?.rol;
           const personaId = usuario?.id;
-          if (rol === '02' || rol === '2') {
+          if (puedeRegistrarServicios(rol)) {
             router.push({
               pathname: '/(tabs)/registroServicio/servicios',
               params: { persona: personaId?.toString() ?? '' },
@@ -472,11 +474,19 @@ const styles = StyleSheet.create({
   },
   cellNombre: { fontSize: 14, color: '#2d3436' },
   cellCantidad: { fontSize: 14, fontWeight: '600', color: '#0984e3' },
+  consolidadoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   consolidadoPersona: {
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    width: 'calc(50% - 4px)' as any,
+    marginBottom: 8,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   consolidadoHeader: {
     flexDirection: 'row',

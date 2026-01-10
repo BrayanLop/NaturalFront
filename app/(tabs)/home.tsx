@@ -1,3 +1,4 @@
+import { puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -32,9 +33,10 @@ export default function Home() {
   const rol = usuario.rol; // ✅ directamente del context
   const personaId = usuario.id; // si necesitas el id
 
-  // Usuarios con rol '02' o '2' sólo pueden ver Registrar servicios
+  // Usuarios con rol '02' (trabajador) o '03' (super empleado) ven menú limitado
+  // Solo rol '01' (admin puro) ve el menú completo
   const menuItems: MenuItem[] =
-    rol === '02' || rol === '2'
+    puedeRegistrarServicios(rol)
       ? [
           {
             title: 'Registrar servicios',
@@ -42,7 +44,12 @@ export default function Home() {
             icon: 'clipboard-check',
           },
           {
-            title: 'Histórico liquidaciones',
+            title: 'Pagos',
+            route: '../contabilidad',
+            icon: 'file-invoice-dollar',
+          },
+          {
+            title: 'Histórico pagos',
             route: '../contabilidad/historico',
             icon: 'history',
           },
@@ -66,12 +73,12 @@ export default function Home() {
             icon: 'clipboard-check',
           },
           {
-            title: 'Liquidar',
+            title: 'Pagos',
             route: '../contabilidad',
             icon: 'file-invoice-dollar',
           },
           {
-            title: 'Histórico liquidaciones',
+            title: 'Histórico pagos',
             route: '../contabilidad/historico',
             icon: 'history',
           },

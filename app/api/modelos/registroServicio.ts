@@ -8,7 +8,7 @@ export interface RegistroServicio {
   confirmado: boolean;
   liquidado: boolean;
   empresaId?: number;
-  FormaPago?: string;
+  formaPago?: string;
 }
 
 export interface RegistroServicioCreate {

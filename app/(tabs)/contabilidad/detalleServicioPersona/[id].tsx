@@ -1,3 +1,5 @@
+import { useAuth } from "@/context/authContext";
+import { isAdmin } from "@/utils/roles";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -24,6 +26,9 @@ export default function DetallePersona() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const personaId = Array.isArray(id) ? id[0] : id;
+  const { usuario } = useAuth();
+  const puedeActualmenteLiquidar = usuario?.rol === '01'; // Solo admin 01 puede liquidar
+  const puedeConfirmar = isAdmin(usuario?.rol); // Solo admin 01 y 03 pueden confirmar
 
   const [detalle, setDetalle] = useState<DetalleServicioPorDiaViewModel[]>([]);
   const empresaId = 1; // ⚡ Aquí pones la empresa actual o tomas de un estado global/contexto
@@ -254,27 +259,29 @@ const handleLiquidar = async () => {
         <Text style={styles.resumenLabel}>Total por liquidar</Text>
         <Text style={styles.resumenMonto}>{cargandoTotal ? "Calculando..." : formatMonto(totalPorLiquidar ?? 0)}</Text>
       </View>
-      {Platform.OS === "web" ? (
-        <div style={{ marginBottom: 16 }}>
-          <button
-            className="btn btn-primary"
-            onClick={handleLiquidar}
+      {puedeActualmenteLiquidar && (
+        Platform.OS === "web" ? (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              className="btn btn-primary"
+              onClick={handleLiquidar}
+              disabled={loadingLiquidar}
+              style={{ width: "100%" }}
+            >
+              {loadingLiquidar ? "Liquidando..." : "Liquidar"}
+            </button>
+          </div>
+        ) : (
+          <TouchableOpacity
+            style={[styles.liquidarButton, loadingLiquidar && styles.liquidarButtonDisabled]}
+            onPress={handleLiquidar}
             disabled={loadingLiquidar}
-            style={{ width: "100%" }}
           >
-            {loadingLiquidar ? "Liquidando..." : "Liquidar"}
-          </button>
-        </div>
-      ) : (
-        <TouchableOpacity
-          style={[styles.liquidarButton, loadingLiquidar && styles.liquidarButtonDisabled]}
-          onPress={handleLiquidar}
-          disabled={loadingLiquidar}
-        >
-          <Text style={styles.liquidarButtonText}>
-            {loadingLiquidar ? "Liquidando..." : "Liquidar"}
-          </Text>
-        </TouchableOpacity>
+            <Text style={styles.liquidarButtonText}>
+              {loadingLiquidar ? "Liquidando..." : "Liquidar"}
+            </Text>
+          </TouchableOpacity>
+        )
       )}
 
       {detalle.length === 0 ? (
@@ -298,7 +305,7 @@ const handleLiquidar = async () => {
                     <Text style={styles.valor}>💰 {formatMonto(s.valorTrabajador)}</Text>
                   </View>
                   <View style={styles.estadoContainer}>
-                    {!s.confirmado && (
+                    {!s.confirmado && puedeConfirmar && (
                       <TouchableOpacity
                         style={[styles.confirmButton, confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) && styles.confirmButtonLoading]}
                         onPress={() => {

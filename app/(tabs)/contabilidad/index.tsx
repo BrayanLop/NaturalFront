@@ -1,4 +1,6 @@
+import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
+import { isTrabajador } from '@/utils/roles';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -25,13 +27,20 @@ type PagoPersona = {
 };
 
 export default function PagosPorPersona() {
+  const { usuario } = useAuth();
   const [pagos, setPagos] = useState<PagoPersona[]>([]);
   const [loading, setLoading] = useState(false);
 
   const cargarPagos = async () => {
     setLoading(true);
     try {
-      const response = await api.get('Contabilidad/PagosUltimosDias');
+      // Si es rol '02' (trabajador), enviar personaId para filtrar en el backend
+      const params: Record<string, unknown> = {};
+      if (isTrabajador(usuario?.rol) && usuario?.id) {
+        params.personaId = usuario.id;
+      }
+      
+      const response = await api.get('Contabilidad/PagosUltimosDias', { params });
       setPagos(response.data);
     } catch (error) {
       console.error('❌ Error al cargar pagos:', error);
@@ -50,7 +59,7 @@ export default function PagosPorPersona() {
     <View style={styles.container}>
       <Link href="/contabilidad/historico" asChild>
         <TouchableOpacity style={styles.historicoButton}>
-          <Text style={styles.historicoText}>📅 Histórico liquidaciones</Text>
+          <Text style={styles.historicoText}>📅 Histórico pagos</Text>
         </TouchableOpacity>
       </Link>
 

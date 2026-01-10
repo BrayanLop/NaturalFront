@@ -55,7 +55,19 @@ export default function Layout() {
       }}
     >
       {/* Personalizamos los títulos */}
-      <Stack.Screen name="home" options={{ title: 'Natural', headerLeft: () => null }} />
+      <Stack.Screen 
+        name="home" 
+        options={{ 
+          title: 'Natural', 
+          headerLeft: () => (
+            <View style={{ marginLeft: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                {usuario?.nombreEmpresa || 'Empresa'}
+              </Text>
+            </View>
+          )
+        }} 
+      />
       <Stack.Screen name="personas/index" options={{ title: 'Personas' }} />
       <Stack.Screen name="personas/crear" options={{ title: 'Crear persona' }} />
       <Stack.Screen name="personas/[id]" options={{ title: 'Editar persona' }} />

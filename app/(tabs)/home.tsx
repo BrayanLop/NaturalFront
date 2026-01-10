@@ -1,3 +1,4 @@
+import LoadingView from '@/components/LoadingView';
 import { puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -15,11 +16,7 @@ export default function Home() {
   const router = useRouter();
 
   if (cargando) {
-    return (
-      <View style={styles.container}>
-        <Text>Cargando menú...</Text>
-      </View>
-    );
+    return <LoadingView />;
   }
 
   if (!usuario) {

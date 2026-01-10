@@ -1,3 +1,4 @@
+import LoadingView from '@/components/LoadingView';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -139,11 +140,7 @@ export default function EditarPersona() {
   ];
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando...</Text>
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (

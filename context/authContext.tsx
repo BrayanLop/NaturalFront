@@ -8,6 +8,7 @@ type Usuario = {
   empresaId: number;
   rol: string;
   token?: string; // Token JWT del backend
+  nombreEmpresa?: string; // Nombre de la empresa
 };
 
 type AuthContextType = {

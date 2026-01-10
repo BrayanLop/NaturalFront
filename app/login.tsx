@@ -82,16 +82,18 @@ export default function Login() {
         Password: hashBase64,
       });
 
-      // El backend devuelve: { token, expiraEn, persona: { id, nombre, empresaId, rol } }
+      // El backend devuelve: { token, expiraEn, persona: { id, nombre, empresaId, rol, nombreEmpresa } }
       const datosUsuario = {
         id: res.data.persona.id,
         nombre: res.data.persona.nombre,
         empresaId: res.data.persona.empresaId,
         rol: res.data.persona.rol,
+        nombreEmpresa: res.data.persona.nombreEmpresa,
         token: res.data.token // ← Token JWT del backend
       };
 
       console.log('Datos del login:', res.data);
+      console.log('Nombre empresa:', res.data.persona.nombreEmpresa); // Para debug
 
       await login(datosUsuario);
       router.replace('/home');

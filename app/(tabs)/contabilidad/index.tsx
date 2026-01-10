@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -9,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
-import { formatCurrency } from '@/utils/formatters';
 
 type ServicioRealizado = {
   nombre: string;

@@ -1,5 +1,5 @@
-import LoadingView from '@/components/LoadingView';
 import BackButton from '@/components/BackButton';
+import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';

@@ -160,6 +160,8 @@ export default function ConfiguracionGeneral() {
               <Picker
                 selectedValue={config.periodicidad}
                 onValueChange={(v) => setConfig((p) => ({ ...p, periodicidad: v }))}
+                style={{ backgroundColor: '#e0e0e0', color: '#2d3436' }} // Fondo gris y texto oscuro
+                itemStyle={{ backgroundColor: '#e0e0e0', color: '#2d3436' }} // Para iOS
               >
                 <Picker.Item label="Seleccione periodicidad" value="" />
                 <Picker.Item label="Mensual (30 días)" value="M" />

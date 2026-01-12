@@ -1,14 +1,13 @@
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -74,12 +73,12 @@ export default function IngresosEmpresa() {
   const [pickerVisible, setPickerVisible] = useState<null | 'desde' | 'hasta'>(null);
   const currentPickerDate = pickerVisible === 'desde' ? new Date(fechaDesde) : new Date(fechaHasta);
 
-  const onChangeFecha = (_: DateTimePickerEvent, selectedDate?: Date) => {
+  const onChangeFecha = (selectedDate?: Date) => {
     if (!selectedDate || !pickerVisible) return;
     const value = toDateInputValue(selectedDate);
     if (pickerVisible === 'desde') setFechaDesde(value);
     if (pickerVisible === 'hasta') setFechaHasta(value);
-    if (Platform.OS !== 'ios') setPickerVisible(null);
+    setPickerVisible(null);
   };
 
   return (
@@ -125,23 +124,21 @@ export default function IngresosEmpresa() {
         </TouchableOpacity>
       </View>
 
-      {!isWeb && pickerVisible && (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setPickerVisible(null)}>
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalContent}>
-              <DateTimePicker
-                value={currentPickerDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                onChange={onChangeFecha}
-              />
-              <TouchableOpacity style={styles.closeModal} onPress={() => setPickerVisible(null)}>
-                <Text style={styles.closeText}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
+      {/* SimpleDatePicker JS universal */}
+      <SimpleDatePicker
+        value={fechaDesde}
+        onChange={(dateStr) => { setFechaDesde(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'desde'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha desde"
+      />
+      <SimpleDatePicker
+        value={fechaHasta}
+        onChange={(dateStr) => { setFechaHasta(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'hasta'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha hasta"
+      />
 
       <View style={styles.resumen}>
         <Text style={styles.resumenLabel}>Total ingresado en rango</Text>

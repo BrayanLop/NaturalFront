@@ -1,17 +1,16 @@
 import LoadingView from '@/components/LoadingView';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { toDateInputValue } from '@/utils/formatters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardTypeOptions,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -32,7 +31,6 @@ export default function EditarPersona() {
   });
 
   const [errores, setErrores] = useState<Partial<Record<keyof typeof persona, string>>>({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const validaciones: Record<keyof typeof persona, { regex: RegExp; mensaje: string }> = {
@@ -59,6 +57,7 @@ export default function EditarPersona() {
     }));
   };
 
+  // Al cargar persona, si no hay fechaNacimiento, asigna la fecha actual, pero no muestres ni input ni texto
   const cargarPersona = async () => {
     try {
       const res = await api.get(`/Persona/Obtener/${id}`);
@@ -71,7 +70,7 @@ export default function EditarPersona() {
         email: data.email || '',
         edad: data.edad?.toString() || '',
         celular: data.celular || '',
-        fechaNacimiento: data.fechaNacimiento?.split('T')[0] || '',
+        fechaNacimiento: data.fechaNacimiento?.split('T')[0] || toDateInputValue(new Date()),
         rol: data.rol || '02', // ✅ Valor que viene o se mantiene
       });
     } catch (err) {
@@ -118,14 +117,6 @@ export default function EditarPersona() {
     }
   };
 
-  const onChangeFecha = (_: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) {
-      const iso = selectedDate.toISOString().split('T')[0];
-      handleChange('fechaNacimiento', iso);
-    }
-  };
-
   const campos: {
     key: keyof typeof persona;
     label: string;
@@ -139,7 +130,6 @@ export default function EditarPersona() {
     { key: 'email', label: 'Correo electrónico', keyboardType: 'email-address' },
     { key: 'edad', label: 'Edad', keyboardType: 'numeric' },
     { key: 'celular', label: 'Celular', keyboardType: 'numeric' },
-    { key: 'fechaNacimiento', label: 'Fecha de nacimiento', isDate: true },
   ];
 
   if (loading) {
@@ -152,53 +142,13 @@ export default function EditarPersona() {
         <View key={key} style={styles.fieldContainer}>
           <Text style={styles.label}>{label}</Text>
 
-          {isDate ? (
-            <>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={persona.fechaNacimiento}
-                  onChange={(e) => handleChange('fechaNacimiento', e.target.value)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errores[key] ? 'red' : '#ccc',
-                    borderRadius: 6,
-                    padding: 12,
-                    backgroundColor: '#fff',
-                    width: '100%',
-                    fontSize: 16,
-                  }}
-                />
-              ) : (
-                <>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker(true)}
-                    style={[styles.input, errores[key] && styles.inputError]}>
-                    <Text style={{ color: persona[key] ? '#000' : '#888' }}>
-                      {persona[key] || 'Selecciona una fecha'}
-                    </Text>
-                  </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={persona.fechaNacimiento ? new Date(persona.fechaNacimiento) : new Date()}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={onChangeFecha}
-                      maximumDate={new Date()}
-                    />
-                  )}
-                </>
-              )}
-            </>
-          ) : (
-            <TextInput
-              value={persona[key]}
-              onChangeText={(text) => handleChange(key, text)}
-              style={[styles.input, errores[key] && styles.inputError]}
-              placeholder={label}
-              keyboardType={keyboardType}
-            />
-          )}
+          <TextInput
+            value={persona[key]}
+            onChangeText={(text) => handleChange(key, text)}
+            style={[styles.input, errores[key] && styles.inputError]}
+            placeholder={label}
+            keyboardType={keyboardType}
+          />
 
           {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
         </View>

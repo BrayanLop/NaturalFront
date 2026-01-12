@@ -160,7 +160,7 @@ const eliminarConfiguracion = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0d6efd" />
+        <ActivityIndicator size="large" color="#00b894" />
       </View>
     );
   }

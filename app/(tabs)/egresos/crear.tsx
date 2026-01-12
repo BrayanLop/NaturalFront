@@ -1,20 +1,22 @@
 import FormField from '@/components/FormField';
 import LoadingView from '@/components/LoadingView';
 import PrimaryButton from '@/components/PrimaryButton';
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import { toDateInputValue } from '@/utils/formatters';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
@@ -30,6 +32,10 @@ export default function CrearEgreso() {
   const [motivo, setMotivo] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingPersonas, setLoadingPersonas] = useState(true);
+
+  // Estado para el modal de fecha
+  const [fechaModalVisible, setFechaModalVisible] = useState<null | 'fecha'>(null);
+  const [fechaEgreso, setFechaEgreso] = useState(() => toDateInputValue(new Date()));
 
   const esAdmin = isAdmin(usuario?.rol);
 
@@ -82,6 +88,12 @@ export default function CrearEgreso() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onChangeFechaEgreso = (_: any, selectedDate?: Date) => {
+    if (!selectedDate) return;
+    setFechaEgreso(toDateInputValue(selectedDate));
+    setFechaModalVisible(null);
   };
 
   if (!esAdmin) {
@@ -191,6 +203,37 @@ export default function CrearEgreso() {
         />
         <Text style={styles.charCount}>{motivo.length}/256</Text>
       </FormField>
+
+      <FormField label="Fecha del egreso">
+        {Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={fechaEgreso}
+            onChange={e => setFechaEgreso(e.target.value)}
+            style={commonStyles.input as any}
+          />
+        ) : (
+          <TouchableOpacity onPress={() => setFechaModalVisible('fecha')}>
+            <TextInput
+              style={commonStyles.input}
+              value={fechaEgreso}
+              editable={false}
+              placeholder="YYYY-MM-DD"
+            />
+          </TouchableOpacity>
+        )}
+      </FormField>
+
+      {/* Modal de fecha para dispositivos */}
+      {Platform.OS !== 'web' && fechaModalVisible && (
+        <SimpleDatePicker
+          value={fechaEgreso}
+          onChange={onChangeFechaEgreso}
+          visible={!!fechaModalVisible}
+          onClose={() => setFechaModalVisible(null)}
+          title="Selecciona la fecha del egreso"
+        />
+      )}
 
       <PrimaryButton
         title="Registrar egreso"

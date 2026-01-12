@@ -1,8 +1,8 @@
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { isTrabajador } from '@/utils/roles';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -89,12 +89,12 @@ export default function HistoricoLiquidaciones() {
   const [pickerVisible, setPickerVisible] = useState<null | 'desde' | 'hasta'>(null);
   const currentPickerDate = pickerVisible === 'desde' ? new Date(fechaDesde) : new Date(fechaHasta);
 
-  const onChangeFecha = useCallback((_: DateTimePickerEvent, selectedDate?: Date) => {
+  const onChangeFecha = useCallback((selectedDate?: Date) => {
     if (!selectedDate || !pickerVisible) return;
     const value = toDateInputValue(selectedDate);
     if (pickerVisible === 'desde') setFechaDesde(value);
     if (pickerVisible === 'hasta') setFechaHasta(value);
-    if (Platform.OS !== 'ios') setPickerVisible(null);
+    setPickerVisible(null);
   }, [pickerVisible]);
 
   const renderItem = useCallback(
@@ -174,23 +174,21 @@ export default function HistoricoLiquidaciones() {
         <Text style={styles.resumenMonto}>{formatCurrency(totalPagado)}</Text>
       </View>
 
-      {!isWeb && pickerVisible && (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setPickerVisible(null)}>
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalContent}>
-              <DateTimePicker
-                value={currentPickerDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                onChange={onChangeFecha}
-              />
-              <TouchableOpacity style={styles.closeModal} onPress={() => setPickerVisible(null)}>
-                <Text style={styles.closeText}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
+      {/* SimpleDatePicker JS universal */}
+      <SimpleDatePicker
+        value={fechaDesde}
+        onChange={(dateStr) => { setFechaDesde(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'desde'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha de inicio"
+      />
+      <SimpleDatePicker
+        value={fechaHasta}
+        onChange={(dateStr) => { setFechaHasta(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'hasta'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha final"
+      />
 
       {!esRol02 && (
         <PersonaModal

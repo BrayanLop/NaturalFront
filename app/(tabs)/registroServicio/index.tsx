@@ -1,6 +1,7 @@
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
-import { formatDateTime } from '@/utils/formatters';
+import { formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
 import { isAdmin, puedeRegistrarServicios } from '@/utils/roles';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -8,13 +9,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
@@ -33,9 +32,12 @@ export default function ListaRegistros() {
   
   // Fechas por defecto: día actual
   const hoy = new Date();
-  const fechaActual = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+  const fechaActual = toDateInputValue(hoy); // YYYY-MM-DD local
   const [fechaInicio, setFechaInicio] = useState<string>(fechaActual);
   const [fechaFin, setFechaFin] = useState<string>(fechaActual);
+  const [showDatePickerInicio, setShowDatePickerInicio] = useState(false);
+  const [showDatePickerFin, setShowDatePickerFin] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState<null | 'inicio' | 'fin'>(null);
 
   const esRol01 = isAdmin(usuario?.rol);
 
@@ -52,15 +54,18 @@ export default function ListaRegistros() {
     try {
       const personaId = usuario?.id ?? null;
       const params: any = {};
-      
       if (personaId) params.personaId = personaId;
-      if (fechaInicio) params.fechaInicio = `${fechaInicio}T00:00:00`;
-      if (fechaFin) params.fechaFin = `${fechaFin}T23:59:59`;
-      
+      // Enviar fechas en hora local (inicio y fin del día)
+      if (fechaInicio) {
+        const inicioDate = new Date(fechaInicio + 'T00:00:00');
+        params.fechaInicio = inicioDate.toISOString();
+      }
+      if (fechaFin) {
+        const finDate = new Date(fechaFin + 'T23:59:59');
+        params.fechaFin = finDate.toISOString();
+      }
       const resRegistros = await api.get('/RegistroServicio/ObtenerRegistros', { params });
-
       if (Array.isArray(resRegistros.data)) {
-
         setRegistros(resRegistros.data);
       }
     } catch (error) {
@@ -198,7 +203,7 @@ export default function ListaRegistros() {
       <View style={styles.itemContent}>
         <View style={{ flex: 1 }}>
           <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
-          <Text>🕒 Fecha: {item.fechaServicio ? formatDateTime(item.fechaServicio) : 'Sin fecha'}</Text>
+          <Text>🕒 Fecha: {item.fechaServicio ? formatDate(item.fechaServicio) : 'Sin fecha'}</Text>
           <Text>💳 Forma de pago: {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}</Text>
         </View>
         
@@ -221,80 +226,34 @@ export default function ListaRegistros() {
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
+  // Handlers para DateTimePicker
+  const onChangeFecha = (dateStr?: string) => {
+    if (!dateStr || !pickerVisible) return;
+    if (pickerVisible === 'inicio') setFechaInicio(dateStr);
+    if (pickerVisible === 'fin') setFechaFin(dateStr);
+    setPickerVisible(null);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView>
         <View style={styles.filtros}>
-          {/* Fila superior: Fechas y botón buscar */}
-          <View style={styles.filtrosTopRow}>
-            <View style={styles.fechasContainer}>
-              <Text style={styles.filtroLabel}>Rango de fechas</Text>
-              <View style={styles.fechasRow}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.fechaLabel}>Desde</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={fechaInicio}
-                      onChange={(e: any) => setFechaInicio(e.target.value)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: '#b2bec3',
-                        borderRadius: 6,
-                        padding: 8,
-                        backgroundColor: '#fff',
-                        fontSize: 14,
-                        width: '100%',
-                      }}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.inputFecha}
-                      value={fechaInicio}
-                      onChangeText={setFechaInicio}
-                      placeholder="YYYY-MM-DD"
-                    />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fechaLabel}>Hasta</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={fechaFin}
-                      onChange={(e: any) => setFechaFin(e.target.value)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: '#b2bec3',
-                        borderRadius: 6,
-                        padding: 8,
-                        backgroundColor: '#fff',
-                        fontSize: 14,
-                        width: '100%',
-                      }}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.inputFecha}
-                      value={fechaFin}
-                      onChangeText={setFechaFin}
-                      placeholder="YYYY-MM-DD"
-                    />
-                  )}
-                </View>
-              </View>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.btnBuscarCompact}
-              onPress={cargarDatos}
-              disabled={loading}
-            >
-              <Text style={styles.btnBuscarText}>
-                {loading ? 'Buscando...' : 'Buscar'}
-              </Text>
+          {/* Filtros de fecha con mejor diseño */}
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2d3436', marginBottom: 10 }}>Filtrar por fechas</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('inicio')}>
+              <Text style={styles.chipLabel}>Desde</Text>
+              <Text style={styles.chipValue}>{fechaInicio}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('fin')}>
+              <Text style={styles.chipLabel}>Hasta</Text>
+              <Text style={styles.chipValue}>{fechaFin}</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity style={styles.btnBuscar} onPress={cargarDatos} disabled={loading}>
+            <Text style={styles.btnBuscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
+          </TouchableOpacity>
+          <View style={{ height: 1, backgroundColor: '#e0e0e0', marginBottom: 18 }} />
 
           {/* Fila inferior: Filtros de chips en dos columnas */}
           <View style={styles.filtrosBottomRow}>
@@ -349,21 +308,24 @@ export default function ListaRegistros() {
 
             {/* Columna derecha */}
             <View style={styles.filtroColumn}>
-              <Text style={styles.filtroLabel}>Forma de pago</Text>
-              <View style={styles.chipsRow}>
-                {[
-                  { key: 'todos', label: 'Todas' },
-                  { key: 'T', label: 'Transferencia' },
-                  { key: 'E', label: 'Efectivo' },
-                ].map((opt) => (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.chip, formaPagoFiltro === opt.key && styles.chipActive]}
-                    onPress={() => setFormaPagoFiltro(opt.key as any)}
-                  >
-                    <Text style={[styles.chipText, formaPagoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Mover forma de pago abajo en una fila separada */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={styles.filtroLabel}>Forma de pago</Text>
+                <View style={[styles.chipsRow, { flexWrap: 'wrap', maxWidth: '100%' }]}>
+                  {[
+                    { key: 'todos', label: 'Todas' },
+                    { key: 'E', label: 'Efectivo' },
+                    { key: 'T', label: 'Transferencia' },
+                  ].map((opt) => (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.chip, formaPagoFiltro === opt.key && styles.chipActive]}
+                      onPress={() => setFormaPagoFiltro(opt.key as any)}
+                    >
+                      <Text style={[styles.chipText, formaPagoFiltro === opt.key && styles.chipTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -391,7 +353,7 @@ export default function ListaRegistros() {
                       <View key={index} style={styles.consolidadoPersona}>
                         <View style={styles.consolidadoHeader}>
                           <Text style={styles.consolidadoNombre}>🧑 {item.nombrePersona}</Text>
-                          <Text style={styles.consolidadoTotal}>{totalServicios} servicio(s)</Text>
+                          <Text style={styles.consolidadoTotalDebajo}>{totalServicios} servicio(s)</Text>
                         </View>
                         <View style={styles.consolidadoServicios}>
                           {item.servicios.map((servicio, sIndex) => (
@@ -444,11 +406,42 @@ export default function ListaRegistros() {
       >
         <Text style={styles.buttonText}>Registrar nuevo</Text>
       </TouchableOpacity>
+
+      {/* SimpleDatePicker JS universal */}
+      <SimpleDatePicker
+        value={fechaInicio}
+        onChange={onChangeFecha}
+        visible={pickerVisible !== null}
+        onClose={() => setPickerVisible(null)}
+        title={pickerVisible === 'inicio' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+    dateChip: {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      backgroundColor: '#f1f2f6',
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: '#dfe6e9',
+      marginRight: 4,
+    },
+    chipLabel: {
+      fontSize: 12,
+      color: '#636e72',
+      marginBottom: 2,
+      fontWeight: '600',
+    },
+    chipValue: {
+      fontSize: 15,
+      color: '#2d3436',
+      fontWeight: 'bold',
+    },
   container: { 
     ...commonStyles.container,
   },
@@ -477,10 +470,12 @@ const styles = StyleSheet.create({
   consolidadoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'flex-start',
+    gap: 0,
   },
   consolidadoPersona: {
-    width: 'calc(50% - 4px)' as any,
+    width: '50%',
+    minWidth: 0,
     marginBottom: 8,
     padding: 10,
     backgroundColor: '#fff',
@@ -489,9 +484,8 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef',
   },
   consolidadoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     marginBottom: 6,
   },
   consolidadoNombre: {
@@ -503,6 +497,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#636e72',
+  },
+  consolidadoTotalDebajo: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636e72',
+    marginTop: 2,
   },
   consolidadoServicios: {
     paddingLeft: 12,

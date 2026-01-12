@@ -2,7 +2,7 @@ import LoadingView from '@/components/LoadingView';
 import { puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 
 type MenuItem = {
@@ -93,22 +93,23 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuButton}
-            onPress={() => router.push(item.route as any)}
-          >
-            <FontAwesome5 name={item.icon} size={30} color="white" />
-            <Text style={styles.menuText}>{item.title}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 40 }}>
+        <View style={styles.grid}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.menuButton}
+              onPress={() => router.push(item.route as any)}
+            >
+              <FontAwesome5 name={item.icon} size={30} color="white" />
+              <Text style={styles.menuText}>{item.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }

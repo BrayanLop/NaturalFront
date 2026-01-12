@@ -1,10 +1,8 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { toDateInputValue } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
-  KeyboardTypeOptions,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +15,7 @@ import { api } from '../../api/api';
 export default function CrearPersona() {
   const router = useRouter();
 
+  // Inicializa persona con fechaNacimiento actual, pero no muestres ni input ni texto
   const [persona, setPersona] = useState({
     nombre: '',
     apellido: '',
@@ -25,11 +24,10 @@ export default function CrearPersona() {
     email: '',
     edad: '',
     celular: '',
-    fechaNacimiento: '',
+    fechaNacimiento: toDateInputValue(new Date()),
   });
 
   const [errores, setErrores] = useState<Partial<Record<keyof typeof persona, string>>>({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const validaciones: Record<keyof typeof persona, { regex: RegExp; mensaje: string }> = {
     nombre: { regex: /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]{3,}$/, mensaje: 'Nombre inválido' },
@@ -87,18 +85,10 @@ export default function CrearPersona() {
     }
   };
 
-  const onChangeFecha = (_: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) {
-      const iso = selectedDate.toISOString().split('T')[0];
-      handleChange('fechaNacimiento', iso);
-    }
-  };
-
   const campos: {
     key: keyof typeof persona;
     label: string;
-    keyboardType?: KeyboardTypeOptions;
+    keyboardType?: any;
     isDate?: boolean;
   }[] = [
     { key: 'nombre', label: 'Nombre' },
@@ -108,62 +98,21 @@ export default function CrearPersona() {
     { key: 'email', label: 'Correo electrónico', keyboardType: 'email-address' },
     { key: 'edad', label: 'Edad', keyboardType: 'numeric' },
     { key: 'celular', label: 'Celular', keyboardType: 'numeric' },
-    { key: 'fechaNacimiento', label: 'Fecha de nacimiento', isDate: true },
   ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {campos.map(({ key, label, keyboardType, isDate }) => (
         <View key={key} style={styles.fieldContainer}>
           <Text style={styles.label}>{label}</Text>
 
-          {isDate ? (
-            <>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={persona.fechaNacimiento}
-                  onChange={(e) => handleChange('fechaNacimiento', e.target.value)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errores[key] ? 'red' : '#ccc',
-                    borderRadius: 6,
-                    padding: 12,
-                    backgroundColor: '#fff',
-                    width: '100%',
-                    fontSize: 16,
-                  }}
-                />
-              ) : (
-                <>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker(true)}
-                    style={[styles.input, errores[key] && styles.inputError]}>
-                    <Text style={{ color: persona[key] ? '#000' : '#888' }}>
-                      {persona[key] || 'Selecciona una fecha'}
-                    </Text>
-                  </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={persona.fechaNacimiento ? new Date(persona.fechaNacimiento) : new Date()}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={onChangeFecha}
-                      maximumDate={new Date()}
-                    />
-                  )}
-                </>
-              )}
-            </>
-          ) : (
-            <TextInput
-              value={persona[key]}
-              onChangeText={(text) => handleChange(key, text)}
-              style={[styles.input, errores[key] && styles.inputError]}
-              placeholder={label}
-              keyboardType={keyboardType}
-            />
-          )}
+          <TextInput
+            value={persona[key]}
+            onChangeText={(text) => handleChange(key, text)}
+            style={[styles.input, errores[key] && styles.inputError]}
+            placeholder={label}
+            keyboardType={keyboardType}
+          />
 
           {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
         </View>

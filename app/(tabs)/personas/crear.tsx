@@ -75,7 +75,8 @@ export default function CrearPersona() {
       await api.post('/Persona/Crear', {
         ...persona,
         edad: parseInt(persona.edad),
-        rol: "02"
+        rol: "02",
+        empresa: {} // Se envía el objeto empresa vacío
       });
 
       Alert.alert('Éxito', 'Persona creada correctamente');

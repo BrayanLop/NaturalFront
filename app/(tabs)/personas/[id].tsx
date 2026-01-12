@@ -103,14 +103,17 @@ export default function EditarPersona() {
     }
 
     try {
-      await api.put(`/Persona/Actualizar/${id}`, {
-        ...persona,
-        edad: parseInt(persona.edad),
-      });
+      await api.put(
+        `/Persona/Actualizar/${id}`,
+        {
+          ...persona,
+          edad: parseInt(persona.edad),
+          empresa: {}, // Se envía el objeto empresa vacío
+        }
+      );
       Alert.alert('Éxito', 'Persona actualizada correctamente');
       router.back();
-    } catch (error) {
-      console.error('Error al actualizar persona:', error);
+    } catch (err) {
       Alert.alert('Error', 'No se pudo actualizar la persona');
     }
   };

@@ -4,17 +4,17 @@ import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
@@ -82,9 +82,10 @@ export default function Login() {
         Password: hashBase64,
       });
 
-      // El backend devuelve: { token, expiraEn, persona: { id, nombre, empresaId, rol, nombreEmpresa } }
+      // El backend devuelve: { token, expiraEn, persona: { id, idUsuario, nombre, empresaId, rol, nombreEmpresa } }
       const datosUsuario = {
         id: res.data.persona.id,
+        idUsuario: res.data.persona.idUsuario, // Nuevo campo
         nombre: res.data.persona.nombre,
         empresaId: res.data.persona.empresaId,
         rol: res.data.persona.rol,

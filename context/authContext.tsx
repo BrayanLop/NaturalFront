@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Usuario = {
   id: number;
+  idUsuario?: number; // Nuevo campo para el idUsuario
   nombre: string;
   empresaId: number;
   rol: string;

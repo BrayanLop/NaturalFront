@@ -5,6 +5,7 @@ import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 
 const API_URL = 'http://45.236.128.205:5000/api';
 
+
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 30000, // 30 segundos

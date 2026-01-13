@@ -3,14 +3,14 @@ import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../api/api';
 
@@ -70,7 +70,7 @@ export default function CambiarContrasena() {
       const hashBase64 = btoa(String.fromCharCode(...new Uint8Array(hashBytes)));
 
       await api.put('Usuario/ActualizarContrasena', {
-        usuarioId: usuario?.id,
+        usuarioId: usuario?.idUsuario ?? usuario?.id,
         nuevaContrasena: hashBase64,
       });
 

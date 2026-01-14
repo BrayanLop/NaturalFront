@@ -32,64 +32,80 @@ export default function Home() {
 
   // Usuarios con rol '02' (trabajador) o '03' (super empleado) ven menú limitado
   // Solo rol '01' (admin puro) ve el menú completo
-  const menuItems: MenuItem[] =
-    puedeRegistrarServicios(rol)
-      ? [
-          {
-            title: 'Registrar servicios',
-            route: '../registroServicio',
-            icon: 'clipboard-check',
-          },
-          {
-            title: 'Pagos',
-            route: '../contabilidad',
-            icon: 'file-invoice-dollar',
-          },
-          {
-            title: 'Histórico pagos',
-            route: '../contabilidad/historico',
-            icon: 'history',
-          },
-        ]
-      : [
-          { title: 'Personas', route: '../personas', icon: 'user-plus' },
-          { title: 'Servicios', route: '../servicios', icon: 'tools' },
-          {
-            title: 'Configurar servicios',
-            route: '../configuracionServicio',
-            icon: 'cog',
-          },
-          {
-            title: 'Configuración general',
-            route: '../configuracion',
-            icon: 'cogs',
-          },
-          {
-            title: 'Registrar servicios',
-            route: '../registroServicio',
-            icon: 'clipboard-check',
-          },
-          {
-            title: 'Pagos',
-            route: '../contabilidad',
-            icon: 'file-invoice-dollar',
-          },
-          {
-            title: 'Histórico pagos',
-            route: '../contabilidad/historico',
-            icon: 'history',
-          },
-          {
-            title: 'Ingresos',
-            route: '../ingresos',
-            icon: 'dollar-sign',
-          },
-          {
-            title: 'Egresos',
-            route: '../egresos',
-            icon: 'money-bill-wave',
-          },
-        ];
+  let menuItems: MenuItem[] = puedeRegistrarServicios(rol)
+    ? [
+        {
+          title: 'Registrar servicios',
+          route: '../registroServicio',
+          icon: 'clipboard-check',
+        },
+        {
+          title: 'Pagos',
+          route: '../contabilidad',
+          icon: 'file-invoice-dollar',
+        },
+        {
+          title: 'Histórico pagos',
+          route: '../contabilidad/historico',
+          icon: 'history',
+        },
+      ]
+    : [
+        { title: 'Personas', route: '../personas', icon: 'user-plus' },
+        { title: 'Servicios', route: '../servicios', icon: 'tools' },
+        {
+          title: 'Configurar servicios',
+          route: '../configuracionServicio',
+          icon: 'cog',
+        },
+        {
+          title: 'Configuración general',
+          route: '../configuracion',
+          icon: 'cogs',
+        },
+        {
+          title: 'Registrar servicios',
+          route: '../registroServicio',
+          icon: 'clipboard-check',
+        },
+        {
+          title: 'Pagos',
+          route: '../contabilidad',
+          icon: 'file-invoice-dollar',
+        },
+        {
+          title: 'Histórico pagos',
+          route: '../contabilidad/historico',
+          icon: 'history',
+        },
+        {
+          title: 'Ingresos',
+          route: '../ingresos',
+          icon: 'dollar-sign',
+        },
+        {
+          title: 'Egresos',
+          route: '../egresos',
+          icon: 'money-bill-wave',
+        },
+      ];
+
+  // Agregar Consolidado solo para admin puro
+  if (rol === '01' || rol === '03') {
+    menuItems = [
+      ...menuItems,
+      {
+        title: 'Consolidado Ingresos',
+        route: '../consolidadoIngresos',
+        icon: 'chart-bar',
+      },
+      {
+        title: 'Consolidado Forma de Pago',
+        route: '../consolidadoFormaPago',
+        icon: 'money-check-alt',
+      },
+    ];
+  }
 
   return (
     <View style={styles.container}>

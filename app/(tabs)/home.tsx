@@ -100,7 +100,7 @@ export default function Home() {
         icon: 'chart-bar',
       },
       {
-        title: 'Consolidado Forma de Pago',
+        title: 'Consolidado forma de Pago',
         route: '../consolidadoFormaPago',
         icon: 'money-check-alt',
       },

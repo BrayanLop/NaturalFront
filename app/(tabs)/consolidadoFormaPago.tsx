@@ -48,7 +48,7 @@ export default function ConsolidadoFormaPagoScreen() {
     <View style={styles.container}>
       <ScrollView>
         <View style={styles.filtros}>
-          <Text style={styles.titulo}>Consolidado por Forma de Pago</Text>
+          <Text style={styles.titulo}>Consolidado por forma de Pago</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
             <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('inicio')}>
               <Text style={styles.chipLabel}>Desde</Text>

@@ -1,10 +1,9 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { useAuth } from '@/context/authContext';
-import { useEffect, useState } from 'react';
-import { Alert, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { toDateInputValue } from '../../utils/formatters';
 import { api } from '../api/api';
-import { Persona } from '../api/modelos/persona';
 
 export default function ConsolidadoIngresos() {
   const { usuario } = useAuth();
@@ -20,19 +19,18 @@ export default function ConsolidadoIngresos() {
     totalEgresos: number;
     consolidado: number;
   } | null>(null);
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [personaSeleccionada, setPersonaSeleccionada] = useState<number | undefined>(undefined);
-  const [personaModal, setPersonaModal] = useState(false);
+  // Eliminado filtro de persona
 
+  // Ejecutar filtro automáticamente al cargar (solo para admin)
+  const firstLoad = useRef(true);
   useEffect(() => {
     if (usuario?.rol !== '01') {
       Alert.alert('Acceso denegado', 'Solo administradores pueden ver el consolidado.');
-    } else {
-      // Cargar personas solo para admin
-      api.get('/Persona/Obtener')
-        .then(res => setPersonas(res.data || []))
-        .catch(() => setPersonas([]));
+    } else if (firstLoad.current) {
+      firstLoad.current = false;
+      fetchConsolidado();
     }
+    // No ejecutar fetchConsolidado al cambiar fechas, solo al cargar
   }, [usuario]);
 
   const fetchConsolidado = async () => {
@@ -43,7 +41,7 @@ export default function ConsolidadoIngresos() {
         fechaDesde,
         fechaHasta,
       };
-      if (personaSeleccionada) params.personaId = personaSeleccionada;
+      // Eliminado filtro de persona
       const res = await api.get('/Contabilidad/ConsolidadoIngresosEgresos', { params });
       setConsolidado({
         totalIngresos: res.data.totalIngresos,
@@ -81,53 +79,12 @@ export default function ConsolidadoIngresos() {
             <Text style={styles.dateValue}>{fechaHasta}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.label}>Persona</Text>
-        <TouchableOpacity style={styles.select} onPress={() => setPersonaModal(true)}>
-          <Text style={styles.selectText}>
-            {personaSeleccionada
-              ? (personas.find((p) => p.id === personaSeleccionada)?.nombre || 'Persona seleccionada')
-              : 'Seleccionar persona'}
-          </Text>
-        </TouchableOpacity>
+        {/* Filtro de persona eliminado */}
         <TouchableOpacity style={styles.button} onPress={fetchConsolidado} disabled={loading}>
           <Text style={styles.buttonText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
         </TouchableOpacity>
       </View>
-      {/* Modal de selección de persona */}
-      <Modal transparent animationType="fade" visible={personaModal} onRequestClose={() => setPersonaModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalContent, { maxHeight: '70%' }]}> 
-            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Seleccionar persona</Text>
-            <FlatList
-              data={personas}
-              keyExtractor={(p) => p.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={{ paddingVertical: 10 }}
-                  onPress={() => { setPersonaSeleccionada(item.id); setPersonaModal(false); }}
-                >
-                  <Text>{item.nombre} {item.apellido ?? ''}</Text>
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: '#ececec' }} />}
-              ListEmptyComponent={
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>👤</Text>
-                  <Text style={{ fontSize: 14, color: '#636e72' }}>No hay personas</Text>
-                </View>
-              }
-            />
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity style={[styles.closeModal, { backgroundColor: '#b2bec3' }]} onPress={() => { setPersonaSeleccionada(undefined); setPersonaModal(false); }}>
-                <Text style={styles.closeText}>Limpiar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.closeModal} onPress={() => setPersonaModal(false)}>
-                <Text style={styles.closeText}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Modal de selección de persona eliminado */}
       {consolidado && (
         <View style={styles.resultBox}>
           <Text style={styles.resultText}>Total Ingresos: <Text style={styles.ingresos}>{consolidado.totalIngresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</Text></Text>

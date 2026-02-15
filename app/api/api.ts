@@ -3,8 +3,8 @@ import { axiosWithRetry } from '@/utils/retry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-//const API_URL = 'https://naturalback.vip/api';
-const API_URL = 'https://localhost:7049/api';
+const API_URL = 'https://naturalback.vip/api';
+//const API_URL = 'https://localhost:7049/api';
 //const API_URL = 'http://45.236.128.205:5000/api';
 
 

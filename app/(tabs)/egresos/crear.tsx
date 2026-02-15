@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -30,6 +31,7 @@ export default function CrearEgreso() {
   const [personaId, setPersonaId] = useState<number | null>(null);
   const [valorEgreso, setValorEgreso] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [seDescuenta, setSeDescuenta] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingPersonas, setLoadingPersonas] = useState(true);
 
@@ -76,6 +78,7 @@ export default function CrearEgreso() {
         NombrePersona: personaSeleccionada ? `${personaSeleccionada.nombre} ${personaSeleccionada.apellido}` : '',
         ValorEgreso: parseFloat(valorEgreso),
         Motivo: motivo,
+        SeDescuenta: seDescuenta
       };
       
       await api.post('/EgresosEmpresa/RegistrarEgreso', payload);
@@ -235,6 +238,11 @@ export default function CrearEgreso() {
         />
       )}
 
+      <View style={styles.switchRow}>
+         <Text style={commonStyles.label}>Aplica para descuento al pagar</Text>
+         <Switch value={seDescuenta} onValueChange={setSeDescuenta} />
+      </View>
+      
       <PrimaryButton
         title="Registrar egreso"
         onPress={guardar}
@@ -248,6 +256,12 @@ export default function CrearEgreso() {
 const styles = StyleSheet.create({
   container: {
     ...commonStyles.scrollContainer,
+  },
+    switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   picker: {
     justifyContent: 'center',

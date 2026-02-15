@@ -10,7 +10,7 @@ const API_URL = 'https://naturalback.vip/api';
 
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000, // 30 segundos
+  timeout: 50000, // 30 segundos
   headers: {
     //'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',

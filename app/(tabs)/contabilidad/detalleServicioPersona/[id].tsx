@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../../api/api";
+import { EgresoEmpresa } from "../../../api/modelos/egreso";
 
 type ServicioDetalleItem = {
   nombreServicio: string;
@@ -37,6 +38,11 @@ export default function DetallePersona() {
   const [totalPorLiquidar, setTotalPorLiquidar] = useState<number | null>(null);
   const [cargandoTotal, setCargandoTotal] = useState(false);
   const [confirmandoServicio, setConfirmandoServicio] = useState<number | null>(null);
+  
+  // Estados para egresos
+  const [egresos, setEgresos] = useState<EgresoEmpresa[]>([]);
+  const [egresosSeleccionados, setEgresosSeleccionados] = useState<number[]>([]);
+  const [cargandoEgresos, setCargandoEgresos] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,6 +93,50 @@ export default function DetallePersona() {
     fetchData();
   }, [personaId]);
 
+  // Cargar egresos de la persona
+  useEffect(() => {
+    const fetchEgresos = async () => {
+      if (!personaId) return;
+      setCargandoEgresos(true);
+      try {
+        const res = await api.get(
+          `EgresosEmpresa/ObtenerEgresosPorPersona?personaId=${personaId}`,
+          {
+            headers: {
+              empresaId: empresaId.toString(),
+            },
+          }
+        );
+        const data = res.data;
+        setEgresos(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("❌ Error cargando egresos", e);
+      } finally {
+        setCargandoEgresos(false);
+      }
+    };
+    fetchEgresos();
+  }, [personaId]);
+
+  // Toggle selección de egreso
+  const toggleEgresoSeleccionado = (egresoId: number) => {
+    setEgresosSeleccionados((prev) => {
+      if (prev.includes(egresoId)) {
+        return prev.filter((id) => id !== egresoId);
+      } else {
+        return [...prev, egresoId];
+      }
+    });
+  };
+
+  // Calcular total de egresos seleccionados
+  const totalEgresosSeleccionados = egresos
+    .filter((egreso) => egresosSeleccionados.includes(egreso.egresoId))
+    .reduce((acc, egreso) => acc + egreso.valorEgreso, 0);
+
+  // Calcular total neto (total por liquidar - egresos seleccionados)
+  const totalNeto = (totalPorLiquidar ?? 0) - totalEgresosSeleccionados;
+
 const handleLiquidar = async () => {
   if (!personaId) {
     alert("ID de persona no disponible.");
@@ -117,19 +167,33 @@ const handleLiquidar = async () => {
   // ✅ Aquí se ejecuta la liquidación
   setLoadingLiquidar(true);
   try {
-    console.log("📤 Enviando POST a /Contabilidad/LiquidarPersona?personaId=" + personaIdNum);
+    // Construir URL con egresosId si hay egresos seleccionados
+    let url = `/Contabilidad/LiquidarPersona?personaId=${personaIdNum}`;
+    if (egresosSeleccionados.length > 0) {
+      const egresosIdParam = egresosSeleccionados.join(',');
+      url += `&egresosId=${egresosIdParam}`;
+    }
+    console.log("📤 Enviando POST a", url);
     const response = await api.post(
-      `/Contabilidad/LiquidarPersona?personaId=${personaIdNum}`,
+      url,
       {},
       { headers: { empresaId: empresaId.toString() } }
     );
     console.log("✅ Respuesta exitosa:", response.data);
     if (Platform.OS === "web") {
       window.alert("Persona liquidada correctamente.");
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/contabilidad");
+      }
     } else {
       Alert.alert("Éxito", "Persona liquidada correctamente.");
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/contabilidad");
+      }
     }
   } catch (e: any) {
     console.error("❌ Error liquidando persona:", e);
@@ -256,9 +320,66 @@ const handleLiquidar = async () => {
   return (
     <View style={styles.container}>
       <View style={styles.resumen}>
-        <Text style={styles.resumenLabel}>Total por liquidar</Text>
-        <Text style={styles.resumenMonto}>{cargandoTotal ? "Calculando..." : formatMonto(totalPorLiquidar ?? 0)}</Text>
+        <View style={styles.resumenLinea}>
+          <Text style={styles.resumenLabel}>Total por liquidar</Text>
+          <Text style={styles.resumenMonto}>{cargandoTotal ? "Calculando..." : formatMonto(totalPorLiquidar ?? 0)}</Text>
+        </View>
+        
+        {totalEgresosSeleccionados > 0 && (
+          <>
+            <View style={styles.resumenLinea}>
+              <Text style={styles.resumenLabelSecundario}>Egresos a descontar</Text>
+              <Text style={styles.resumenMontoDescuento}>- {formatMonto(totalEgresosSeleccionados)}</Text>
+            </View>
+            <View style={styles.resumenDivider} />
+            <View style={styles.resumenLinea}>
+              <Text style={styles.resumenLabelTotal}>Total neto</Text>
+              <Text style={[styles.resumenMontoNeto, totalNeto < 0 && styles.resumenMontoNegativo]}>
+                {formatMonto(totalNeto)}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
+      
+      {/* Sección de Egresos */}
+      {egresos.length > 0 && (
+        <View style={styles.egresosSection}>
+          <Text style={styles.egresosSectionTitle}>Egresos a descontar</Text>
+          {cargandoEgresos ? (
+            <Text style={styles.loadingText}>Cargando egresos...</Text>
+          ) : (
+            egresos.map((egreso) => (
+              <TouchableOpacity
+                key={egreso.egresoId}
+                style={styles.egresoItem}
+                onPress={() => toggleEgresoSeleccionado(egreso.egresoId)}
+              >
+                <View style={styles.checkbox}>
+                  {egresosSeleccionados.includes(egreso.egresoId) && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </View>
+                <View style={styles.egresoInfo}>
+                  <Text style={styles.egresoMotivo}>{egreso.motivo}</Text>
+                  <Text style={styles.egresoValor}>{formatMonto(egreso.valorEgreso)}</Text>
+                  {egreso.fechaRegistro && (
+                    <Text style={styles.egresoFecha}>
+                      {new Date(egreso.fechaRegistro).toLocaleDateString('es-CO')}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+          {egresosSeleccionados.length > 0 && (
+            <Text style={styles.egresosSeleccionadosText}>
+              {egresosSeleccionados.length} egreso(s) seleccionado(s)
+            </Text>
+          )}
+        </View>
+      )}
+      
       {puedeActualmenteLiquidar && (
         Platform.OS === "web" ? (
           <div style={{ marginBottom: 16 }}>
@@ -451,12 +572,98 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "#00b89433",
   },
-  resumenLabel: { color: "#2d3436", fontWeight: "600" },
+  resumenLinea: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  resumenLabel: { color: "#2d3436", fontWeight: "600", flex: 1 },
   resumenMonto: { color: "#00b894", fontWeight: "bold", fontSize: 16 },
+  resumenLabelSecundario: { color: "#6c757d", fontWeight: "600", fontSize: 14, flex: 1 },
+  resumenMontoDescuento: { color: "#dc3545", fontWeight: "bold", fontSize: 14 },
+  resumenLabelTotal: { color: "#2d3436", fontWeight: "700", fontSize: 16, flex: 1 },
+  resumenMontoNeto: { color: "#00b894", fontWeight: "bold", fontSize: 18 },
+  resumenMontoNegativo: { color: "#dc3545" },
+  resumenDivider: {
+    height: 1,
+    backgroundColor: "#00b89466",
+    marginVertical: 8,
+  },
+  
+  // Estilos para egresos
+  egresosSection: {
+    backgroundColor: "#fff3cd",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#ffc107",
+  },
+  egresosSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#856404",
+    marginBottom: 10,
+  },
+  loadingText: {
+    textAlign: "center",
+    color: "#6c757d",
+    fontSize: 14,
+  },
+  egresoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#dee2e6",
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: "#0d6efd",
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  checkmark: {
+    color: "#0d6efd",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  egresoInfo: {
+    flex: 1,
+  },
+  egresoMotivo: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#212529",
+    marginBottom: 2,
+  },
+  egresoValor: {
+    fontSize: 14,
+    color: "#dc3545",
+    fontWeight: "bold",
+  },
+  egresoFecha: {
+    fontSize: 12,
+    color: "#6c757d",
+    marginTop: 2,
+  },
+  egresosSeleccionadosText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#0d6efd",
+    fontWeight: "600",
+    textAlign: "center",
+  },
 });

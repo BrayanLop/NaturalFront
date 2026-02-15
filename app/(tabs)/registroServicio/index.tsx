@@ -29,6 +29,8 @@ export default function ListaRegistros() {
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados'>('todos');
   const [formaPagoFiltro, setFormaPagoFiltro] = useState<'todos' | 'T' | 'E'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+  const [editandoFormaPagoId, setEditandoFormaPagoId] = useState<number | null>(null);
+  const [actualizandoFormaPago, setActualizandoFormaPago] = useState(false);
   
   // Fechas por defecto: día actual
   const hoy = new Date();
@@ -39,15 +41,16 @@ export default function ListaRegistros() {
   const [showDatePickerFin, setShowDatePickerFin] = useState(false);
   const [pickerVisible, setPickerVisible] = useState<null | 'inicio' | 'fin'>(null);
 
-  const esRol01 = isAdmin(usuario?.rol);
+  // Roles 01 (Admin) y 03 (Super Empleado) pueden editar
+  const puedeEditar = isAdmin(usuario?.rol);
 
   useEffect(() => {
-    if (!esRol01) return;
+    if (!puedeEditar) return;
     api
       .get('/Persona/Obtener')
       .then((res) => setPersonas(res.data || []))
       .catch((err) => logger.error('Error al cargar personas:', err));
-  }, [esRol01]);
+  }, [puedeEditar]);
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -84,7 +87,7 @@ export default function ListaRegistros() {
 
   const registrosFiltrados = useMemo(() => {
     const filtrados = registros.filter((item) => {
-    if (esRol01 && personaFiltro) {
+    if (puedeEditar && personaFiltro) {
       if (String(item.personaId) !== personaFiltro) return false;
     }
 
@@ -121,7 +124,7 @@ export default function ListaRegistros() {
       const fechaB = new Date(b.fechaServicio).getTime();
       return fechaB - fechaA; // Descendente (más reciente primero)
     });
-  }, [registros, esRol01, personaFiltro, estadoFiltro, formaPagoFiltro]);
+  }, [registros, puedeEditar, personaFiltro, estadoFiltro, formaPagoFiltro]);
 
   // Calcular consolidado basado en registros filtrados
   const consolidado = useMemo(() => {
@@ -159,7 +162,7 @@ export default function ListaRegistros() {
   }, [registrosFiltrados]);
 
   const handleConfirmarRegistro = useCallback(async (registroServicioId: number) => {
-    if (!esRol01) return;
+    if (!puedeEditar) return;
 
     const confirmar = await showConfirm('¿Desea confirmar este registro?', 'Confirmar registro');
     if (!confirmar) return;
@@ -180,7 +183,29 @@ export default function ListaRegistros() {
     } finally {
       setConfirmandoId(null);
     }
-  }, [esRol01, cargarDatos]);
+  }, [puedeEditar, cargarDatos]);
+
+  const handleActualizarFormaPago = useCallback(async (registroServicioId: number, formaPago: 'T' | 'E') => {
+    if (!puedeEditar) return;
+
+    setActualizandoFormaPago(true);
+    try {
+      await api.patch(
+        `/RegistroServicio/ActualizarFormaPago/${registroServicioId}?formaPago=${formaPago}`,
+        {},
+        { headers: { empresaId: '1' } }
+      );
+
+      showSuccess('Forma de pago actualizada correctamente');
+      setEditandoFormaPagoId(null);
+      cargarDatos();
+    } catch (e: any) {
+      logger.error('Error actualizando forma de pago:', e);
+      showError(e?.response?.data?.message || 'No se pudo actualizar la forma de pago');
+    } finally {
+      setActualizandoFormaPago(false);
+    }
+  }, [puedeEditar, cargarDatos]);
 
   const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={styles.item}>
@@ -204,10 +229,43 @@ export default function ListaRegistros() {
         <View style={{ flex: 1 }}>
           <Text>🧾 Servicio: {item.nombreServicio ?? 'N/A'}</Text>
           <Text>🕒 Fecha: {item.fechaServicio ? formatDate(item.fechaServicio) : 'Sin fecha'}</Text>
-          <Text>💳 Forma de pago: {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}</Text>
+          
+          {/* Forma de pago con opción de editar */}
+          {puedeEditar && !item.liquidado && editandoFormaPagoId === item.id ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+              <Text style={{ marginRight: 8 }}>💳 Forma de pago:</Text>
+              <TouchableOpacity
+                style={[styles.formaPagoOption, item.formaPago === 'E' && styles.formaPagoOptionActive]}
+                onPress={() => handleActualizarFormaPago(item.id, 'E')}
+                disabled={actualizandoFormaPago}
+              >
+                <Text style={[styles.formaPagoOptionText, item.formaPago === 'E' && styles.formaPagoOptionTextActive]}>Efectivo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.formaPagoOption, item.formaPago === 'T' && styles.formaPagoOptionActive]}
+                onPress={() => handleActualizarFormaPago(item.id, 'T')}
+                disabled={actualizandoFormaPago}
+              >
+                <Text style={[styles.formaPagoOptionText, item.formaPago === 'T' && styles.formaPagoOptionTextActive]}>Transferencia</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditandoFormaPagoId(null)} style={{ marginLeft: 8 }}>
+                <Text style={{ color: '#636e72', fontSize: 12 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              onPress={() => puedeEditar && !item.liquidado ? setEditandoFormaPagoId(item.id) : null}
+              disabled={item.liquidado || !puedeEditar}
+            >
+              <Text>
+                💳 Forma de pago: {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}
+                {puedeEditar && !item.liquidado && <Text style={{ color: '#0984e3', fontSize: 12 }}> ✎</Text>}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         
-        {esRol01 && !item.confirmado && !item.liquidado && (
+        {puedeEditar && !item.confirmado && !item.liquidado && (
           <View style={styles.confirmContainer}>
             <TouchableOpacity
               style={[styles.confirmButton, confirmandoId === item.id && styles.confirmButtonLoading]}
@@ -222,7 +280,7 @@ export default function ListaRegistros() {
         )}
       </View>
     </View>
-  ), [esRol01, confirmandoId, handleConfirmarRegistro]);
+  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago]);
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
@@ -259,7 +317,7 @@ export default function ListaRegistros() {
           <View style={styles.filtrosBottomRow}>
             {/* Columna izquierda */}
             <View style={styles.filtroColumn}>
-              {esRol01 && (
+              {puedeEditar && (
                 <View style={{ marginBottom: 12 }}>
                   <Text style={styles.filtroLabel}>Persona</Text>
                   <View style={styles.chipsRow}>
@@ -699,5 +757,26 @@ const styles = StyleSheet.create({
     color: '#0d6efd',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  formaPagoOption: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#b2bec3',
+    backgroundColor: '#fff',
+    marginRight: 6,
+  },
+  formaPagoOptionActive: {
+    backgroundColor: '#00b894',
+    borderColor: '#00b894',
+  },
+  formaPagoOptionText: {
+    fontSize: 11,
+    color: '#2d3436',
+    fontWeight: '600',
+  },
+  formaPagoOptionTextActive: {
+    color: '#fff',
   },
 });

@@ -1,6 +1,7 @@
 import EmptyState from '@/components/EmptyState';
 import ListCard from '@/components/ListCard';
 import LoadingView from '@/components/LoadingView';
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
@@ -9,12 +10,11 @@ import { isAdmin } from '@/utils/roles';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    FlatList,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../api/api';
 import { EgresoEmpresa } from '../../api/modelos/egreso';
@@ -32,6 +32,7 @@ export default function ListaEgresos() {
     return toDateInputValue(start);
   });
   const [fechaFin, setFechaFin] = useState(() => toDateInputValue(new Date()));
+  const [pickerVisible, setPickerVisible] = useState<null | 'inicio' | 'fin'>(null);
 
   const esAdmin = isAdmin(usuario?.rol);
 
@@ -102,40 +103,37 @@ export default function ListaEgresos() {
   return (
     <View style={styles.container}>
       <View style={styles.filtros}>
-        <Text style={styles.label}>Rango de fechas</Text>
-        <View style={styles.row}>
-          <View style={styles.dateInputBox}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2d3436', marginBottom: 10 }}>Filtrar por fechas</Text>
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('inicio')}>
             <Text style={styles.chipLabel}>Desde</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                style={styles.webDateInput as any}
-              />
-            ) : (
-              <Text style={styles.dateValue}>{fechaInicio}</Text>
-            )}
-          </View>
-          <View style={styles.dateInputBox}>
+            <Text style={styles.chipValue}>{fechaInicio}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('fin')}>
             <Text style={styles.chipLabel}>Hasta</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-                style={styles.webDateInput as any}
-              />
-            ) : (
-              <Text style={styles.dateValue}>{fechaFin}</Text>
-            )}
-          </View>
+            <Text style={styles.chipValue}>{fechaFin}</Text>
+          </TouchableOpacity>
         </View>
-
         <TouchableOpacity style={styles.buscarButton} onPress={cargarEgresos} disabled={loading}>
           <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Pickers para dispositivos móviles */}
+      <SimpleDatePicker
+        value={fechaInicio}
+        onChange={(dateStr) => { setFechaInicio(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'inicio'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha desde"
+      />
+      <SimpleDatePicker
+        value={fechaFin}
+        onChange={(dateStr) => { setFechaFin(dateStr); setPickerVisible(null); }}
+        visible={pickerVisible === 'fin'}
+        onClose={() => setPickerVisible(null)}
+        title="Selecciona la fecha hasta"
+      />
 
       <View style={styles.resumen}>
         <Text style={styles.resumenLabel}>Total egresos en rango</Text>
@@ -163,40 +161,41 @@ export default function ListaEgresos() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: COLORS.surface },
   filtros: {
-    backgroundColor: COLORS.cardBackground,
-    padding: 12,
+    backgroundColor: '#fff',
     borderRadius: 10,
-    marginBottom: 16,
-    gap: 8,
-  },
-  label: { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dateInputBox: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    padding: 8,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#dfe6e9',
   },
-  chipLabel: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 4 },
-  dateValue: { fontSize: 14, color: COLORS.text },
-  webDateInput: {
-    borderWidth: 0,
-    padding: 4,
-    fontSize: 14,
-    width: '100%',
+  dateChip: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    backgroundColor: '#f1f2f6',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#dfe6e9',
+  },
+  chipLabel: {
+    fontSize: 12,
+    color: '#636e72',
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  chipValue: {
+    fontSize: 15,
+    color: '#2d3436',
+    fontWeight: 'bold',
   },
   buscarButton: {
-    backgroundColor: COLORS.primary,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#00b894',
+    padding: 10,
+    borderRadius: 6,
     alignItems: 'center',
   },
-  buscarText: { color: COLORS.white, fontWeight: 'bold', fontSize: 16 },
+  buscarText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   resumen: {
     backgroundColor: '#fee5e5',
     borderRadius: 10,

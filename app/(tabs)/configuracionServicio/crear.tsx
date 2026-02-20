@@ -1,18 +1,18 @@
+import { logger, showError, showSuccess } from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -40,7 +40,7 @@ export default function CrearConfiguracion() {
       .get('/Servicio/Obtener')
       .then((res) => setServicios(res.data))
       .catch(() => {
-        Alert.alert('Error', 'No se pudieron cargar los servicios');
+        showError('No se pudieron cargar los servicios');
       });
 
     // Cargar configuraciones existentes
@@ -51,7 +51,7 @@ export default function CrearConfiguracion() {
         setConfiguracionesExistentes(serviciosConfigurados);
       })
       .catch(() => {
-        console.error('No se pudieron cargar las configuraciones existentes');
+        logger.error('No se pudieron cargar las configuraciones existentes');
       });
   }, []);
 
@@ -81,23 +81,23 @@ export default function CrearConfiguracion() {
 
     if (!configuracion.servicioId) {
       setErrores((prev) => ({ ...prev, servicioId: 'Seleccione un servicio' }));
-      Alert.alert('Error', 'Seleccione un servicio');
+      showError('Seleccione un servicio', 'Error de validación');
       return;
     }
 
     // Validar si el servicio ya está configurado
     if (configuracionesExistentes.includes(servicioId)) {
-      Alert.alert('Error', 'Este servicio ya está configurado. Edítelo desde la lista de configuraciones.');
+      showError('Este servicio ya está configurado. Edítelo desde la lista de configuraciones.', 'Error de validación');
       return;
     }
 
     if (isNaN(pt) || isNaN(pe)) {
-      Alert.alert('Error', 'Porcentajes inválidos');
+      showError('Porcentajes inválidos', 'Error de validación');
       return;
     }
 
     if (pt + pe !== 100) {
-      Alert.alert('Error', 'La suma de porcentajes debe ser 100%');
+      showError('La suma de porcentajes debe ser 100%', 'Error de validación');
       return;
     }
 
@@ -109,11 +109,11 @@ export default function CrearConfiguracion() {
         estado: configuracion.estado,
       });
 
-      Alert.alert('Éxito', 'Configuración creada');
+      showSuccess('Configuración creada');
       router.back();
     } catch (error) {
-      console.error('Error al guardar', error);
-      Alert.alert('Error', 'No se pudo guardar la configuración');
+      logger.error('Error al guardar', error);
+      showError('No se pudo guardar la configuración');
     }
   };
 

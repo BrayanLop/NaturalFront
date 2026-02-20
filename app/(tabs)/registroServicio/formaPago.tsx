@@ -3,9 +3,10 @@ import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
+import { logger, showError, showSuccess } from '@/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../../api/api';
 
 type FormaPago = 'T' | 'E';
@@ -52,8 +53,8 @@ export default function ResumenYFormaPago() {
       );
       setServicios(serviciosSeleccionados);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
+      logger.error('Error al cargar datos:', error);
+      showError('No se pudieron cargar los datos');
     } finally {
       setLoading(false);
     }
@@ -77,11 +78,11 @@ export default function ResumenYFormaPago() {
       }));
 
       await api.post('/RegistroServicio/Guardar', registros);
-      Alert.alert('Éxito', 'Servicios registrados correctamente');
+      showSuccess('Servicios registrados correctamente');
       router.replace('/(tabs)/registroServicio');
     } catch (error) {
-      console.error('Error al guardar registros:', error);
-      Alert.alert('Error', 'No se pudieron guardar los servicios');
+      logger.error('Error al guardar registros:', error);
+      showError('No se pudieron guardar los servicios');
     } finally {
       setGuardando(false);
     }

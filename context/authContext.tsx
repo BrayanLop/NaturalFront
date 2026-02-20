@@ -15,6 +15,7 @@ type Usuario = {
 type AuthContextType = {
   usuario: Usuario | null;
   cargando: boolean;
+  isAuthenticated: boolean;
   login: (datos: Usuario) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -62,8 +63,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const isAuthenticated = usuario !== null;
+
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, cargando }}>
+    <AuthContext.Provider value={{ usuario, login, logout, cargando, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

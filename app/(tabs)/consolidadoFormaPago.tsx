@@ -1,6 +1,7 @@
 import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { toDateInputValue } from '@/utils/formatters';
+import { logger } from '@/utils/logger';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
@@ -30,7 +31,7 @@ export default function ConsolidadoFormaPagoScreen() {
       if (fechaFin) params.fechaHasta = fechaFin + 'T23:59:59';
       params.formaPago = formaPago !== 'todos' ? formaPago : undefined;
       const res = await api.get('/Contabilidad/ConsolidadoFormaPago', { params });
-      console.log('API ConsolidadoFormaPago:', res.data);
+      logger.log('Consolidado forma de pago obtenido');
       setData(res.data);
     } catch (err) {
       setData(null);

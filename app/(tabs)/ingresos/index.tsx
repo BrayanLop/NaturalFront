@@ -1,13 +1,14 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import { logger } from '@/utils/logger';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -43,7 +44,7 @@ export default function IngresosEmpresa() {
       });
       setHistorial(response.data || []);
     } catch (error) {
-      console.error('❌ Error al cargar historial de ingresos:', error);
+      logger.error('Error al cargar historial de ingresos:', error);
     } finally {
       setLoading(false);
     }

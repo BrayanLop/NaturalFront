@@ -1,16 +1,16 @@
 import { toDateInputValue } from '@/utils/formatters';
+import { logger, showError, showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { api } from '../../api/api';
+import { personaService } from '../../api/services';
 
 export default function CrearPersona() {
   const router = useRouter();
@@ -70,18 +70,17 @@ export default function CrearPersona() {
     }
 
     try {
-      await api.post('/Persona/Crear', {
+      await personaService.crear({
         ...persona,
         edad: parseInt(persona.edad),
         rol: "02",
-        empresa: {} // Se envía el objeto empresa vacío
       });
 
-      Alert.alert('Éxito', 'Persona creada correctamente');
+      showSuccess('Persona creada correctamente');
       router.back();
     } catch (error) {
-      console.error('Error al crear persona:', error);
-      Alert.alert('Error', 'No se pudo crear la persona');
+      logger.error('Error al crear persona:', error);
+      showError('No se pudo crear la persona');
     }
   };
 

@@ -2,19 +2,20 @@ import EmptyState from '@/components/EmptyState';
 import ListCard from '@/components/ListCard';
 import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS } from '@/constants/theme';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger, showError } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { api } from '../../api/api';
 import { EgresoEmpresa } from '../../api/modelos/egreso';
@@ -75,6 +76,7 @@ export default function ListaEgresos() {
         title={item.nombrePersona || 'Sin persona'}
         subtitle={`💵 ${formatCurrency(item.valorEgreso)}`}
         description={item.motivo || 'Sin motivo'}
+        leftIcon={<FontAwesome5 name="arrow-down" size={16} color={COLORS.error} />}
         rightContent={
           <Text style={styles.fecha}>
             {item.fechaRegistro ? formatDate(item.fechaRegistro) : 'Sin fecha'}
@@ -88,8 +90,16 @@ export default function ListaEgresos() {
   const keyExtractor = useCallback((item: EgresoEmpresa, index: number) => `${item.empresaId}-${item.personaId}-${index}`, []);
 
   const emptyComponent = useMemo(
-    () => <EmptyState message="No hay egresos en el rango seleccionado" icon="💸" />,
-    []
+    () => (
+      <EmptyState 
+        message="No hay egresos en el rango seleccionado" 
+        icon="💸"
+        subtitle="Ajusta las fechas o registra un nuevo egreso"
+        actionLabel="Registrar egreso"
+        onAction={handleCrear}
+      />
+    ),
+    [handleCrear]
   );
 
   if (!esAdmin) {
@@ -102,21 +112,55 @@ export default function ListaEgresos() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Egresos</Text>
+          <Text style={styles.headerSubtitle}>
+            {egresos.length} registro{egresos.length !== 1 ? 's' : ''} encontrado{egresos.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.headerAddButton,
+            pressed && styles.headerAddButtonPressed,
+          ]}
+          onPress={handleCrear}
+        >
+          <FontAwesome5 name="plus" size={18} color={COLORS.white} />
+        </Pressable>
+      </View>
+
       <View style={styles.filtros}>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2d3436', marginBottom: 10 }}>Filtrar por fechas</Text>
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-          <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('inicio')}>
+        <Text style={styles.filtrosTitle}>Filtrar por fechas</Text>
+        <View style={styles.dateRow}>
+          <Pressable 
+            style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+            onPress={() => setPickerVisible('inicio')}
+          >
             <Text style={styles.chipLabel}>Desde</Text>
             <Text style={styles.chipValue}>{fechaInicio}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('fin')}>
+          </Pressable>
+          <Pressable 
+            style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+            onPress={() => setPickerVisible('fin')}
+          >
             <Text style={styles.chipLabel}>Hasta</Text>
             <Text style={styles.chipValue}>{fechaFin}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
-        <TouchableOpacity style={styles.buscarButton} onPress={cargarEgresos} disabled={loading}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.buscarButton, 
+            pressed && styles.buscarButtonPressed,
+            loading && styles.buscarButtonDisabled,
+          ]} 
+          onPress={cargarEgresos} 
+          disabled={loading}
+        >
+          <FontAwesome5 name="search" size={14} color={COLORS.white} />
           <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Pickers para dispositivos móviles */}
@@ -141,92 +185,193 @@ export default function ListaEgresos() {
       </View>
 
       {loading ? (
-        <LoadingView />
+        <LoadingView message="Cargando egresos..." />
       ) : (
         <FlatList
           data={egresos}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListEmptyComponent={emptyComponent}
+          contentContainerStyle={egresos.length === 0 ? styles.emptyList : undefined}
         />
       )}
 
-      <TouchableOpacity style={styles.addButton} onPress={handleCrear}>
-        <Text style={styles.addText}>+ Registrar egreso</Text>
-      </TouchableOpacity>
+      {egresos.length > 0 && (
+        <Pressable 
+          style={({ pressed }) => [
+            styles.addButton, 
+            pressed && styles.addButtonPressed,
+          ]} 
+          onPress={handleCrear}
+        >
+          <Text style={styles.addText}>+ Registrar egreso</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: COLORS.surface },
+  container: { 
+    flex: 1, 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background 
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  headerAddButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...SHADOWS.primary,
+  },
+  headerAddButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.95 }],
+  },
   filtros: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  filtrosTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
   },
   dateChip: {
+    flex: 1,
     flexDirection: 'column',
     alignItems: 'flex-start',
-    backgroundColor: '#f1f2f6',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: COLORS.border,
+  },
+  dateChipPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
   },
   chipLabel: {
-    fontSize: 12,
-    color: '#636e72',
-    marginBottom: 2,
-    fontWeight: '600',
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    fontWeight: FONT_WEIGHT.medium,
   },
   chipValue: {
-    fontSize: 15,
-    color: '#2d3436',
-    fontWeight: 'bold',
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   buscarButton: {
-    backgroundColor: '#00b894',
-    padding: 10,
-    borderRadius: 6,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    ...SHADOWS.primary,
   },
-  buscarText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  buscarButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
+  },
+  buscarButtonDisabled: {
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
+  },
+  buscarText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    fontSize: FONT_SIZE.sm 
+  },
   resumen: {
-    backgroundColor: '#fee5e5',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.errorLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d6303133',
+    borderColor: COLORS.error,
   },
-  resumenLabel: { color: '#2d3436', fontWeight: '600' },
-  resumenMonto: { color: '#d63031', fontWeight: 'bold', fontSize: 16 },
+  resumenLabel: { 
+    color: COLORS.text, 
+    fontWeight: FONT_WEIGHT.medium,
+    fontSize: FONT_SIZE.sm,
+  },
+  resumenMonto: { 
+    color: COLORS.error, 
+    fontWeight: FONT_WEIGHT.bold, 
+    fontSize: FONT_SIZE.lg,
+  },
+  emptyList: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   fecha: {
-    fontSize: 12,
+    fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
   addButton: {
-    marginTop: 16,
+    marginTop: SPACING.lg,
     backgroundColor: COLORS.primary,
-    padding: 15,
-    borderRadius: 8,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
+    ...SHADOWS.primary,
+  },
+  addButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
   },
   addText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
   },
   errorText: {
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: SPACING.xl,
     color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.md,
   },
 });

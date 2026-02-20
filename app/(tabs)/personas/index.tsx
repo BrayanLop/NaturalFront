@@ -1,15 +1,16 @@
 import EmptyState from '@/components/EmptyState';
 import ListCard from '@/components/ListCard';
 import LoadingView from '@/components/LoadingView';
-import { COLORS } from '@/constants/theme';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { api } from '../../api/api';
@@ -65,8 +66,9 @@ export default function ListaPersonas() {
     ({ item }: { item: Persona }) => (
       <ListCard
         title={`${item.nombre} ${item.apellido}`}
-        description={`📱 ${item.celular || 'Sin celular'}`}
+        description={item.celular ? `📱 ${item.celular}` : item.email || 'Sin contacto'}
         onPress={() => handleNavegar(item.id)}
+        leftIcon={<FontAwesome5 name="user" size={18} color={COLORS.primary} />}
       />
     ),
     [handleNavegar]
@@ -84,14 +86,41 @@ export default function ListaPersonas() {
   );
 
   const emptyComponent = useMemo(
-    () => <EmptyState message="No hay personas registradas" icon="👥" subtitle="Comienza agregando una nueva persona" />,
-    []
+    () => (
+      <EmptyState 
+        message="No hay personas registradas" 
+        icon="👥" 
+        subtitle="Comienza agregando una nueva persona"
+        actionLabel="Agregar persona"
+        onAction={handleCrear}
+      />
+    ),
+    [handleCrear]
   );
 
   return (
     <View style={styles.container}>
+      {/* Header con estadísticas */}
+      {!loading && personas.length > 0 && (
+        <View style={styles.header}>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>Personas</Text>
+            <Text style={styles.headerSubtitle}>{personas.length} registrado{personas.length !== 1 ? 's' : ''}</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.headerAddButton,
+              pressed && styles.headerAddButtonPressed,
+            ]}
+            onPress={handleCrear}
+          >
+            <FontAwesome5 name="plus" size={14} color={COLORS.white} />
+          </Pressable>
+        </View>
+      )}
+
       {loading ? (
-        <LoadingView />
+        <LoadingView message="Cargando personas..." />
       ) : (
         <FlatList
           data={personas}
@@ -103,30 +132,75 @@ export default function ListaPersonas() {
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           windowSize={10}
+          contentContainerStyle={personas.length === 0 ? styles.emptyList : undefined}
+          showsVerticalScrollIndicator={false}
         />
       )}
-
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleCrear}
-      >
-        <Text style={styles.addText}>+ Agregar persona</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: COLORS.surface },
-  addButton: {
-    marginTop: 20,
-    backgroundColor: COLORS.primary,
-    padding: 15,
-    borderRadius: 8,
+  container: { 
+    flex: 1, 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background 
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  headerAddButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...SHADOWS.primary,
+  },
+  headerAddButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.95 }],
+  },
+  emptyList: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  addButton: {
+    marginTop: SPACING.lg,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    ...SHADOWS.primary,
+  },
+  addButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
   },
   addText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
   },
 });

@@ -1,8 +1,10 @@
 import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { toDateInputValue } from '@/utils/formatters';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 import { api } from '../api/api';
 
@@ -46,78 +48,299 @@ export default function ConsolidadoFormaPagoScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerIconContainer}>
+            <FontAwesome5 name="credit-card" size={24} color={COLORS.primary} />
+          </View>
+          <Text style={styles.headerTitle}>Consolidado</Text>
+          <Text style={styles.headerSubtitle}>Por forma de pago</Text>
+        </View>
+
         <View style={styles.filtros}>
-          <Text style={styles.titulo}>Consolidado por forma de Pago</Text>
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-            <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('inicio')}>
+          <Text style={styles.filtrosLabel}>Rango de fechas</Text>
+          <View style={styles.dateRow}>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+              onPress={() => setPickerVisible('inicio')}
+            >
               <Text style={styles.chipLabel}>Desde</Text>
               <Text style={styles.chipValue}>{fechaInicio}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.dateChip, { flex: 1 }]} onPress={() => setPickerVisible('fin')}>
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]}
+              onPress={() => setPickerVisible('fin')}
+            >
               <Text style={styles.chipLabel}>Hasta</Text>
               <Text style={styles.chipValue}>{fechaFin}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
+
+          <Text style={styles.filtrosLabel}>Forma de pago</Text>
           <View style={styles.chipsRow}>
-            {[{ key: 'todos', label: 'Todas' }, { key: 'E', label: 'Efectivo' }, { key: 'T', label: 'Transferencia' }].map(opt => (
-              <TouchableOpacity
+            {[{ key: 'todos', label: 'Todas', icon: 'list' }, { key: 'E', label: 'Efectivo', icon: 'money-bill-wave' }, { key: 'T', label: 'Transferencia', icon: 'exchange-alt' }].map(opt => (
+              <Pressable
                 key={opt.key}
-                style={[styles.chip, formaPago === opt.key && styles.chipActive]}
+                style={({ pressed }) => [
+                  styles.chip, 
+                  formaPago === opt.key && styles.chipActive,
+                  pressed && styles.chipPressed
+                ]}
                 onPress={() => setFormaPago(opt.key as any)}
               >
+                <FontAwesome5 
+                  name={opt.icon} 
+                  size={12} 
+                  color={formaPago === opt.key ? COLORS.white : COLORS.textSecondary} 
+                />
                 <Text style={[styles.chipText, formaPago === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
-          <TouchableOpacity style={styles.btnBuscar} onPress={fetchData} disabled={loading}>
+
+          <Pressable 
+            style={({ pressed }) => [
+              styles.btnBuscar, 
+              pressed && styles.btnBuscarPressed,
+              loading && styles.btnBuscarDisabled
+            ]} 
+            onPress={fetchData} 
+            disabled={loading}
+          >
+            <FontAwesome5 name="search" size={14} color={COLORS.white} />
             <Text style={styles.btnBuscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
+
         {loading ? (
           <LoadingView />
         ) : (
           <View style={styles.resultadoBox}>
-            <Text style={styles.resultadoTitulo}>Transferencia</Text>
-            <Text style={styles.resultadoDato}>Cantidad: {data?.cantidadTransferencia ?? 0}</Text>
-            <Text style={styles.resultadoDato}>Total: ${data?.totalTransferencia?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}</Text>
-            <View style={{ height: 16 }} />
-            <Text style={styles.resultadoTitulo}>Efectivo</Text>
-            <Text style={styles.resultadoDato}>Cantidad: {data?.cantidadEfectivo ?? 0}</Text>
-            <Text style={styles.resultadoDato}>Total: ${data?.totalEfectivo?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}</Text>
+            <View style={styles.resultCard}>
+              <View style={[styles.resultIconContainer, { backgroundColor: COLORS.infoLight }]}>
+                <FontAwesome5 name="exchange-alt" size={20} color={COLORS.info} />
+              </View>
+              <Text style={styles.resultadoTitulo}>Transferencia</Text>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cantidad</Text>
+                <Text style={styles.resultValue}>{data?.cantidadTransferencia ?? 0}</Text>
+              </View>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Total</Text>
+                <Text style={[styles.resultValue, styles.resultHighlight]}>
+                  ${data?.totalTransferencia?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.resultCard}>
+              <View style={[styles.resultIconContainer, { backgroundColor: COLORS.successLight }]}>
+                <FontAwesome5 name="money-bill-wave" size={20} color={COLORS.success} />
+              </View>
+              <Text style={styles.resultadoTitulo}>Efectivo</Text>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cantidad</Text>
+                <Text style={styles.resultValue}>{data?.cantidadEfectivo ?? 0}</Text>
+              </View>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Total</Text>
+                <Text style={[styles.resultValue, { color: COLORS.success }]}>
+                  ${data?.totalEfectivo?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
-        <SimpleDatePicker
-          visible={pickerVisible !== null}
-          value={pickerVisible === 'inicio' ? fechaInicio : fechaFin}
-          onChange={dateStr => {
-            if (pickerVisible === 'inicio') setFechaInicio(dateStr);
-            if (pickerVisible === 'fin') setFechaFin(dateStr);
-            setPickerVisible(null);
-          }}
-          onClose={() => setPickerVisible(null)}
-          title={pickerVisible === 'inicio' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
-        />
       </ScrollView>
+
+      <SimpleDatePicker
+        visible={pickerVisible !== null}
+        value={pickerVisible === 'inicio' ? fechaInicio : fechaFin}
+        onChange={dateStr => {
+          if (pickerVisible === 'inicio') setFechaInicio(dateStr);
+          if (pickerVisible === 'fin') setFechaFin(dateStr);
+          setPickerVisible(null);
+        }}
+        onClose={() => setPickerVisible(null)}
+        title={pickerVisible === 'inicio' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', paddingTop: 40 },
-  filtros: { backgroundColor: '#fff', borderRadius: 10, padding: 12, margin: 16, elevation: 2 },
-  titulo: { fontSize: 18, fontWeight: 'bold', color: '#2d3436', marginBottom: 12, textAlign: 'center' },
-  dateChip: { flexDirection: 'column', alignItems: 'flex-start', backgroundColor: '#f1f2f6', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#dfe6e9', marginRight: 4 },
-  chipLabel: { fontSize: 12, color: '#636e72', marginBottom: 2, fontWeight: '600' },
-  chipValue: { fontSize: 15, color: '#2d3436', fontWeight: 'bold' },
-  chipsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 12 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#dfe6e9', marginRight: 6 },
-  chipActive: { backgroundColor: '#00b894' },
-  chipText: { color: '#636e72', fontSize: 13 },
-  chipTextActive: { color: '#fff', fontWeight: 'bold' },
-  btnBuscar: { backgroundColor: '#00b894', padding: 10, borderRadius: 6, alignItems: 'center', marginTop: 10 },
-  btnBuscarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  resultadoBox: { backgroundColor: '#fff', borderRadius: 10, padding: 18, margin: 16, elevation: 2 },
-  resultadoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#0984e3', marginBottom: 6 },
-  resultadoDato: { fontSize: 15, color: '#2d3436', marginBottom: 2 },
+  container: { 
+    flex: 1, 
+    backgroundColor: COLORS.background, 
+    padding: SPACING.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.lg,
+  },
+  headerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  filtros: { 
+    backgroundColor: COLORS.white, 
+    borderRadius: RADIUS.lg, 
+    padding: SPACING.lg, 
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
+  },
+  filtrosLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  dateChip: { 
+    flex: 1,
+    flexDirection: 'column', 
+    alignItems: 'flex-start', 
+    backgroundColor: COLORS.surface, 
+    borderRadius: RADIUS.md, 
+    paddingHorizontal: SPACING.md, 
+    paddingVertical: SPACING.md, 
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+  },
+  dateChipPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  chipLabel: { 
+    fontSize: FONT_SIZE.xs, 
+    color: COLORS.textSecondary, 
+    marginBottom: SPACING.xs, 
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  chipValue: { 
+    fontSize: FONT_SIZE.md, 
+    color: COLORS.text, 
+    fontWeight: FONT_WEIGHT.bold,
+  },
+  chipsRow: { 
+    flexDirection: 'row', 
+    gap: SPACING.sm, 
+    flexWrap: 'wrap', 
+    marginBottom: SPACING.lg,
+  },
+  chip: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md, 
+    paddingVertical: SPACING.sm, 
+    borderRadius: RADIUS.full, 
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  chipActive: { 
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  chipPressed: {
+    transform: [{ scale: 0.95 }],
+  },
+  chipText: { 
+    color: COLORS.textSecondary, 
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  chipTextActive: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  btnBuscar: { 
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary, 
+    padding: SPACING.md, 
+    borderRadius: RADIUS.md, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.primary,
+  },
+  btnBuscarPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
+  },
+  btnBuscarDisabled: {
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
+  },
+  btnBuscarText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    fontSize: FONT_SIZE.md,
+  },
+  resultadoBox: { 
+    gap: SPACING.md,
+  },
+  resultCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.md,
+  },
+  resultIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  resultadoTitulo: { 
+    fontSize: FONT_SIZE.lg, 
+    fontWeight: FONT_WEIGHT.bold, 
+    color: COLORS.text, 
+    marginBottom: SPACING.md,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  resultLabel: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+  },
+  resultValue: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  resultHighlight: {
+    color: COLORS.info,
+    fontWeight: FONT_WEIGHT.bold,
+  },
 });

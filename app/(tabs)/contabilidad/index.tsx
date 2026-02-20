@@ -1,14 +1,16 @@
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
 import { isTrabajador } from '@/utils/roles';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { api } from '../../api/api';
@@ -57,195 +59,323 @@ export default function PagosPorPersona() {
 
   return (
     <View style={styles.container}>
-      <Link href="/contabilidad/historico" asChild>
-        <TouchableOpacity style={styles.historicoButton}>
-          <Text style={styles.historicoText}>📅 Histórico pagos</Text>
-        </TouchableOpacity>
-      </Link>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Contabilidad</Text>
+          <Text style={styles.headerSubtitle}>
+            {pagos.length} persona{pagos.length !== 1 ? 's' : ''} con pagos recientes
+          </Text>
+        </View>
+        <Link href="/contabilidad/historico" asChild>
+          <Pressable style={({ pressed }) => [
+            styles.headerActionButton,
+            pressed && styles.headerActionButtonPressed,
+          ]}>
+            <FontAwesome5 name="calendar-alt" size={16} color={COLORS.primary} />
+          </Pressable>
+        </Link>
+      </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando pagos...</Text>
+        </View>
       ) : pagos.length === 0 ? (
-        <View style={{ padding: 40, alignItems: 'center' }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>📊</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436' }}>No hay pagos recientes</Text>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconContainer}>
+            <FontAwesome5 name="chart-bar" size={48} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No hay pagos recientes</Text>
+          <Text style={styles.emptySubtitle}>Los pagos aparecerán aquí cuando se registren</Text>
         </View>
       ) : (
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
           {pagos.map((pago, index) => (
           <Link
               key={index}
               href={`/contabilidad/detalleServicioPersona/${pago.personaId}`}
               asChild
             >
-              <TouchableOpacity>
-                <View style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.nombre}>🧑 {pago.nombrePersona}</Text>
-                    {pago.totalSinConfirmar > 0 && (
-                      <View style={styles.pendingBadge}>
-                        <Text style={styles.pendingBadgeText}>Pendiente</Text>
-                      </View>
-                    )}
-                  </View>
-                  
-                  <View style={styles.totalesContainer}>
-                    <View style={styles.totalBox}>
-                      <Text style={styles.totalLabel}>Total</Text>
-                      <Text style={styles.totalMonto}>{formatCurrency(pago.totalPagado)}</Text>
+              <Pressable style={({ pressed }) => [
+                styles.card,
+                pressed && styles.cardPressed,
+              ]}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.personaInfo}>
+                    <View style={styles.avatarContainer}>
+                      <FontAwesome5 name="user" size={16} color={COLORS.primary} />
                     </View>
-                    {pago.totalSinConfirmar > 0 && (
-                      <View style={styles.sinConfirmarBox}>
-                        <Text style={styles.sinConfirmarLabel}>Sin confirmar</Text>
-                        <Text style={styles.sinConfirmarMonto}>{formatCurrency(pago.totalSinConfirmar)}</Text>
-                      </View>
-                    )}
+                    <Text style={styles.nombre}>{pago.nombrePersona}</Text>
                   </View>
-                  
-                  <View style={styles.serviciosContainer}>
-                    <Text style={styles.serviciosTitle}>Servicios realizados</Text>
-                    {pago.servicios.map((servicio, idx) => (
-                      <View key={idx} style={styles.servicioItem}>
-                        <Text style={styles.servicioPunto}>•</Text>
-                        <Text style={styles.servicioNombre}>{servicio.nombre}</Text>
-                        <Text style={styles.servicioCantidad}>{servicio.cantidad}</Text>
-                      </View>
-                    ))}
-                  </View>
+                  {pago.totalSinConfirmar > 0 && (
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.pendingBadgeText}>Pendiente</Text>
+                    </View>
+                  )}
                 </View>
-              </TouchableOpacity>
+                
+                <View style={styles.totalesContainer}>
+                  <View style={styles.totalBox}>
+                    <Text style={styles.totalLabel}>Total pagado</Text>
+                    <Text style={styles.totalMonto}>{formatCurrency(pago.totalPagado)}</Text>
+                  </View>
+                  {pago.totalSinConfirmar > 0 && (
+                    <View style={styles.sinConfirmarBox}>
+                      <Text style={styles.sinConfirmarLabel}>Sin confirmar</Text>
+                      <Text style={styles.sinConfirmarMonto}>{formatCurrency(pago.totalSinConfirmar)}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.serviciosContainer}>
+                  <Text style={styles.serviciosTitle}>Servicios realizados</Text>
+                  {pago.servicios.map((servicio, idx) => (
+                    <View key={idx} style={styles.servicioItem}>
+                      <View style={styles.servicioIndicador} />
+                      <Text style={styles.servicioNombre}>{servicio.nombre}</Text>
+                      <Text style={styles.servicioCantidad}>{servicio.cantidad}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Pressable>
           </Link>))}
         </ScrollView>)}
     </View>);
   }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  historicoButton: {
-    backgroundColor: '#00b894',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
+  container: { 
+    flex: 1, 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background 
   },
-  historicoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  card: {
-    backgroundColor: '#e9ecef',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  headerActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ced4da',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: COLORS.primary,
+  },
+  headerActionButtonPressed: {
+    backgroundColor: COLORS.primary,
+    transform: [{ scale: 0.95 }],
+  },
+  historicoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.primary,
+  },
+  historicoButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
+  },
+  historicoText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    fontSize: FONT_SIZE.md 
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  loadingText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xxl,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  emptySubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.md,
+  },
+  cardPressed: {
+    backgroundColor: COLORS.surface,
+    transform: [{ scale: 0.99 }],
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
+  },
+  personaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: SPACING.sm,
+  },
+  avatarContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   nombre: { 
-    fontSize: 16, 
-    fontWeight: 'bold',
-    color: '#2d3436',
+    fontSize: FONT_SIZE.md, 
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
     flex: 1,
   },
   pendingBadge: {
-    backgroundColor: '#fff3cd',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: COLORS.warningLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: '#ffc107',
+    borderColor: COLORS.warning,
   },
   pendingBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#856404',
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.warning,
   },
   totalesContainer: { 
     flexDirection: 'row', 
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   totalBox: {
     flex: 1,
-    backgroundColor: '#e8f8f2',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.primarySurface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     borderLeftWidth: 3,
-    borderLeftColor: '#00b894',
+    borderLeftColor: COLORS.primary,
   },
   totalLabel: {
-    fontSize: 11,
-    color: '#636e72',
-    marginBottom: 4,
-    fontWeight: '500',
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    fontWeight: FONT_WEIGHT.medium,
   },
   totalMonto: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#00b894',
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.primary,
   },
   sinConfirmarBox: {
     flex: 1,
-    backgroundColor: '#fff8e1',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.warningLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     borderLeftWidth: 3,
-    borderLeftColor: '#ffc107',
+    borderLeftColor: COLORS.warning,
   },
   sinConfirmarLabel: {
-    fontSize: 11,
-    color: '#636e72',
-    marginBottom: 4,
-    fontWeight: '500',
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    fontWeight: FONT_WEIGHT.medium,
   },
   sinConfirmarMonto: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#f39c12',
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.warning,
   },
   serviciosContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingTop: 12,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.md,
   },
   serviciosTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#636e72',
-    marginBottom: 8,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   servicioItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 6,
-    marginBottom: 4,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.xs,
   },
-  servicioPunto: {
-    fontSize: 14,
-    color: '#00b894',
-    marginRight: 8,
+  servicioIndicador: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+    marginRight: SPACING.sm,
   },
   servicioNombre: {
-    fontSize: 14,
-    color: '#2d3436',
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
     flex: 1,
   },
   servicioCantidad: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#00b894',
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.primary,
     minWidth: 30,
     textAlign: 'right',
   },

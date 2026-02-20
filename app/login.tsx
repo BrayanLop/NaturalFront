@@ -9,13 +9,14 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from 'react-native';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
 
@@ -112,7 +113,7 @@ export default function Login() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
           <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }] }]}>
             <Image
@@ -121,27 +122,44 @@ export default function Login() {
             />
           </Animated.View>
 
-            <TextInput
-              style={[
-                styles.input,
-                focusedInput === 'email' && styles.inputFocused,
-              ]}
-              placeholder="Usuario"
-              value={email}
-              onChangeText={setEmail}
-              onFocus={() => setFocusedInput('email')}
-              onBlur={() => setFocusedInput('')}
-              placeholderTextColor="#555"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-            />
+          <View style={styles.formCard}>
+            <Text style={styles.welcomeTitle}>Bienvenido</Text>
+            <Text style={styles.welcomeSubtitle}>Inicia sesión para continuar</Text>
 
-            <View
-              style={[
-                styles.passwordContainer,
-                focusedInput === 'password' && styles.inputFocused,
-              ]}
-            >
+            <View style={styles.inputContainer}>
+              <Ionicons 
+                name="person-outline" 
+                size={20} 
+                color={focusedInput === 'email' ? COLORS.primary : COLORS.textTertiary} 
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  focusedInput === 'email' && styles.inputFocused,
+                ]}
+                placeholder="Usuario"
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput('')}
+                placeholderTextColor={COLORS.textTertiary}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={[
+              styles.passwordContainer,
+              focusedInput === 'password' && styles.passwordContainerFocused,
+            ]}>
+              <Ionicons 
+                name="lock-closed-outline" 
+                size={20} 
+                color={focusedInput === 'password' ? COLORS.primary : COLORS.textTertiary} 
+                style={styles.inputIcon}
+              />
               <TextInput
                 ref={passwordRef}
                 style={styles.passwordInput}
@@ -151,33 +169,47 @@ export default function Login() {
                 secureTextEntry={!showPassword}
                 onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput('')}
-                placeholderTextColor="#555"
+                placeholderTextColor={COLORS.textTertiary}
                 returnKeyType="done"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Pressable 
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={8}
+              >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={24}
-                  color="#555"
+                  size={22}
+                  color={COLORS.textTertiary}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
-            <TouchableOpacity
-              style={[styles.button, !(email && password) && styles.buttonDisabled]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                !(email && password) && styles.buttonDisabled,
+                pressed && styles.buttonPressed,
+              ]}
               onPress={handleLogin}
               disabled={!(email && password) || loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.white} />
               ) : (
                 <Text style={styles.buttonText}>Ingresar</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity onPress={() => alert('Recuperación no implementada')}>
-              <Text style={styles.forgotPassword}>¿Olvidó su contraseña?</Text>
-            </TouchableOpacity>
+            <Pressable 
+              onPress={() => alert('Recuperación no implementada')}
+              style={({ pressed }) => [
+                styles.forgotPasswordContainer,
+                pressed && { opacity: 0.7 }
+              ]}
+            >
+              <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
+            </Pressable>
+          </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -188,63 +220,106 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#00b894',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.primary,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.xl,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 180,
     resizeMode: 'contain',
   },
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    ...SHADOWS.lg,
+  },
+  welcomeTitle: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: SPACING.xs,
+  },
+  welcomeSubtitle: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
+  inputIcon: {
+    marginRight: SPACING.sm,
+  },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginBottom: 10,
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: '#fff',
+    flex: 1,
+    paddingVertical: SPACING.md,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
   },
   inputFocused: {
-    borderColor: '#4CAF50',
-    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    backgroundColor: '#fff',
-    marginBottom: 10,
-    paddingHorizontal: 10,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+  },
+  passwordContainerFocused: {
+    borderColor: COLORS.primary,
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: SPACING.md,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
   },
   button: {
-    backgroundColor: '#14534c',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md + 2,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    ...SHADOWS.primary,
+  },
+  buttonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: '#cccccc',
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
+  },
+  forgotPasswordContainer: {
+    marginTop: SPACING.lg,
+    alignItems: 'center',
   },
   forgotPassword: {
-    marginTop: 15,
-    textAlign: 'center',
-    color: '#eee',
-    textDecorationLine: 'underline',
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
   },
 });

@@ -1,14 +1,17 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { isTrabajador } from '@/utils/roles';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -100,9 +103,19 @@ export default function HistoricoLiquidaciones() {
   const renderItem = useCallback(
     ({ item }: { item: HistorialLiquidacion }) => (
       <View style={styles.card}>
-        <Text style={styles.persona}>{item.nombrePersona}</Text>
-        <Text style={styles.fecha}>📅 {formatDate(item.fechaLiquidacion)}</Text>
-        <Text style={styles.total}>💵 {formatCurrency(item.totalPagado)}</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardAvatarContainer}>
+            <FontAwesome5 name="user" size={14} color={COLORS.primary} />
+          </View>
+          <Text style={styles.persona} numberOfLines={1}>{item.nombrePersona}</Text>
+        </View>
+        <View style={styles.cardRow}>
+          <FontAwesome5 name="calendar" size={12} color={COLORS.textSecondary} />
+          <Text style={styles.fecha}>{formatDate(item.fechaLiquidacion)}</Text>
+        </View>
+        <View style={styles.cardTotal}>
+          <Text style={styles.total}>{formatCurrency(item.totalPagado)}</Text>
+        </View>
       </View>
     ),
     []
@@ -115,6 +128,14 @@ export default function HistoricoLiquidaciones() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Histórico</Text>
+          <Text style={styles.headerSubtitle}>Liquidaciones realizadas</Text>
+        </View>
+      </View>
+
       <View style={styles.filtros}>
         <Text style={styles.label}>Rango de fechas</Text>
         {isWeb ? (
@@ -140,33 +161,52 @@ export default function HistoricoLiquidaciones() {
           </View>
         ) : (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.dateChip} onPress={() => setPickerVisible('desde')}>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+              onPress={() => setPickerVisible('desde')}
+            >
               <Text style={styles.chipLabel}>Desde</Text>
               <Text style={styles.chipValue}>{fechaDesde}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateChip} onPress={() => setPickerVisible('hasta')}>
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]}
+              onPress={() => setPickerVisible('hasta')}
+            >
               <Text style={styles.chipLabel}>Hasta</Text>
               <Text style={styles.chipValue}>{fechaHasta}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
 
         {!esRol02 && (
-          <View style={{ marginTop: 8 }}>
+          <View style={styles.personaSection}>
             <Text style={styles.label}>Persona</Text>
-            <TouchableOpacity style={styles.select} onPress={() => setPersonaModal(true)}>
+            <Pressable 
+              style={({ pressed }) => [styles.select, pressed && styles.selectPressed]} 
+              onPress={() => setPersonaModal(true)}
+            >
               <Text style={styles.selectText}>
                 {personaSeleccionada
                   ? personas.find((p) => p.id === personaSeleccionada)?.nombre || 'Persona seleccionada'
                   : 'Seleccionar persona'}
               </Text>
-            </TouchableOpacity>
+              <FontAwesome5 name="chevron-down" size={12} color={COLORS.textSecondary} />
+            </Pressable>
           </View>
         )}
 
-        <TouchableOpacity style={styles.buscarButton} onPress={cargarHistorial} disabled={loading}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.buscarButton, 
+            pressed && styles.buscarButtonPressed,
+            loading && styles.buscarButtonDisabled
+          ]} 
+          onPress={cargarHistorial} 
+          disabled={loading}
+        >
+          <FontAwesome5 name="search" size={14} color={COLORS.white} />
           <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.resumen}>
@@ -207,12 +247,17 @@ export default function HistoricoLiquidaciones() {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando historial...</Text>
+        </View>
       ) : historial.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>📅</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436', textAlign: 'center' }}>No hay historial en este rango</Text>
-          <Text style={{ fontSize: 14, color: '#636e72', textAlign: 'center', marginTop: 8 }}>Intenta con otras fechas</Text>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconContainer}>
+            <FontAwesome5 name="calendar-alt" size={48} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No hay historial en este rango</Text>
+          <Text style={styles.emptySubtitle}>Intenta con otras fechas</Text>
         </View>
       ) : (
         <FlatList
@@ -228,118 +273,275 @@ export default function HistoricoLiquidaciones() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  filtros: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    gap: 8,
+  container: { 
+    flex: 1, 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background 
   },
-  label: { fontSize: 14, fontWeight: '600', color: '#2d3436' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#b2bec3',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    backgroundColor: '#fff',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  filtros: {
+    backgroundColor: COLORS.white,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
+  },
+  label: { 
+    fontSize: FONT_SIZE.sm, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  personaSection: {
+    marginTop: SPACING.md,
   },
   buscarButton: {
-    backgroundColor: '#00b894',
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    ...SHADOWS.primary,
   },
-  buscarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  infoRol: { fontSize: 12, color: '#0984e3' },
-  emptyText: { textAlign: 'center', marginTop: 24, color: '#636e72' },
+  buscarButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
+  },
+  buscarButtonDisabled: {
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
+  },
+  buscarText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    fontSize: FONT_SIZE.md 
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xxl,
+    gap: SPACING.md,
+  },
+  loadingText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xxl,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: SPACING.sm,
+  },
   columnWrapper: {
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   card: {
-    backgroundColor: '#dfe6e9',
-    padding: 14,
-    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: SPACING.xs,
     maxWidth: '48%',
+    ...SHADOWS.sm,
   },
-  persona: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  fecha: { fontSize: 14, color: '#2d3436' },
-  total: { fontSize: 15, color: '#00b894', fontWeight: 'bold', marginTop: 6 },
-  observacion: { marginTop: 4, color: '#636e72' },
-  row: { flexDirection: 'row', gap: 10 },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  cardAvatarContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  persona: { 
+    fontSize: FONT_SIZE.sm, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text,
+    flex: 1,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  fecha: { 
+    fontSize: FONT_SIZE.xs, 
+    color: COLORS.textSecondary 
+  },
+  cardTotal: {
+    backgroundColor: COLORS.successLight,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    marginTop: SPACING.sm,
+    alignItems: 'center',
+  },
+  total: { 
+    fontSize: FONT_SIZE.md, 
+    color: COLORS.success, 
+    fontWeight: FONT_WEIGHT.bold,
+  },
+  row: { 
+    flexDirection: 'row', 
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
   dateChip: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#b2bec3',
+    borderColor: COLORS.border,
   },
-  chipLabel: { fontSize: 12, color: '#636e72' },
-  chipValue: { fontSize: 16, fontWeight: '600', color: '#2d3436' },
+  dateChipPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  chipLabel: { 
+    fontSize: FONT_SIZE.xs, 
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  chipValue: { 
+    fontSize: FONT_SIZE.md, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text 
+  },
   dateInputBox: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#b2bec3',
-    gap: 6,
+    borderColor: COLORS.border,
+    gap: SPACING.xs,
   },
   webDateInput: {
     width: '100%',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: '#b2bec3',
+    borderColor: COLORS.border,
     fontSize: 14,
   },
   select: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#b2bec3',
-    padding: 12,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
   },
-  selectText: { color: '#2d3436', fontSize: 14 },
+  selectPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  selectText: { 
+    color: COLORS.text, 
+    fontSize: FONT_SIZE.sm 
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     width: '90%',
     maxWidth: 400,
+    ...SHADOWS.lg,
   },
   closeModal: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#00b894',
+    flex: 1,
+    marginTop: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
-  closeText: { color: '#fff', fontWeight: 'bold' },
+  closeText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold 
+  },
   resumen: {
-    backgroundColor: '#e8f8f2',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.successLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#00b89433',
+    borderColor: COLORS.success,
   },
-  resumenLabel: { color: '#2d3436', fontWeight: '600' },
-  resumenMonto: { color: '#00b894', fontWeight: 'bold', fontSize: 16 },
+  resumenLabel: { 
+    color: COLORS.text, 
+    fontWeight: FONT_WEIGHT.medium,
+    fontSize: FONT_SIZE.sm,
+  },
+  resumenMonto: { 
+    color: COLORS.success, 
+    fontWeight: FONT_WEIGHT.bold, 
+    fontSize: FONT_SIZE.lg,
+  },
 });
 
 type PersonaModalProps = {

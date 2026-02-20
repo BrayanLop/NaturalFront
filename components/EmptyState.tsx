@@ -1,18 +1,34 @@
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '@/constants/theme';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface EmptyStateProps {
   message: string;
   icon?: string;
   subtitle?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-const EmptyState = React.memo(function EmptyState({ message, icon = '📭', subtitle }: EmptyStateProps) {
+const EmptyState = React.memo(function EmptyState({ 
+  message, 
+  icon = '📭', 
+  subtitle,
+  actionLabel,
+  onAction,
+}: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      <View style={styles.iconContainer}>
+        <Text style={styles.icon}>{icon}</Text>
+      </View>
       <Text style={styles.message}>{message}</Text>
       {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {actionLabel && onAction && (
+        <TouchableOpacity style={styles.actionButton} onPress={onAction}>
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 });
@@ -24,24 +40,45 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    minHeight: 200,
+    padding: SPACING.huge,
+    minHeight: 300,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: RADIUS.round,
+    backgroundColor: COLORS.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
   },
   icon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.8,
+    fontSize: 48,
   },
   message: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3436',
+    fontSize: FONT_SIZE.title3,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#636e72',
+    fontSize: FONT_SIZE.body,
+    color: COLORS.textSecondary,
     textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: FONT_SIZE.body * 1.5,
+  },
+  actionButton: {
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+  },
+  actionText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.body,
+    fontWeight: FONT_WEIGHT.semibold,
   },
 });

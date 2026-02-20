@@ -1,4 +1,6 @@
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -6,10 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { api } from '../api/api';
@@ -103,58 +106,89 @@ export default function CambiarContrasena() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Cambiar contraseña</Text>
-        <Text style={styles.subtitle}>Usuario: {usuario?.nombre}</Text>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Contraseña actual</Text>
-          <TextInput
-            style={styles.input}
-            value={contrasenaActual}
-            onChangeText={setContrasenaActual}
-            secureTextEntry
-            placeholder="Ingrese su contraseña actual"
-            autoCapitalize="none"
-          />
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerIconContainer}>
+          <FontAwesome5 name="lock" size={24} color={COLORS.primary} />
         </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Nueva contraseña</Text>
-          <TextInput
-            style={styles.input}
-            value={nuevaContrasena}
-            onChangeText={setNuevaContrasena}
-            secureTextEntry
-            placeholder="Ingrese su nueva contraseña"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Confirmar nueva contraseña</Text>
-          <TextInput
-            style={styles.input}
-            value={confirmarContrasena}
-            onChangeText={setConfirmarContrasena}
-            secureTextEntry
-            placeholder="Confirme su nueva contraseña"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleCambiarContrasena}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Cambiar contraseña</Text>
-          )}
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Cambiar contraseña</Text>
+        <Text style={styles.headerSubtitle}>{usuario?.nombre}</Text>
       </View>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Contraseña actual</Text>
+            <View style={styles.inputContainer}>
+              <FontAwesome5 name="key" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={contrasenaActual}
+                onChangeText={setContrasenaActual}
+                secureTextEntry
+                placeholder="Ingrese su contraseña actual"
+                placeholderTextColor={COLORS.textTertiary}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Nueva contraseña</Text>
+            <View style={styles.inputContainer}>
+              <FontAwesome5 name="lock" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={nuevaContrasena}
+                onChangeText={setNuevaContrasena}
+                secureTextEntry
+                placeholder="Ingrese su nueva contraseña"
+                placeholderTextColor={COLORS.textTertiary}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Confirmar nueva contraseña</Text>
+            <View style={styles.inputContainer}>
+              <FontAwesome5 name="check-circle" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={confirmarContrasena}
+                onChangeText={setConfirmarContrasena}
+                secureTextEntry
+                placeholder="Confirme su nueva contraseña"
+                placeholderTextColor={COLORS.textTertiary}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              loading && styles.buttonDisabled,
+              pressed && !loading && styles.buttonPressed,
+            ]}
+            onPress={handleCambiarContrasena}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.buttonText}>Cambiar contraseña</Text>
+            )}
+          </Pressable>
+
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="info-circle" size={14} color={COLORS.warning} />
+            <Text style={styles.infoText}>
+              La contraseña debe tener al menos 6 caracteres
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -162,73 +196,101 @@ export default function CambiarContrasena() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.lg,
+  },
+  headerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2d3436',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#636e72',
-    marginBottom: 24,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.md,
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2d3436',
-    marginBottom: 8,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.white,
+  },
+  inputIcon: {
+    paddingLeft: SPACING.md,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#b2bec3',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    flex: 1,
+    padding: SPACING.md,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
   },
   button: {
-    backgroundColor: '#00b894',
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: SPACING.sm,
+    ...SHADOWS.primary,
+  },
+  buttonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: '#b2bec3',
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.bold,
   },
   infoBox: {
-    backgroundColor: '#fff3cd',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.warningLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#ffc107',
+    borderColor: COLORS.warning,
   },
   infoText: {
-    fontSize: 12,
-    color: '#856404',
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
     lineHeight: 18,
   },
 });

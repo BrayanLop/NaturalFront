@@ -1,7 +1,9 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { toDateInputValue } from '../../utils/formatters';
 import { api } from '../api/api';
 
@@ -66,32 +68,88 @@ export default function ConsolidadoIngresos() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ingresos y egresos</Text>
-      <View style={styles.filtros}>
-        <Text style={styles.label}>Rango de fechas</Text>
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-          <TouchableOpacity style={[styles.dateInputBox, { flex: 1 }]} onPress={() => setPickerVisible('desde')}>
-            <Text style={styles.chipLabel}>Desde</Text>
-            <Text style={styles.dateValue}>{fechaDesde}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.dateInputBox, { flex: 1 }]} onPress={() => setPickerVisible('hasta')}>
-            <Text style={styles.chipLabel}>Hasta</Text>
-            <Text style={styles.dateValue}>{fechaHasta}</Text>
-          </TouchableOpacity>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerIconContainer}>
+          <FontAwesome5 name="chart-line" size={24} color={COLORS.primary} />
         </View>
-        {/* Filtro de persona eliminado */}
-        <TouchableOpacity style={styles.button} onPress={fetchConsolidado} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Consolidado</Text>
+        <Text style={styles.headerSubtitle}>Ingresos y Egresos</Text>
       </View>
-      {/* Modal de selección de persona eliminado */}
-      {consolidado && (
-        <View style={styles.resultBox}>
-          <Text style={styles.resultText}>Total Ingresos: <Text style={styles.ingresos}>{consolidado.totalIngresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</Text></Text>
-          <Text style={styles.resultText}>Total Egresos: <Text style={styles.egresos}>{consolidado.totalEgresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</Text></Text>
-          <Text style={styles.resultText}>Consolidado: <Text style={consolidado.consolidado >= 0 ? styles.ingresos : styles.egresos}>{consolidado.consolidado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</Text></Text>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.filtros}>
+          <Text style={styles.label}>Rango de fechas</Text>
+          <View style={styles.dateRow}>
+            <Pressable 
+              style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]} 
+              onPress={() => setPickerVisible('desde')}
+            >
+              <Text style={styles.chipLabel}>Desde</Text>
+              <Text style={styles.dateValue}>{fechaDesde}</Text>
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
+              onPress={() => setPickerVisible('hasta')}
+            >
+              <Text style={styles.chipLabel}>Hasta</Text>
+              <Text style={styles.dateValue}>{fechaHasta}</Text>
+            </Pressable>
+          </View>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.button, 
+              pressed && styles.buttonPressed,
+              loading && styles.buttonDisabled
+            ]} 
+            onPress={fetchConsolidado} 
+            disabled={loading}
+          >
+            <FontAwesome5 name="search" size={14} color={COLORS.white} />
+            <Text style={styles.buttonText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
+          </Pressable>
         </View>
-      )}
+
+        {consolidado && (
+          <View style={styles.resultBox}>
+            <View style={styles.resultItem}>
+              <View style={styles.resultIconContainer}>
+                <FontAwesome5 name="arrow-up" size={16} color={COLORS.success} />
+              </View>
+              <View style={styles.resultInfo}>
+                <Text style={styles.resultLabel}>Total Ingresos</Text>
+                <Text style={[styles.resultValue, styles.ingresos]}>
+                  {consolidado.totalIngresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.resultItem}>
+              <View style={[styles.resultIconContainer, styles.resultIconEgresos]}>
+                <FontAwesome5 name="arrow-down" size={16} color={COLORS.error} />
+              </View>
+              <View style={styles.resultInfo}>
+                <Text style={styles.resultLabel}>Total Egresos</Text>
+                <Text style={[styles.resultValue, styles.egresos]}>
+                  {consolidado.totalEgresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.consolidadoBox}>
+              <Text style={styles.consolidadoLabel}>Consolidado</Text>
+              <Text style={[styles.consolidadoValue, consolidado.consolidado >= 0 ? styles.ingresos : styles.egresos]}>
+                {consolidado.consolidado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+              </Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
       <SimpleDatePicker
         value={pickerVisible === 'desde' ? fechaDesde : fechaHasta}
         onChange={onChangeFecha}
@@ -104,120 +162,158 @@ export default function ConsolidadoIngresos() {
 }
 
 const styles = StyleSheet.create({
-    select: {
-      backgroundColor: '#fff',
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: '#ced4da',
-      alignItems: 'center',
-    },
-    selectText: {
-      fontSize: 15,
-      color: '#636e72',
-    },
-    modalBackdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 999,
-    },
-    modalContent: {
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      padding: 16,
-      width: '90%',
-      maxWidth: 400,
-      elevation: 5,
-    },
-    closeModal: {
-      flex: 1,
-      backgroundColor: '#636e72',
-      borderRadius: 8,
-      padding: 10,
-      alignItems: 'center',
-    },
-    closeText: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 15,
-    },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.background,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#14534c',
-    textAlign: 'center',
+  header: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.lg,
+  },
+  headerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
   },
   filtros: {
-    backgroundColor: '#e9ecef',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    gap: 8,
+    backgroundColor: COLORS.white,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
   },
-  label: { fontSize: 14, fontWeight: '600', color: '#2d3436' },
-  row: {
+  label: { 
+    fontSize: FONT_SIZE.sm, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  dateRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   dateInputBox: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 8,
-    alignItems: 'center',
-  },
-  chipLabel: { fontSize: 12, color: '#636e72', marginBottom: 4 },
-  dateValue: { fontSize: 14, color: '#2d3436', marginBottom: 4 },
-  webDateInput: {
-    width: '100%',
-    padding: 8,
-    borderRadius: 6,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#ced4da',
-    backgroundColor: '#fff',
+    borderColor: COLORS.border,
+  },
+  dateInputBoxPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  chipLabel: { 
+    fontSize: FONT_SIZE.xs, 
+    color: COLORS.textSecondary, 
+    marginBottom: SPACING.xs,
+  },
+  dateValue: { 
+    fontSize: FONT_SIZE.md, 
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   button: {
-    backgroundColor: '#14534c',
-    padding: 14,
-    borderRadius: 8,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    ...SHADOWS.primary,
+  },
+  buttonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
+  },
+  buttonDisabled: {
+    backgroundColor: COLORS.border,
+    ...SHADOWS.none,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
   },
   resultBox: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 20,
-    marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.md,
   },
-  resultText: {
-    fontSize: 18,
-    marginBottom: 10,
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  resultIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.successLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultIconEgresos: {
+    backgroundColor: COLORS.errorLight,
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  resultLabel: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  resultValue: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.md,
+  },
+  consolidadoBox: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  consolidadoLabel: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  consolidadoValue: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: FONT_WEIGHT.bold,
   },
   ingresos: {
-    color: '#00b894',
-    fontWeight: 'bold',
+    color: COLORS.success,
   },
   egresos: {
-    color: '#d63031',
-    fontWeight: 'bold',
+    color: COLORS.error,
   },
 });

@@ -1,16 +1,17 @@
+import FormField from '@/components/FormField';
 import LoadingView from '@/components/LoadingView';
+import PrimaryButton from '@/components/PrimaryButton';
+import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { toDateInputValue } from '@/utils/formatters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  KeyboardTypeOptions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardTypeOptions,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    View
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -133,88 +134,48 @@ export default function EditarPersona() {
   ];
 
   if (loading) {
-    return <LoadingView />;
+    return <LoadingView message="Cargando información..." />;
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {campos.map(({ key, label, keyboardType, isDate }) => (
-        <View key={key} style={styles.fieldContainer}>
-          <Text style={styles.label}>{label}</Text>
+      <View style={styles.formCard}>
+        {campos.map(({ key, label, keyboardType, isDate }) => (
+          <FormField key={key} label={label} error={errores[key]}>
+            <TextInput
+              value={persona[key]}
+              onChangeText={(text) => handleChange(key, text)}
+              style={[commonStyles.input, errores[key] && styles.inputError]}
+              placeholder={label}
+              keyboardType={keyboardType}
+              placeholderTextColor={COLORS.textTertiary}
+            />
+          </FormField>
+        ))}
 
-          <TextInput
-            value={persona[key]}
-            onChangeText={(text) => handleChange(key, text)}
-            style={[styles.input, errores[key] && styles.inputError]}
-            placeholder={label}
-            keyboardType={keyboardType}
-          />
-
-          {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
+        {/* ✅ Campo oculto, no visible */}
+        <View style={{ display: 'none' }}>
+          <TextInput value={persona.rol} onChangeText={(text) => handleChange('rol', text)} />
         </View>
-      ))}
 
-      {/* ✅ Campo oculto, no visible */}
-      <View style={{ display: 'none' }}>
-        <TextInput value={persona.rol} onChangeText={(text) => handleChange('rol', text)} />
+        <PrimaryButton title="Guardar" onPress={guardarCambios} />
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={guardarCambios}>
-        <Text style={styles.buttonText}>Guardar</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.background,
     flexGrow: 1,
   },
-  fieldContainer: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 12,
-    backgroundColor: '#fff',
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
   },
   inputError: {
-    borderColor: 'red',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: '#0984e3',
-    padding: 15,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f2f2f2',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#555',
+    borderColor: COLORS.error,
   },
 });

@@ -1,3 +1,6 @@
+import FormField from '@/components/FormField';
+import PrimaryButton from '@/components/PrimaryButton';
+import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { toDateInputValue } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -5,9 +8,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { api } from '../../api/api';
@@ -102,68 +103,38 @@ export default function CrearPersona() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      {campos.map(({ key, label, keyboardType, isDate }) => (
-        <View key={key} style={styles.fieldContainer}>
-          <Text style={styles.label}>{label}</Text>
+      <View style={styles.formCard}>
+        {campos.map(({ key, label, keyboardType, isDate }) => (
+          <FormField key={key} label={label} error={errores[key]}>
+            <TextInput
+              value={persona[key]}
+              onChangeText={(text) => handleChange(key, text)}
+              style={[commonStyles.input, errores[key] && styles.inputError]}
+              placeholder={label}
+              keyboardType={keyboardType}
+              placeholderTextColor={COLORS.textTertiary}
+            />
+          </FormField>
+        ))}
 
-          <TextInput
-            value={persona[key]}
-            onChangeText={(text) => handleChange(key, text)}
-            style={[styles.input, errores[key] && styles.inputError]}
-            placeholder={label}
-            keyboardType={keyboardType}
-          />
-
-          {errores[key] ? <Text style={styles.errorText}>{errores[key]}</Text> : null}
-        </View>
-      ))}
-
-      <TouchableOpacity style={styles.button} onPress={guardar}>
-        <Text style={styles.buttonText}>Guardar</Text>
-      </TouchableOpacity>
+        <PrimaryButton title="Guardar" onPress={guardar} />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.background,
     flexGrow: 1,
   },
-  fieldContainer: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 12,
-    backgroundColor: '#fff',
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
   },
   inputError: {
-    borderColor: 'red',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: '#0984e3',
-    padding: 15,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    borderColor: COLORS.error,
   },
 });

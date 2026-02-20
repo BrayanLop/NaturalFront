@@ -1,16 +1,17 @@
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import { api } from '../../api/api';
 
@@ -212,32 +213,67 @@ export default function ConfiguracionGeneral() {
           </button>
         </div>
       ) : (
-        <TouchableOpacity style={styles.button} onPress={guardar} disabled={loading}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.button, 
+            pressed && { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.98 }] }
+          ]} 
+          onPress={guardar} 
+          disabled={loading}
+        >
           <Text style={styles.buttonText}>Guardar</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#f2f2f2', flexGrow: 1 },
-  field: { marginBottom: 16 },
-  label: { fontWeight: '600', marginBottom: 6 },
+  container: { 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background, 
+    flexGrow: 1 
+  },
+  field: { marginBottom: SPACING.lg },
+  label: { 
+    fontWeight: FONT_WEIGHT.semibold, 
+    marginBottom: SPACING.sm,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    padding: 12,
-    backgroundColor: '#fff',
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    backgroundColor: COLORS.white,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
   },
   helperText: {
-    fontSize: 13,
-    color: '#0984e3',
-    marginTop: 6,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.info,
+    marginTop: SPACING.sm,
     fontStyle: 'italic',
   },
-  button: { backgroundColor: '#00b894', padding: 14, borderRadius: 8, alignItems: 'center', width: '100%' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  pickerWrapper: { borderWidth: 1, borderColor: '#ced4da', borderRadius: 6, overflow: 'hidden' },
+  button: { 
+    backgroundColor: COLORS.primary, 
+    paddingVertical: SPACING.md, 
+    borderRadius: RADIUS.md, 
+    alignItems: 'center', 
+    width: '100%',
+    ...SHADOWS.primary,
+  },
+  buttonText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
+  },
+  pickerWrapper: { 
+    borderWidth: 1, 
+    borderColor: COLORS.border, 
+    borderRadius: RADIUS.md, 
+    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+  },
 });

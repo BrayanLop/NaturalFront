@@ -1,14 +1,19 @@
+import FormField from '@/components/FormField';
+import LoadingView from '@/components/LoadingView';
+import PrimaryButton from '@/components/PrimaryButton';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, commonStyles } from '@/constants/theme';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
@@ -134,107 +139,211 @@ const eliminar = async () => {
 };
 
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#00b894" />
-      </View>
-    );
+    return <LoadingView message="Cargando servicio..." />;
   }
 
   return (
-    <View style={styles.container}>
-      {/* Nombre */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Nombre</Text>
-        <TextInput
-          value={nombre}
-          onChangeText={(text) => handleChange('nombre', text)}
-          style={[styles.input, errores.nombre && styles.inputError]}
-          placeholder="Nombre del servicio"
-        />
-        {errores.nombre && <Text style={styles.errorText}>{errores.nombre}</Text>}
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.formCard}>
+        {/* Header del servicio */}
+        <View style={styles.serviceHeader}>
+          <View style={styles.serviceIconContainer}>
+            <FontAwesome5 name="concierge-bell" size={24} color={COLORS.secondary} />
+          </View>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceTitle}>{nombre || 'Nuevo Servicio'}</Text>
+            <View style={[styles.statusBadge, disponible ? styles.statusActive : styles.statusInactive]}>
+              <Text style={[styles.statusText, disponible ? styles.statusTextActive : styles.statusTextInactive]}>
+                {disponible ? 'Disponible' : 'No disponible'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Nombre */}
+        <FormField label="Nombre" error={errores.nombre}>
+          <TextInput
+            value={nombre}
+            onChangeText={(text) => handleChange('nombre', text)}
+            style={[commonStyles.input, errores.nombre && styles.inputError]}
+            placeholder="Nombre del servicio"
+            placeholderTextColor={COLORS.textTertiary}
+          />
+        </FormField>
+
+        {/* Descripción */}
+        <FormField label="Descripción">
+          <TextInput
+            value={descripcion}
+            onChangeText={setDescripcion}
+            style={[commonStyles.input, styles.textArea]}
+            placeholder="Descripción detallada (opcional)"
+            placeholderTextColor={COLORS.textTertiary}
+            multiline
+            numberOfLines={3}
+          />
+        </FormField>
+
+        {/* Precio */}
+        <FormField label="Precio" error={errores.precio}>
+          <MaskedTextInput
+            type="currency"
+            options={{
+              prefix: '$',
+              decimalSeparator: ',',
+              groupSeparator: '.',
+              precision: 0,
+            }}
+            value={precio}
+            onChangeText={(_, unmasked) => handleChange('precio', unmasked)}
+            style={[commonStyles.input, errores.precio && styles.inputError]}
+            keyboardType="numeric"
+            placeholder="Precio en pesos"
+            placeholderTextColor={COLORS.textTertiary}
+          />
+        </FormField>
+
+        {/* Disponible */}
+        <View style={styles.switchRow}>
+          <View>
+            <Text style={styles.switchLabel}>Estado del servicio</Text>
+            <Text style={styles.switchHint}>{disponible ? 'Visible para clientes' : 'Oculto temporalmente'}</Text>
+          </View>
+          <Switch 
+            value={disponible} 
+            onValueChange={setDisponible}
+            trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+            thumbColor={disponible ? COLORS.primary : COLORS.textTertiary}
+          />
+        </View>
       </View>
 
-      {/* Descripción */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Descripción</Text>
-        <TextInput
-          value={descripcion}
-          onChangeText={setDescripcion}
-          style={styles.input}
-          placeholder="Descripción detallada (opcional)"
-        />
+      {/* Botones de acción */}
+      <View style={styles.actionsContainer}>
+        <PrimaryButton title="Guardar cambios" onPress={actualizar}/>
+        
+        <Pressable
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && styles.deleteButtonPressed,
+          ]}
+          onPress={eliminar}
+        >
+          <FontAwesome5 name="trash-alt" size={16} color={COLORS.error} />
+          <Text style={styles.deleteButtonText}>Eliminar servicio</Text>
+        </Pressable>
       </View>
-
-      {/* Precio */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Precio</Text>
-        <MaskedTextInput
-          type="currency"
-          options={{
-            prefix: '$',
-            decimalSeparator: ',',
-            groupSeparator: '.',
-            precision: 0,
-          }}
-          value={precio}
-          onChangeText={(_, unmasked) => handleChange('precio', unmasked)}
-          style={[styles.input, errores.precio && styles.inputError]}
-          keyboardType="numeric"
-          placeholder="Precio en pesos"
-        />
-        {errores.precio && <Text style={styles.errorText}>{errores.precio}</Text>}
-      </View>
-
-      {/* Disponible */}
-      <View style={styles.switchRow}>
-        <Text style={styles.label}>Estado</Text>
-        <Switch value={disponible} onValueChange={setDisponible} />
-      </View>
-
-      {/* Botones */}
-      <TouchableOpacity style={styles.button} onPress={actualizar}>
-        <Text style={styles.buttonText}>Guardar</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={eliminar}>
-        <Text style={styles.buttonText}>Eliminar</Text>
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
-  fieldContainer: { marginBottom: 15 },
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 5 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    backgroundColor: '#fff',
+  container: { 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background,
+    flexGrow: 1,
   },
-  inputError: { borderColor: 'red' },
-  errorText: { color: 'red', fontSize: 12, marginTop: 4 },
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.md,
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  serviceIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.secondarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  serviceInfo: {
+    flex: 1,
+  },
+  serviceTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
+  },
+  statusActive: {
+    backgroundColor: COLORS.successLight,
+  },
+  statusInactive: {
+    backgroundColor: COLORS.surface,
+  },
+  statusText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  statusTextActive: {
+    color: COLORS.success,
+  },
+  statusTextInactive: {
+    color: COLORS.textSecondary,
+  },
+  inputError: { 
+    borderColor: COLORS.error,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
   },
-  button: {
-    backgroundColor: '#0984e3',
-    padding: 15,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginBottom: 10,
+  switchLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.text,
+  },
+  switchHint: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  actionsContainer: {
+    marginTop: SPACING.lg,
+    gap: SPACING.md,
   },
   deleteButton: {
-    backgroundColor: '#d63031',
-    padding: 15,
-    borderRadius: 6,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    backgroundColor: COLORS.white,
   },
-  buttonText: { color: 'white', fontWeight: 'bold' },
+  deleteButtonPressed: {
+    backgroundColor: COLORS.errorLight,
+  },
+  deleteButtonText: {
+    color: COLORS.error,
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
+  },
 });

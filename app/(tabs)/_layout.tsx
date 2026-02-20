@@ -1,9 +1,10 @@
 import BackButton from '@/components/BackButton';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Layout() {
   const { usuario, cargando, logout } = useAuth();
@@ -18,14 +19,14 @@ export default function Layout() {
 
   if (cargando) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00b894" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
   if (!usuario) {
-    return null; // Se redirige al login
+    return null;
   }
 
   return (
@@ -33,24 +34,28 @@ export default function Layout() {
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#00b894',
+            backgroundColor: COLORS.primary,
           },
-          headerTintColor: '#fff',
+          headerTintColor: COLORS.white,
           headerTitleAlign: 'center',
           headerTitleStyle: {
-            fontWeight: 'bold',
+            fontWeight: FONT_WEIGHT.bold,
+            fontSize: FONT_SIZE.headline,
           },
+          headerShadowVisible: false,
           headerLeft: () => <BackButton />,
           headerRight: () => (
-            <TouchableOpacity
+            <Pressable
               onPress={() => setMenuVisible(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12, gap: 8 }}
+              style={styles.headerRightButton}
             >
-              <FontAwesome5 name="user-circle" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
-                {usuario?.nombre || 'Usuario'}
+              <View style={styles.avatarCircle}>
+                <FontAwesome5 name="user" size={14} color={COLORS.primary} />
+              </View>
+              <Text style={styles.headerUserName} numberOfLines={1}>
+                {usuario?.nombre?.split(' ')[0] || 'Usuario'}
               </Text>
-          </TouchableOpacity>
+          </Pressable>
         ),
       }}
     >
@@ -101,15 +106,21 @@ export default function Layout() {
       animationType="fade"
       onRequestClose={() => setMenuVisible(false)}
     >
-      <TouchableOpacity
+      <Pressable
         style={styles.modalBackdrop}
-        activeOpacity={1}
         onPress={() => setMenuVisible(false)}
       >
         <View style={styles.menuContainer}>
           <View style={styles.menuHeader}>
-            <FontAwesome5 name="user-circle" size={24} color="#2d3436" />
-            <Text style={styles.menuUserName}>{usuario?.nombre || 'Usuario'}</Text>
+            <View style={styles.menuAvatarLarge}>
+              <FontAwesome5 name="user" size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.menuHeaderText}>
+              <Text style={styles.menuUserName}>{usuario?.nombre || 'Usuario'}</Text>
+              <Text style={styles.menuRolText}>
+                {usuario?.rol === '01' ? 'Administrador' : usuario?.rol === '02' ? 'Trabajador' : 'Usuario'}
+              </Text>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -119,8 +130,11 @@ export default function Layout() {
               router.push('/(tabs)/cambiarContrasena');
             }}
           >
-            <FontAwesome5 name="key" size={16} color="#0984e3" />
+            <View style={styles.menuItemIcon}>
+              <FontAwesome5 name="key" size={14} color={COLORS.secondary} />
+            </View>
             <Text style={styles.menuItemText}>Cambiar contraseña</Text>
+            <FontAwesome5 name="chevron-right" size={12} color={COLORS.textTertiary} />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
@@ -132,63 +146,115 @@ export default function Layout() {
               logout();
             }}
           >
-            <FontAwesome5 name="sign-out-alt" size={16} color="#d63031" />
-            <Text style={[styles.menuItemText, { color: '#d63031' }]}>Cerrar sesión</Text>
+            <View style={[styles.menuItemIcon, { backgroundColor: COLORS.errorLight }]}>
+              <FontAwesome5 name="sign-out-alt" size={14} color={COLORS.error} />
+            </View>
+            <Text style={[styles.menuItemText, { color: COLORS.error }]}>Cerrar sesión</Text>
+            <FontAwesome5 name="chevron-right" size={12} color={COLORS.textTertiary} />
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Modal>
   </>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  headerRightButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+    gap: SPACING.sm,
+  },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerUserName: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.body,
+    maxWidth: 100,
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingTop: 60,
-    paddingRight: 12,
+    paddingRight: SPACING.md,
   },
   menuContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    minWidth: 220,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    minWidth: 260,
+    overflow: 'hidden',
+    ...SHADOWS.lg,
   },
   menuHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    backgroundColor: COLORS.backgroundSecondary,
+  },
+  menuAvatarLarge: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  menuHeaderText: {
+    flex: 1,
   },
   menuUserName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3436',
+    fontSize: FONT_SIZE.headline,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  menuRolText: {
+    fontSize: FONT_SIZE.footnote,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xxs,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+  },
+  menuItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.secondarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   menuItemText: {
-    fontSize: 14,
-    color: '#2d3436',
+    flex: 1,
+    fontSize: FONT_SIZE.body,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.medium,
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#e9ecef',
-    marginHorizontal: 8,
+    backgroundColor: COLORS.divider,
+    marginHorizontal: SPACING.lg,
   },
 });
 

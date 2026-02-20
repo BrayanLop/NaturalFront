@@ -1,12 +1,14 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View
 } from 'react-native';
 import { api } from '../../api/api';
@@ -83,8 +85,18 @@ export default function IngresosEmpresa() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Ingresos</Text>
+          <Text style={styles.headerSubtitle}>
+            {historial.length} día{historial.length !== 1 ? 's' : ''} con registros
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.filtros}>
-        <Text style={styles.label}>Rango de fechas</Text>
+        <Text style={styles.filtrosTitle}>Rango de fechas</Text>
         {isWeb ? (
           <View style={styles.row}>
             <View style={styles.dateInputBox}>
@@ -108,20 +120,35 @@ export default function IngresosEmpresa() {
           </View>
         ) : (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.dateChip} onPress={() => setPickerVisible('desde')}>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+              onPress={() => setPickerVisible('desde')}
+            >
               <Text style={styles.chipLabel}>Desde</Text>
               <Text style={styles.chipValue}>{fechaDesde}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateChip} onPress={() => setPickerVisible('hasta')}>
+            </Pressable>
+            <Pressable 
+              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
+              onPress={() => setPickerVisible('hasta')}
+            >
               <Text style={styles.chipLabel}>Hasta</Text>
               <Text style={styles.chipValue}>{fechaHasta}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
 
-        <TouchableOpacity style={styles.buscarButton} onPress={cargarHistorial} disabled={loading}>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.buscarButton, 
+            pressed && styles.buscarButtonPressed,
+            loading && styles.buscarButtonDisabled,
+          ]} 
+          onPress={cargarHistorial} 
+          disabled={loading}
+        >
+          <FontAwesome5 name="search" size={14} color={COLORS.white} />
           <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* SimpleDatePicker JS universal */}
@@ -146,20 +173,38 @@ export default function IngresosEmpresa() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#00b894" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando ingresos...</Text>
+        </View>
       ) : historial.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>💰</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#2d3436', textAlign: 'center' }}>No hay ingresos en este rango</Text>
-          <Text style={{ fontSize: 14, color: '#636e72', textAlign: 'center', marginTop: 8 }}>Intenta con otras fechas</Text>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconContainer}>
+            <FontAwesome5 name="money-bill-wave" size={48} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No hay ingresos en este rango</Text>
+          <Text style={styles.emptySubtitle}>Intenta con otras fechas</Text>
         </View>
       ) : (
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
           {historial.map((item, index) => (
             <View key={index} style={styles.card}>
-              <Text style={styles.fecha}>📅 {formatFecha(item.fecha)}</Text>
-              <Text style={styles.registros}>Registros: {item.totalRegistros}</Text>
-              <Text style={styles.total}>💵 {formatMonto(item.totalIngresado)}</Text>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIconContainer}>
+                  <FontAwesome5 name="calendar" size={16} color={COLORS.primary} />
+                </View>
+                <Text style={styles.fecha}>{formatFecha(item.fecha)}</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <View style={styles.cardRow}>
+                  <Text style={styles.registrosLabel}>Registros</Text>
+                  <Text style={styles.registros}>{item.totalRegistros}</Text>
+                </View>
+                <View style={styles.cardRow}>
+                  <Text style={styles.totalLabel}>Total</Text>
+                  <Text style={styles.total}>{formatMonto(item.totalIngresado)}</Text>
+                </View>
+              </View>
             </View>
           ))}
         </ScrollView>
@@ -169,92 +214,221 @@ export default function IngresosEmpresa() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  filtros: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    gap: 8,
+  container: { 
+    flex: 1, 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.background 
   },
-  label: { fontSize: 14, fontWeight: '600', color: '#2d3436' },
-  buscarButton: {
-    backgroundColor: '#00b894',
-    padding: 12,
-    borderRadius: 8,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  buscarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  emptyText: { textAlign: 'center', marginTop: 24, color: '#636e72' },
-  card: {
-    backgroundColor: '#dfe6e9',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 12,
+  headerInfo: {
+    flex: 1,
   },
-  fecha: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  registros: { fontSize: 14, color: '#2d3436', marginBottom: 4 },
-  total: { fontSize: 15, color: '#00b894', fontWeight: 'bold', marginTop: 6 },
-  row: { flexDirection: 'row', gap: 10 },
+  headerTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  filtros: {
+    backgroundColor: COLORS.white,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
+    gap: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  filtrosTitle: { 
+    fontSize: FONT_SIZE.md, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text 
+  },
+  row: { 
+    flexDirection: 'row', 
+    gap: SPACING.md 
+  },
   dateChip: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#b2bec3',
+    borderColor: COLORS.border,
   },
-  chipLabel: { fontSize: 12, color: '#636e72' },
-  chipValue: { fontSize: 16, fontWeight: '600', color: '#2d3436' },
+  dateChipPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  chipLabel: { 
+    fontSize: FONT_SIZE.xs, 
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  chipValue: { 
+    fontSize: FONT_SIZE.md, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text 
+  },
   dateInputBox: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#b2bec3',
-    gap: 6,
+    borderColor: COLORS.border,
+    gap: SPACING.xs,
   },
   webDateInput: {
     width: '100%',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: '#b2bec3',
+    borderColor: COLORS.border,
     fontSize: 14,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  buscarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    ...SHADOWS.primary,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    width: '90%',
-    maxWidth: 400,
+  buscarButtonPressed: {
+    backgroundColor: COLORS.primaryDark,
+    transform: [{ scale: 0.98 }],
   },
-  closeModal: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#00b894',
-    alignItems: 'center',
+  buscarButtonDisabled: {
+    backgroundColor: COLORS.border,
   },
-  closeText: { color: '#fff', fontWeight: 'bold' },
+  buscarText: { 
+    color: COLORS.white, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    fontSize: FONT_SIZE.md 
+  },
   resumen: {
-    backgroundColor: '#e8f8f2',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.primarySurface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#00b89433',
+    borderColor: COLORS.primaryBorder,
   },
-  resumenLabel: { color: '#2d3436', fontWeight: '600' },
-  resumenMonto: { color: '#00b894', fontWeight: 'bold', fontSize: 16 },
+  resumenLabel: { 
+    color: COLORS.text, 
+    fontWeight: FONT_WEIGHT.medium,
+    fontSize: FONT_SIZE.sm,
+  },
+  resumenMonto: { 
+    color: COLORS.primary, 
+    fontWeight: FONT_WEIGHT.bold, 
+    fontSize: FONT_SIZE.lg 
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  loadingText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xxl,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  emptyTitle: { 
+    fontSize: FONT_SIZE.lg, 
+    fontWeight: FONT_WEIGHT.semibold, 
+    color: COLORS.text, 
+    textAlign: 'center',
+    marginBottom: SPACING.xs,
+  },
+  emptySubtitle: { 
+    fontSize: FONT_SIZE.sm, 
+    color: COLORS.textSecondary, 
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  cardIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primarySurface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fecha: { 
+    fontSize: FONT_SIZE.md, 
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  cardContent: {
+    gap: SPACING.sm,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  registrosLabel: { 
+    fontSize: FONT_SIZE.sm, 
+    color: COLORS.textSecondary,
+  },
+  registros: { 
+    fontSize: FONT_SIZE.sm, 
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  totalLabel: { 
+    fontSize: FONT_SIZE.sm, 
+    color: COLORS.textSecondary,
+  },
+  total: { 
+    fontSize: FONT_SIZE.md, 
+    color: COLORS.primary, 
+    fontWeight: FONT_WEIGHT.bold,
+  },
 });

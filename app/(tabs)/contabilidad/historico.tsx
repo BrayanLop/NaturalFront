@@ -7,15 +7,15 @@ import { isTrabajador } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { api } from '../../api/api';
 import { HistorialLiquidacion } from '../../api/modelos/contabilidad';

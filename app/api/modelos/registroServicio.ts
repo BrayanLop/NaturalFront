@@ -9,6 +9,15 @@ export interface RegistroServicio {
   liquidado: boolean;
   empresaId?: number;
   formaPago?: string;
+  evidencias?: Evidencia[];
+}
+
+export interface Evidencia {
+  id: number;
+  registroServicioId: number;
+  urlEvidencia: string;
+  nombreArchivo: string;
+  fechaSubida: string;
 }
 
 export interface RegistroServicioCreate {

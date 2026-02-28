@@ -14,11 +14,15 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Modal,
+  Image,
+  Dimensions,
+  Linking
 } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
-import { RegistroServicio } from '../../api/modelos/registroServicio';
+import { RegistroServicio, Evidencia } from '../../api/modelos/registroServicio';
 
 export default function ListaRegistros() {
   const router = useRouter();
@@ -32,6 +36,12 @@ export default function ListaRegistros() {
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
   const [editandoFormaPagoId, setEditandoFormaPagoId] = useState<number | null>(null);
   const [actualizandoFormaPago, setActualizandoFormaPago] = useState(false);
+  
+  // Estado para evidencias
+  const [evidenciasModalVisible, setEvidenciasModalVisible] = useState(false);
+  const [evidenciasActuales, setEvidenciasActuales] = useState<Evidencia[]>([]);
+  const [cargandoEvidencias, setCargandoEvidencias] = useState(false);
+  const [imagenSeleccionada, setImagenSeleccionada] = useState<number>(0);
   
   // Fechas por defecto: día actual
   const hoy = new Date();
@@ -208,6 +218,31 @@ export default function ListaRegistros() {
     }
   }, [puedeEditar, cargarDatos]);
 
+  const verEvidencias = useCallback(async (registro: any) => {
+    setCargandoEvidencias(true);
+    setEvidenciasModalVisible(true);
+    setImagenSeleccionada(0);
+    
+    // Si las evidencias ya vienen del backend, usarlas directamente
+    if (registro.evidencias && Array.isArray(registro.evidencias)) {
+      setEvidenciasActuales(registro.evidencias);
+      setCargandoEvidencias(false);
+      return;
+    }
+    
+    // Fallback: cargar evidencias si no vienen del backend
+    try {
+      const response = await api.get(`/Evidencia/ObtenerEvidencias/${registro.id}`);
+      setEvidenciasActuales(response.data || []);
+    } catch (error) {
+      logger.error('Error al cargar evidencias:', error);
+      showError('No se pudieron cargar las evidencias');
+      setEvidenciasActuales([]);
+    } finally {
+      setCargandoEvidencias(false);
+    }
+  }, []);
+
   const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={styles.item}>
       <View style={styles.itemHeader}>
@@ -274,6 +309,17 @@ export default function ListaRegistros() {
           )}
         </View>
         
+        {/* Botón para ver evidencias - solo si tiene evidencias */}
+        {item.evidencias && item.evidencias.length > 0 && (
+          <TouchableOpacity
+            style={styles.evidenciasButton}
+            onPress={() => verEvidencias(item)}
+          >
+            <FontAwesome5 name="image" size={14} color={COLORS.primary} />
+            <Text style={styles.evidenciasButtonText}>Ver evidencias ({item.evidencias.length})</Text>
+          </TouchableOpacity>
+        )}
+        
         {puedeEditar && !item.confirmado && !item.liquidado && (
           <View style={styles.confirmContainer}>
             <TouchableOpacity
@@ -289,7 +335,7 @@ export default function ListaRegistros() {
         )}
       </View>
     </View>
-  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago]);
+  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias]);
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
@@ -495,6 +541,63 @@ export default function ListaRegistros() {
         onClose={() => setPickerVisible(null)}
         title={pickerVisible === 'inicio' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
       />
+
+      {/* Modal de Evidencias */}
+      <Modal
+        visible={evidenciasModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEvidenciasModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Evidencias</Text>
+              <TouchableOpacity onPress={() => setEvidenciasModalVisible(false)}>
+                <FontAwesome5 name="times" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            {cargandoEvidencias ? (
+              <View style={styles.modalLoading}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.modalLoadingText}>Cargando evidencias...</Text>
+              </View>
+            ) : evidenciasActuales.length === 0 ? (
+              <View style={styles.modalEmpty}>
+                <FontAwesome5 name="image" size={48} color={COLORS.textSecondary} />
+                <Text style={styles.modalEmptyText}>No hay evidencias para este registro</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.modalScroll}>
+                <View style={styles.evidenciasGrid}>
+                  {evidenciasActuales.map((evidencia, index) => (
+                    <View key={evidencia.id} style={styles.evidenciaCard}>
+                      <Image
+                        source={{ uri: evidencia.urlEvidencia }}
+                        style={styles.evidenciaImagen}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.evidenciaInfo}>
+                        <Text style={styles.evidenciaNombre} numberOfLines={1}>
+                          {evidencia.nombreArchivo}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.evidenciaVerButton}
+                          onPress={() => Linking.openURL(evidencia.urlEvidencia)}
+                        >
+                          <FontAwesome5 name="external-link-alt" size={12} color={COLORS.primary} />
+                          <Text style={styles.evidenciaVerText}>Abrir</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -923,5 +1026,103 @@ const styles = StyleSheet.create({
   },
   formaPagoOptionTextActive: {
     color: COLORS.white,
+  },
+  evidenciasButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  evidenciasButtonText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    width: '90%',
+    maxWidth: 600,
+    maxHeight: '80%',
+    ...SHADOWS.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  modalLoading: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  modalLoadingText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+  },
+  modalEmpty: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  modalEmptyText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    maxHeight: 500,
+  },
+  evidenciasGrid: {
+    padding: SPACING.lg,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  evidenciaCard: {
+    width: '48%',
+    minWidth: 150,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  evidenciaImagen: {
+    width: '100%',
+    height: 150,
+    backgroundColor: COLORS.border,
+  },
+  evidenciaInfo: {
+    padding: SPACING.sm,
+  },
+  evidenciaNombre: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  evidenciaVerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  evidenciaVerText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
   },
 });

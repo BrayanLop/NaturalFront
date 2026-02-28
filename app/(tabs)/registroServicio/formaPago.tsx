@@ -3,9 +3,12 @@ import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
+import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../../api/api';
 
 type FormaPago = 'T' | 'E';
@@ -22,6 +25,13 @@ interface Servicio {
   precio: number;
 }
 
+interface ArchivoSeleccionado {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+}
+
 export default function ResumenYFormaPago() {
   const router = useRouter();
   const { usuario } = useAuth();
@@ -32,6 +42,8 @@ export default function ResumenYFormaPago() {
   const [formaPago, setFormaPago] = useState<FormaPago | null>(null);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [archivosSeleccionados, setArchivosSeleccionados] = useState<ArchivoSeleccionado[]>([]);
+  const [subiendoEvidencias, setSubiendoEvidencias] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -59,6 +71,170 @@ export default function ResumenYFormaPago() {
     }
   };
 
+  const tomarFoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso requerido', 'Necesitamos permisos para usar la cámara');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const archivo: ArchivoSeleccionado = {
+          uri: asset.uri,
+          name: asset.fileName || `foto_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+          size: asset.fileSize,
+        };
+        console.log('Foto tomada:', archivo);
+        setArchivosSeleccionados(prev => [...prev, archivo]);
+      }
+    } catch (error) {
+      console.error('Error al tomar foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto');
+    }
+  };
+
+  const seleccionarImagen = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso requerido', 'Necesitamos permisos para acceder a tus fotos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const archivo: ArchivoSeleccionado = {
+          uri: asset.uri,
+          name: asset.fileName || `imagen_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+          size: asset.fileSize,
+        };
+        console.log('Imagen seleccionada:', archivo);
+        setArchivosSeleccionados(prev => [...prev, archivo]);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    }
+  };
+
+  const seleccionarDocumento = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const archivo: ArchivoSeleccionado = {
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || 'application/octet-stream',
+          size: asset.size,
+        };
+        console.log('Documento seleccionado:', archivo);
+        setArchivosSeleccionados(prev => [...prev, archivo]);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar documento:', error);
+      Alert.alert('Error', 'No se pudo seleccionar el documento');
+    }
+  };
+
+  const eliminarArchivo = (index: number) => {
+    setArchivosSeleccionados(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const subirEvidencias = async (registrosIds: number[]) => {
+    if (archivosSeleccionados.length === 0) {
+      return;
+    }
+
+    // Validar que tengamos IDs válidos
+    if (!registrosIds || registrosIds.length === 0) {
+      console.warn('No hay IDs de registros para subir evidencias');
+      return;
+    }
+
+    setSubiendoEvidencias(true);
+    try {
+      // Subir cada evidencia para cada registro
+      for (const registroId of registrosIds) {
+        // Validar que el ID sea válido
+        if (!registroId || isNaN(registroId)) {
+          console.warn('ID de registro inválido:', registroId);
+          continue;
+        }
+
+        for (const archivo of archivosSeleccionados) {
+          const formData = new FormData();
+          formData.append('registroServicioId', registroId.toString());
+          
+          console.log('Procesando archivo:', archivo);
+          
+          // Manejar diferente según la plataforma
+          if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
+            // En Web: convertir blob a File
+            try {
+              const response = await fetch(archivo.uri);
+              const blob = await response.blob();
+              const file = new File([blob], archivo.name, { type: archivo.type || 'image/jpeg' });
+              
+              console.log('Archivo convertido para web:', file);
+              formData.append('archivo', file);
+            } catch (error) {
+              console.error('Error al convertir blob:', error);
+              throw new Error('No se pudo procesar el archivo para web');
+            }
+          } else {
+            // En Mobile (iOS/Android): usar objeto con uri, name, type
+            let fileUri = archivo.uri;
+            if (Platform.OS === 'android' && !fileUri.startsWith('file://')) {
+              fileUri = 'file://' + fileUri;
+            }
+            
+            const fileToUpload: any = {
+              uri: fileUri,
+              name: archivo.name,
+              type: archivo.type || 'image/jpeg',
+            };
+            
+            console.log('Archivo para mobile:', fileToUpload);
+            formData.append('archivo', fileToUpload as any);
+          }
+
+          console.log('Enviando FormData para registro', registroId);
+
+          // Enviar sin establecer Content-Type - axios lo detectará automáticamente
+          const response = await api.post('/Evidencia/SubirEvidencia', formData);
+          
+          console.log('Evidencia subida exitosamente:', response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error al subir evidencias:', error);
+      throw error;
+    } finally {
+      setSubiendoEvidencias(false);
+    }
+  };
+
   const confirmar = async () => {
     if (!formaPago) {
       Alert.alert('Falta seleccionar', 'Debes seleccionar una forma de pago');
@@ -76,8 +252,73 @@ export default function ResumenYFormaPago() {
         FormaPago: formaPago,
       }));
 
-      await api.post('/RegistroServicio/Guardar', registros);
-      Alert.alert('Éxito', 'Servicios registrados correctamente');
+      // Guardar los registros
+      const response = await api.post('/RegistroServicio/Guardar', registros);
+      
+      console.log('Respuesta del backend:', response.data);
+      
+      // Si hay evidencias, subirlas
+      if (archivosSeleccionados.length > 0) {
+        try {
+          let registrosIds: number[] = [];
+          
+          // Verificar si la respuesta contiene los IDs
+          if (Array.isArray(response.data)) {
+            registrosIds = response.data
+              .map((r: any) => r.id || r.Id || r.ID)
+              .filter((id: any) => id !== undefined && id !== null);
+          } else if (response.data?.registrosIds && Array.isArray(response.data.registrosIds)) {
+            registrosIds = response.data.registrosIds;
+          } else if (response.data?.id || response.data?.Id || response.data?.ID) {
+            registrosIds = [response.data.id || response.data.Id || response.data.ID];
+          }
+          
+          // Si no hay IDs en la respuesta, consultar los últimos registros de esta persona
+          if (registrosIds.length === 0) {
+            console.log('Backend no retornó IDs, consultando registros recientes...');
+            
+            // Obtener todos los registros de la persona
+            const registrosResponse = await api.get(`/RegistroServicio/ObtenerPorPersona/${personaId}`);
+            
+            if (registrosResponse.data && Array.isArray(registrosResponse.data)) {
+              // Filtrar los registros que coincidan con los servicios que acabamos de guardar
+              const servicioIds = servicios.map(s => s.id);
+              const registrosRecientes = registrosResponse.data
+                .filter((r: any) => servicioIds.includes(r.servicioId))
+                // Ordenar por fecha descendente y tomar los últimos N registros
+                .sort((a: any, b: any) => {
+                  const dateA = new Date(a.fechaServicio || a.fechaCreacion || 0).getTime();
+                  const dateB = new Date(b.fechaServicio || b.fechaCreacion || 0).getTime();
+                  return dateB - dateA;
+                })
+                .slice(0, servicios.length);
+              
+              registrosIds = registrosRecientes.map((r: any) => r.id || r.Id).filter(Boolean);
+              console.log('IDs obtenidos de consulta:', registrosIds);
+            }
+          }
+          
+          if (registrosIds.length > 0) {
+            console.log('Subiendo evidencias para', registrosIds.length, 'registros');
+            await subirEvidencias(registrosIds);
+          } else {
+            console.warn('No se pudieron obtener los IDs de los registros');
+            Alert.alert(
+              'Advertencia',
+              'Servicios registrados correctamente, pero no se pudieron subir las evidencias automáticamente.'
+            );
+          }
+        } catch (errorEvidencias) {
+          console.error('Error al procesar evidencias:', errorEvidencias);
+          Alert.alert(
+            'Advertencia',
+            'Servicios registrados correctamente, pero hubo un error al subir las evidencias.'
+          );
+        }
+      }
+
+      Alert.alert('\u00c9xito', 'Servicios registrados correctamente' + 
+        (archivosSeleccionados.length > 0 && response.data ? ' con evidencias' : ''));
       router.replace('/(tabs)/registroServicio');
     } catch (error) {
       console.error('Error al guardar registros:', error);
@@ -151,15 +392,76 @@ export default function ResumenYFormaPago() {
             </View>
           </View>
 
+          {/* Evidencias */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
+            
+            <View style={styles.evidenciasButtons}>
+              <TouchableOpacity
+                style={styles.evidenciaButton}
+                onPress={tomarFoto}
+                disabled={guardando}
+              >
+                <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.evidenciaButtonText}>Cámara</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.evidenciaButton}
+                onPress={seleccionarImagen}
+                disabled={guardando}
+              >
+                <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.evidenciaButtonText}>Galería</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.evidenciaButton}
+                onPress={seleccionarDocumento}
+                disabled={guardando}
+              >
+                <Ionicons name="document-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.evidenciaButtonText}>Archivo</Text>
+              </TouchableOpacity>
+            </View>
+
+            {archivosSeleccionados.length > 0 && (
+              <View style={styles.archivosLista}>
+                {archivosSeleccionados.map((archivo, index) => (
+                  <View key={index} style={styles.archivoItem}>
+                    <Ionicons
+                      name={archivo.type.startsWith('image/') ? 'image' : 'document'}
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text style={styles.archivoNombre} numberOfLines={1}>
+                      {archivo.name}
+                    </Text>
+                    <TouchableOpacity onPress={() => eliminarArchivo(index)}>
+                      <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
           {/* Botón confirmar */}
           <TouchableOpacity
             style={[styles.button, (!formaPago || guardando) && styles.buttonDisabled]}
             onPress={confirmar}
             disabled={!formaPago || guardando}
           >
-            <Text style={styles.buttonText}>
-              {guardando ? 'Guardando...' : 'Confirmar registro'}
-            </Text>
+            {guardando || subiendoEvidencias ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color={COLORS.white} size="small" />
+                <Text style={styles.buttonText}>
+                  {subiendoEvidencias ? 'Subiendo evidencias...' : 'Guardando...'}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.buttonText}>Confirmar registro</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -310,5 +612,50 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  evidenciasButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  evidenciaButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.cardBackground,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '33',
+  },
+  evidenciaButtonText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  archivosLista: {
+    marginTop: 12,
+    gap: 8,
+  },
+  archivoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.cardBackground,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '22',
+  },
+  archivoNombre: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
   },
 });

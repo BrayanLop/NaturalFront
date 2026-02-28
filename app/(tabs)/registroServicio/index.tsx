@@ -8,21 +8,20 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Modal,
-  Image,
-  Dimensions,
-  Linking
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Linking,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
-import { RegistroServicio, Evidencia } from '../../api/modelos/registroServicio';
+import { Evidencia, RegistroServicio } from '../../api/modelos/registroServicio';
 
 export default function ListaRegistros() {
   const router = useRouter();

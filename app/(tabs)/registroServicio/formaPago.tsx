@@ -3,7 +3,7 @@ import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -186,7 +186,7 @@ export default function ResumenYFormaPago() {
           const formData = new FormData();
           formData.append('registroServicioId', registroId.toString());
           
-          console.log('Procesando archivo:', archivo);
+          console.log('Procesando archivo:', JSON.stringify(archivo, null, 2));
           
           // Manejar diferente según la plataforma
           if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
@@ -205,17 +205,46 @@ export default function ResumenYFormaPago() {
           } else {
             // En Mobile (iOS/Android): usar objeto con uri, name, type
             let fileUri = archivo.uri;
-            if (Platform.OS === 'android' && !fileUri.startsWith('file://')) {
+            
+            // Determinar el tipo MIME correcto basado en la extensión si no está presente
+            let mimeType = archivo.type;
+            if (!mimeType || mimeType === 'application/octet-stream') {
+              const extension = archivo.name.split('.').pop()?.toLowerCase();
+              if (extension === 'jpg' || extension === 'jpeg') {
+                mimeType = 'image/jpeg';
+              } else if (extension === 'png') {
+                mimeType = 'image/png';
+              } else if (extension === 'gif') {
+                mimeType = 'image/gif';
+              } else if (extension === 'heic' || extension === 'heif') {
+                mimeType = 'image/heic';
+              } else if (extension === 'pdf') {
+                mimeType = 'application/pdf';
+              } else {
+                mimeType = 'image/jpeg'; // Default para imágenes
+              }
+            }
+            
+            // En Android: agregar file:// solo si no tiene ningún esquema
+            if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
               fileUri = 'file://' + fileUri;
+            }
+            
+            // En iOS: la URI de DocumentPicker puede necesitar decodificación
+            if (Platform.OS === 'ios') {
+              // Asegurarse de que la URI esté correctamente formateada
+              fileUri = decodeURIComponent(fileUri.replace('file://', '')).startsWith('/') 
+                ? fileUri 
+                : fileUri;
             }
             
             const fileToUpload: any = {
               uri: fileUri,
               name: archivo.name,
-              type: archivo.type || 'image/jpeg',
+              type: mimeType,
             };
             
-            console.log('Archivo para mobile:', fileToUpload);
+            console.log('Archivo para mobile:', JSON.stringify(fileToUpload, null, 2));
             formData.append('archivo', fileToUpload as any);
           }
 
@@ -396,32 +425,12 @@ export default function ResumenYFormaPago() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
             
-            <View style={styles.evidenciasButtons}>
-              <TouchableOpacity
-                style={styles.evidenciaButton}
-                onPress={tomarFoto}
-                disabled={guardando}
-              >
-                <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.evidenciaButtonText}>Cámara</Text>
+            <View style={styles.evidenceOptionsContainer}>
+              <TouchableOpacity onPress={tomarFoto} style={styles.iconButton}>
+                <MaterialIcons name="photo-camera" size={32} color={COLORS.primary} />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.evidenciaButton}
-                onPress={seleccionarImagen}
-                disabled={guardando}
-              >
-                <Ionicons name="image-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.evidenciaButtonText}>Galería</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.evidenciaButton}
-                onPress={seleccionarDocumento}
-                disabled={guardando}
-              >
-                <Ionicons name="document-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.evidenciaButtonText}>Archivo</Text>
+              <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
+                <MaterialIcons name="attach-file" size={32} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
 
@@ -657,5 +666,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: COLORS.text,
+  },
+  evidenceOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 16,
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '33',
   },
 });

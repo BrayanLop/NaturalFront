@@ -374,119 +374,115 @@ export default function ResumenYFormaPago() {
         <Text style={styles.title}>Resumen del registro</Text>
       </View>
 
-      {/* Layout en dos columnas principales */}
-      <View style={styles.mainRow}>
-        {/* Columna izquierda: Empleado, Total, Forma de Pago, Botón */}
-        <View style={styles.leftColumn}>
-          {/* Información de la persona */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👤 Empleado</Text>
-            <View style={styles.card}>
-              <Text style={styles.infoText}>
-                {persona?.nombre} {persona?.apellido}
-              </Text>
+      {/* Fila superior: Empleado + Total */}
+      <View style={styles.topRow}>
+        <View style={styles.employeeCard}>
+          <Text style={styles.cardLabel}>👤 Empleado</Text>
+          <Text style={styles.employeeName}>
+            {persona?.nombre} {persona?.apellido}
+          </Text>
+        </View>
+        <View style={styles.totalCard}>
+          <Text style={styles.cardLabel}>Total a pagar</Text>
+          <Text style={styles.totalMonto}>{formatCurrency(total)}</Text>
+        </View>
+      </View>
+
+      {/* Servicios en grid */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>💼 Servicios ({servicios.length})</Text>
+        <View style={styles.serviciosGrid}>
+          {servicios.map((servicio) => (
+            <View key={servicio.id} style={styles.servicioItem}>
+              <Text style={styles.servicioNombre} numberOfLines={2}>{servicio.nombre}</Text>
+              <Text style={styles.servicioValor}>{formatCurrency(servicio.precio)}</Text>
             </View>
-          </View>
+          ))}
+        </View>
+      </View>
 
-          {/* Total */}
-          <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>Total a pagar</Text>
-            <Text style={styles.totalMonto}>{formatCurrency(total)}</Text>
-          </View>
-
-          {/* Forma de pago */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💳 Forma de pago</Text>
-            
-            <View style={styles.formaPagoRow}>
-              <TouchableOpacity
-                style={[styles.option, formaPago === 'T' && styles.optionSelected]}
-                onPress={() => setFormaPago('T')}
-              >
-                <Text style={styles.optionIcon}>💳</Text>
-                <Text style={[styles.optionText, formaPago === 'T' && styles.optionTextSelected]}>
-                  Transferencia
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.option, formaPago === 'E' && styles.optionSelected]}
-                onPress={() => setFormaPago('E')}
-              >
-                <Text style={styles.optionIcon}>💵</Text>
-                <Text style={[styles.optionText, formaPago === 'E' && styles.optionTextSelected]}>
-                  Efectivo
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Evidencias */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
-            
-            <View style={styles.evidenceOptionsContainer}>
-              <TouchableOpacity onPress={tomarFoto} style={styles.iconButton}>
-                <MaterialIcons name="photo-camera" size={32} color={COLORS.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
-                <MaterialIcons name="attach-file" size={32} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {archivosSeleccionados.length > 0 && (
-              <View style={styles.archivosLista}>
-                {archivosSeleccionados.map((archivo, index) => (
-                  <View key={index} style={styles.archivoItem}>
-                    <Ionicons
-                      name={archivo.type.startsWith('image/') ? 'image' : 'document'}
-                      size={16}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.archivoNombre} numberOfLines={1}>
-                      {archivo.name}
-                    </Text>
-                    <TouchableOpacity onPress={() => eliminarArchivo(index)}>
-                      <Ionicons name="close-circle" size={20} color={COLORS.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {/* Botón confirmar */}
+      {/* Forma de pago debajo de servicios */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>💳 Forma de pago</Text>
+        <View style={styles.formaPagoRow}>
           <TouchableOpacity
-            style={[styles.button, (!formaPago || guardando) && styles.buttonDisabled]}
-            onPress={confirmar}
-            disabled={!formaPago || guardando}
+            style={[styles.option, formaPago === 'T' && styles.optionSelected]}
+            onPress={() => setFormaPago('T')}
           >
-            {guardando || subiendoEvidencias ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color={COLORS.white} size="small" />
-                <Text style={styles.buttonText}>
-                  {subiendoEvidencias ? 'Subiendo evidencias...' : 'Guardando...'}
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.buttonText}>Confirmar registro</Text>
-            )}
+            <Text style={styles.optionIcon}>💳</Text>
+            <Text style={[styles.optionText, formaPago === 'T' && styles.optionTextSelected]}>
+              Transferencia
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.option, formaPago === 'E' && styles.optionSelected]}
+            onPress={() => setFormaPago('E')}
+          >
+            <Text style={styles.optionIcon}>💵</Text>
+            <Text style={[styles.optionText, formaPago === 'E' && styles.optionTextSelected]}>
+              Efectivo
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Evidencias con todas las opciones */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
+        <View style={styles.evidenceOptionsContainer}>
+          <TouchableOpacity onPress={tomarFoto} style={styles.iconButton}>
+            <MaterialIcons name="photo-camera" size={28} color={COLORS.primary} />
+            <Text style={styles.iconButtonLabel}>Cámara</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={seleccionarImagen} style={styles.iconButton}>
+            <MaterialIcons name="photo-library" size={28} color={COLORS.primary} />
+            <Text style={styles.iconButtonLabel}>Galería</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
+            <MaterialIcons name="attach-file" size={28} color={COLORS.primary} />
+            <Text style={styles.iconButtonLabel}>Archivo</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Columna derecha: Servicios */}
-        <View style={styles.rightColumn}>
-          <Text style={styles.sectionTitle}>💼 Servicios ({servicios.length})</Text>
-          <ScrollView style={styles.serviciosScroll} nestedScrollEnabled>
-            {servicios.map((servicio) => (
-              <View key={servicio.id} style={styles.servicioItem}>
-                <Text style={styles.servicioNombre} numberOfLines={2}>{servicio.nombre}</Text>
-                <Text style={styles.servicioValor}>{formatCurrency(servicio.precio)}</Text>
+        {archivosSeleccionados.length > 0 && (
+          <View style={styles.archivosGrid}>
+            {archivosSeleccionados.map((archivo, index) => (
+              <View key={index} style={styles.archivoItem}>
+                <Ionicons
+                  name={archivo.type.startsWith('image/') ? 'image' : 'document'}
+                  size={16}
+                  color={COLORS.primary}
+                />
+                <Text style={styles.archivoNombre} numberOfLines={1}>
+                  {archivo.name}
+                </Text>
+                <TouchableOpacity onPress={() => eliminarArchivo(index)}>
+                  <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                </TouchableOpacity>
               </View>
             ))}
-          </ScrollView>
-        </View>
+          </View>
+        )}
       </View>
+
+      {/* Botón confirmar */}
+      <TouchableOpacity
+        style={[styles.button, (!formaPago || guardando) && styles.buttonDisabled]}
+        onPress={confirmar}
+        disabled={!formaPago || guardando}
+      >
+        {guardando || subiendoEvidencias ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={COLORS.white} size="small" />
+            <Text style={styles.buttonText}>
+              {subiendoEvidencias ? 'Subiendo evidencias...' : 'Guardando...'}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.buttonText}>Confirmar registro</Text>
+        )}
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -509,22 +505,44 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
   },
-  section: {
-    marginBottom: 16,
-  },
-  mainRow: {
+  // Fila superior: Empleado + Total
+  topRow: {
     flexDirection: 'row',
     gap: 16,
-    flex: 1,
+    marginBottom: 20,
   },
-  leftColumn: {
+  employeeCard: {
     flex: 1,
+    backgroundColor: COLORS.cardBackground,
+    padding: 14,
+    borderRadius: 12,
   },
-  rightColumn: {
+  cardLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  employeeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  totalCard: {
     flex: 1,
+    backgroundColor: '#e8f8f5',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.primary + '33',
   },
-  serviciosScroll: {
-    maxHeight: 500,
+  totalMonto: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  // Secciones
+  section: {
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
@@ -532,86 +550,114 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
   },
-  card: {
-    backgroundColor: COLORS.cardBackground,
-    padding: 16,
-    borderRadius: 12,
-  },
-  infoText: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '500',
+  // Grid de servicios
+  serviciosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   servicioItem: {
     backgroundColor: COLORS.cardBackground,
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 6,
+    padding: 12,
+    borderRadius: 10,
+    minWidth: 150,
+    flex: 1,
+    maxWidth: '48%',
   },
   servicioNombre: {
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.text,
-    marginBottom: 4,
-  },
-  servicioValor: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  totalSection: {
-    backgroundColor: '#e8f8f5',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary + '33',
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
     marginBottom: 6,
   },
-  totalMonto: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  servicioValor: {
+    fontSize: 15,
+    fontWeight: '700',
     color: COLORS.primary,
   },
+  // Forma de pago
   formaPagoRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   option: {
     flex: 1,
     backgroundColor: COLORS.cardBackground,
-    padding: 12,
-    borderRadius: 10,
-    flexDirection: 'column',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   optionSelected: {
     borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
   },
   optionIcon: {
-    fontSize: 32,
-    marginBottom: 6,
+    fontSize: 28,
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.text,
-    textAlign: 'center',
   },
   optionTextSelected: {
     color: COLORS.primary,
   },
+  // Evidencias
+  evidenceOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    minWidth: 90,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '33',
+  },
+  iconButtonLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  archivosGrid: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  archivoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.cardBackground,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '22',
+  },
+  archivoNombre: {
+    maxWidth: 150,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  // Botón
   button: {
     backgroundColor: COLORS.primary,
-    padding: 14,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
+    marginBottom: 30,
   },
   buttonDisabled: {
     backgroundColor: COLORS.textSecondary,
@@ -626,59 +672,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  evidenciasButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  evidenciaButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.cardBackground,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '33',
-  },
-  evidenciaButtonText: {
-    color: COLORS.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  archivosLista: {
-    marginTop: 12,
-    gap: 8,
-  },
-  archivoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.cardBackground,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '22',
-  },
-  archivoNombre: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.text,
-  },
-  evidenceOptionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 16,
-  },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '33',
   },
 });

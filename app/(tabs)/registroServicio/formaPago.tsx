@@ -5,6 +5,7 @@ import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -118,8 +119,28 @@ export default function ResumenYFormaPago() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        let finalUri = asset.uri;
+        
+        // En Android (content://) e iOS (ph://), copiar a cache para que funcione con FormData
+        if (Platform.OS !== 'web' && (asset.uri.startsWith('content://') || asset.uri.startsWith('ph://'))) {
+          const fileName = asset.fileName || `imagen_${Date.now()}.jpg`;
+          const cacheUri = `${FileSystem.cacheDirectory}${fileName}`;
+          
+          try {
+            await FileSystem.copyAsync({
+              from: asset.uri,
+              to: cacheUri,
+            });
+            finalUri = cacheUri;
+            console.log('Imagen copiada a cache:', cacheUri);
+          } catch (copyError) {
+            console.error('Error al copiar imagen a cache:', copyError);
+            // Si falla la copia, intentar con la URI original
+          }
+        }
+        
         const archivo: ArchivoSeleccionado = {
-          uri: asset.uri,
+          uri: finalUri,
           name: asset.fileName || `imagen_${Date.now()}.jpg`,
           type: asset.mimeType || 'image/jpeg',
           size: asset.fileSize,

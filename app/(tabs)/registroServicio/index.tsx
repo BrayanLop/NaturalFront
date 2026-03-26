@@ -5,23 +5,35 @@ import { formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
 import { isAdmin, puedeRegistrarServicios } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
 import { Evidencia, RegistroServicio } from '../../api/modelos/registroServicio';
+
+interface ArchivoSeleccionado {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+}
 
 export default function ListaRegistros() {
   const router = useRouter();
@@ -41,6 +53,12 @@ export default function ListaRegistros() {
   const [evidenciasActuales, setEvidenciasActuales] = useState<Evidencia[]>([]);
   const [cargandoEvidencias, setCargandoEvidencias] = useState(false);
   const [imagenSeleccionada, setImagenSeleccionada] = useState<number>(0);
+
+  // Estado para subir evidencias
+  const [subirEvidenciaModalVisible, setSubirEvidenciaModalVisible] = useState(false);
+  const [registroParaEvidencia, setRegistroParaEvidencia] = useState<RegistroServicio | null>(null);
+  const [archivosSeleccionados, setArchivosSeleccionados] = useState<ArchivoSeleccionado[]>([]);
+  const [subiendoEvidencias, setSubiendoEvidencias] = useState(false);
   
   // Fechas por defecto: día actual
   const hoy = new Date();
@@ -217,6 +235,150 @@ export default function ListaRegistros() {
     }
   }, [puedeEditar, cargarDatos]);
 
+  // Funciones para subir evidencias desde la lista
+  const abrirSubirEvidencia = useCallback((registro: RegistroServicio) => {
+    setRegistroParaEvidencia(registro);
+    setArchivosSeleccionados([]);
+    setSubirEvidenciaModalVisible(true);
+  }, []);
+
+  const tomarFoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso requerido', 'Necesitamos permisos para usar la cámara');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setArchivosSeleccionados(prev => [...prev, {
+          uri: asset.uri,
+          name: asset.fileName || `foto_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+          size: asset.fileSize,
+        }]);
+      }
+    } catch (error) {
+      logger.error('Error al tomar foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto');
+    }
+  };
+
+  const seleccionarImagen = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso requerido', 'Necesitamos permisos para acceder a tus fotos');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        let finalUri = asset.uri;
+        if (Platform.OS !== 'web' && (asset.uri.startsWith('content://') || asset.uri.startsWith('ph://'))) {
+          const fileName = asset.fileName || `imagen_${Date.now()}.jpg`;
+          const cacheUri = `${FileSystem.cacheDirectory}${fileName}`;
+          try {
+            await FileSystem.copyAsync({ from: asset.uri, to: cacheUri });
+            finalUri = cacheUri;
+          } catch (copyError) {
+            logger.error('Error al copiar imagen a cache:', copyError);
+          }
+        }
+        setArchivosSeleccionados(prev => [...prev, {
+          uri: finalUri,
+          name: asset.fileName || `imagen_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+          size: asset.fileSize,
+        }]);
+      }
+    } catch (error) {
+      logger.error('Error al seleccionar imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    }
+  };
+
+  const seleccionarDocumento = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setArchivosSeleccionados(prev => [...prev, {
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || 'application/octet-stream',
+          size: asset.size,
+        }]);
+      }
+    } catch (error) {
+      logger.error('Error al seleccionar documento:', error);
+      Alert.alert('Error', 'No se pudo seleccionar el documento');
+    }
+  };
+
+  const eliminarArchivo = (index: number) => {
+    setArchivosSeleccionados(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const confirmarSubirEvidencias = async () => {
+    if (!registroParaEvidencia || archivosSeleccionados.length === 0) return;
+
+    setSubiendoEvidencias(true);
+    try {
+      for (const archivo of archivosSeleccionados) {
+        const formData = new FormData();
+        formData.append('registroServicioId', registroParaEvidencia.id.toString());
+
+        if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
+          const response = await fetch(archivo.uri);
+          const blob = await response.blob();
+          const file = new File([blob], archivo.name, { type: archivo.type || 'image/jpeg' });
+          formData.append('archivo', file);
+        } else {
+          let fileUri = archivo.uri;
+          let mimeType = archivo.type;
+          if (!mimeType || mimeType === 'application/octet-stream') {
+            const extension = archivo.name.split('.').pop()?.toLowerCase();
+            const mimeMap: Record<string, string> = {
+              jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+              gif: 'image/gif', heic: 'image/heic', heif: 'image/heic', pdf: 'application/pdf',
+            };
+            mimeType = mimeMap[extension || ''] || 'image/jpeg';
+          }
+          if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+            fileUri = 'file://' + fileUri;
+          }
+          formData.append('archivo', { uri: fileUri, name: archivo.name, type: mimeType } as any);
+        }
+
+        await api.post('/Evidencia/SubirEvidencia', formData);
+      }
+
+      showSuccess('Evidencias subidas correctamente');
+      setSubirEvidenciaModalVisible(false);
+      setArchivosSeleccionados([]);
+      setRegistroParaEvidencia(null);
+      cargarDatos();
+    } catch (error) {
+      logger.error('Error al subir evidencias:', error);
+      showError('No se pudieron subir las evidencias');
+    } finally {
+      setSubiendoEvidencias(false);
+    }
+  };
+
   const verEvidencias = useCallback(async (registro: any) => {
     setCargandoEvidencias(true);
     setEvidenciasModalVisible(true);
@@ -318,6 +480,17 @@ export default function ListaRegistros() {
             <Text style={styles.evidenciasButtonText}>Ver evidencias ({item.evidencias.length})</Text>
           </TouchableOpacity>
         )}
+
+        {/* Botón para subir evidencia - solo si forma de pago es Transferencia */}
+        {item.formaPago === 'T' && !item.liquidado && (
+          <TouchableOpacity
+            style={styles.subirEvidenciaButton}
+            onPress={() => abrirSubirEvidencia(item)}
+          >
+            <FontAwesome5 name="upload" size={14} color={COLORS.success} />
+            <Text style={styles.subirEvidenciaButtonText}>Subir evidencia</Text>
+          </TouchableOpacity>
+        )}
         
         {puedeEditar && !item.confirmado && !item.liquidado && (
           <View style={styles.confirmContainer}>
@@ -334,7 +507,7 @@ export default function ListaRegistros() {
         )}
       </View>
     </View>
-  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias]);
+  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias, abrirSubirEvidencia]);
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
@@ -540,6 +713,82 @@ export default function ListaRegistros() {
         onClose={() => setPickerVisible(null)}
         title={pickerVisible === 'inicio' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
       />
+
+      {/* Modal para subir evidencias */}
+      <Modal
+        visible={subirEvidenciaModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setSubirEvidenciaModalVisible(false); setArchivosSeleccionados([]); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Subir evidencia</Text>
+              <TouchableOpacity onPress={() => { setSubirEvidenciaModalVisible(false); setArchivosSeleccionados([]); }}>
+                <FontAwesome5 name="times" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              <View style={{ padding: SPACING.lg }}>
+                {registroParaEvidencia && (
+                  <View style={styles.uploadRegistroInfo}>
+                    <Text style={styles.uploadRegistroNombre}>{registroParaEvidencia.nombrePersona}</Text>
+                    <Text style={styles.uploadRegistroServicio}>{registroParaEvidencia.nombreServicio} - {formatDate(registroParaEvidencia.fechaServicio)}</Text>
+                  </View>
+                )}
+
+                <Text style={styles.uploadSectionTitle}>Seleccionar archivos</Text>
+                <View style={styles.uploadButtonsRow}>
+                  <TouchableOpacity style={styles.uploadOptionButton} onPress={tomarFoto}>
+                    <FontAwesome5 name="camera" size={20} color={COLORS.primary} />
+                    <Text style={styles.uploadOptionText}>Cámara</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.uploadOptionButton} onPress={seleccionarDocumento}>
+                    <FontAwesome5 name="file-alt" size={20} color={COLORS.primary} />
+                    <Text style={styles.uploadOptionText}>Documento</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {archivosSeleccionados.length > 0 && (
+                  <View style={styles.uploadFilesList}>
+                    <Text style={styles.uploadFilesTitle}>{archivosSeleccionados.length} archivo(s) seleccionado(s)</Text>
+                    {archivosSeleccionados.map((archivo, index) => (
+                      <View key={index} style={styles.uploadFileItem}>
+                        <FontAwesome5
+                          name={archivo.type?.includes('pdf') ? 'file-pdf' : 'file-image'}
+                          size={16}
+                          color={COLORS.textSecondary}
+                        />
+                        <Text style={styles.uploadFileName} numberOfLines={1}>{archivo.name}</Text>
+                        <TouchableOpacity onPress={() => eliminarArchivo(index)}>
+                          <FontAwesome5 name="trash" size={14} color={COLORS.error} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.uploadConfirmButton,
+                    (archivosSeleccionados.length === 0 || subiendoEvidencias) && styles.uploadConfirmButtonDisabled,
+                  ]}
+                  onPress={confirmarSubirEvidencias}
+                  disabled={archivosSeleccionados.length === 0 || subiendoEvidencias}
+                >
+                  {subiendoEvidencias ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.uploadConfirmButtonText}>Subir evidencia(s)</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de Evidencias */}
       <Modal
@@ -1123,5 +1372,99 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.primary,
     fontWeight: FONT_WEIGHT.semibold,
+  },
+  subirEvidenciaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  subirEvidenciaButtonText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.success,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  uploadRegistroInfo: {
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.lg,
+  },
+  uploadRegistroNombre: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  uploadRegistroServicio: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  uploadSectionTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  uploadButtonsRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  uploadOptionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.xs,
+  },
+  uploadOptionText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  uploadFilesList: {
+    marginBottom: SPACING.lg,
+  },
+  uploadFilesTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  uploadFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.xs,
+  },
+  uploadFileName: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+  },
+  uploadConfirmButton: {
+    backgroundColor: COLORS.success,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  uploadConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  uploadConfirmButtonText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.bold,
+    fontSize: FONT_SIZE.md,
   },
 });

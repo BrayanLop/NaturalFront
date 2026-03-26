@@ -406,6 +406,7 @@ export default function ListaRegistros() {
 
   const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={styles.item}>
+      {/* Fila superior: nombre + badges */}
       <View style={styles.itemHeader}>
         <Text style={styles.itemTitle}>{item.nombrePersona ?? 'N/A'}</Text>
         <View style={styles.badges}>
@@ -422,88 +423,89 @@ export default function ListaRegistros() {
         </View>
       </View>
       
-      <View style={styles.itemContent}>
-        <View style={styles.itemDetails}>
-          <View style={styles.itemDetailRow}>
-            <FontAwesome5 name="cut" size={12} color={COLORS.textSecondary} />
-            <Text style={styles.itemDetailText}>Servicio: {item.nombreServicio ?? 'N/A'}</Text>
-          </View>
-          <View style={styles.itemDetailRow}>
-            <FontAwesome5 name="calendar" size={12} color={COLORS.textSecondary} />
-            <Text style={styles.itemDetailText}>{item.fechaServicio ? formatDate(item.fechaServicio) : 'Sin fecha'}</Text>
-          </View>
-          
-          {/* Forma de pago con opción de editar */}
-          {puedeEditar && !item.liquidado && editandoFormaPagoId === item.id ? (
-            <View style={styles.formaPagoEditRow}>
-              <Text style={styles.formaPagoLabel}>Forma de pago:</Text>
-              <TouchableOpacity
-                style={[styles.formaPagoOption, item.formaPago === 'E' && styles.formaPagoOptionActive]}
-                onPress={() => handleActualizarFormaPago(item.id, 'E')}
-                disabled={actualizandoFormaPago}
-              >
-                <Text style={[styles.formaPagoOptionText, item.formaPago === 'E' && styles.formaPagoOptionTextActive]}>Efectivo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.formaPagoOption, item.formaPago === 'T' && styles.formaPagoOptionActive]}
-                onPress={() => handleActualizarFormaPago(item.id, 'T')}
-                disabled={actualizandoFormaPago}
-              >
-                <Text style={[styles.formaPagoOptionText, item.formaPago === 'T' && styles.formaPagoOptionTextActive]}>Transferencia</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditandoFormaPagoId(null)} style={styles.formaPagoCancelButton}>
-                <Text style={styles.formaPagoCancelText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={styles.itemDetailRow}
-              onPress={() => puedeEditar && !item.liquidado ? setEditandoFormaPagoId(item.id) : null}
-              disabled={item.liquidado || !puedeEditar}
+      {/* Detalles del servicio */}
+      <View style={styles.itemDetails}>
+        <View style={styles.itemDetailRow}>
+          <FontAwesome5 name="cut" size={12} color={COLORS.textSecondary} />
+          <Text style={styles.itemDetailText}>Servicio: {item.nombreServicio ?? 'N/A'}</Text>
+        </View>
+        <View style={styles.itemDetailRow}>
+          <FontAwesome5 name="calendar" size={12} color={COLORS.textSecondary} />
+          <Text style={styles.itemDetailText}>{item.fechaServicio ? formatDate(item.fechaServicio) : 'Sin fecha'}</Text>
+        </View>
+        
+        {/* Forma de pago con opción de editar */}
+        {puedeEditar && !item.liquidado && editandoFormaPagoId === item.id ? (
+          <View style={styles.formaPagoEditRow}>
+            <Text style={styles.formaPagoLabel}>Forma de pago:</Text>
+            <TouchableOpacity
+              style={[styles.formaPagoOption, item.formaPago === 'E' && styles.formaPagoOptionActive]}
+              onPress={() => handleActualizarFormaPago(item.id, 'E')}
+              disabled={actualizandoFormaPago}
             >
-              <FontAwesome5 name="credit-card" size={12} color={COLORS.textSecondary} />
-              <Text style={styles.itemDetailText}>
-                {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}
-                {puedeEditar && !item.liquidado && <Text style={styles.editIcon}> ✎</Text>}
-              </Text>
+              <Text style={[styles.formaPagoOptionText, item.formaPago === 'E' && styles.formaPagoOptionTextActive]}>Efectivo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.formaPagoOption, item.formaPago === 'T' && styles.formaPagoOptionActive]}
+              onPress={() => handleActualizarFormaPago(item.id, 'T')}
+              disabled={actualizandoFormaPago}
+            >
+              <Text style={[styles.formaPagoOptionText, item.formaPago === 'T' && styles.formaPagoOptionTextActive]}>Transferencia</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditandoFormaPagoId(null)} style={styles.formaPagoCancelButton}>
+              <Text style={styles.formaPagoCancelText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.itemDetailRow}
+            onPress={() => puedeEditar && !item.liquidado ? setEditandoFormaPagoId(item.id) : null}
+            disabled={item.liquidado || !puedeEditar}
+          >
+            <FontAwesome5 name="credit-card" size={12} color={COLORS.textSecondary} />
+            <Text style={styles.itemDetailText}>
+              {item.formaPago === 'T' ? 'Transferencia' : item.formaPago === 'E' ? 'Efectivo' : 'No especificada'}
+              {puedeEditar && !item.liquidado && <Text style={styles.editIcon}> ✎</Text>}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Fila inferior: acciones (evidencias + confirmar) */}
+      <View style={styles.itemActions}>
+        <View style={styles.itemActionsLeft}>
+          {/* Ver evidencias */}
+          {item.evidencias && item.evidencias.length > 0 && (
+            <TouchableOpacity
+              style={styles.actionChip}
+              onPress={() => verEvidencias(item)}
+            >
+              <FontAwesome5 name="image" size={12} color={COLORS.primary} />
+              <Text style={styles.actionChipText}>Evidencias ({item.evidencias.length})</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Subir evidencia - solo si forma de pago es Transferencia */}
+          {item.formaPago === 'T' && !item.liquidado && (
+            <TouchableOpacity
+              style={styles.actionChipUpload}
+              onPress={() => abrirSubirEvidencia(item)}
+            >
+              <FontAwesome5 name="file-upload" size={12} color={COLORS.white} />
             </TouchableOpacity>
           )}
         </View>
-        
-        {/* Botón para ver evidencias - solo si tiene evidencias */}
-        {item.evidencias && item.evidencias.length > 0 && (
-          <TouchableOpacity
-            style={styles.evidenciasButton}
-            onPress={() => verEvidencias(item)}
-          >
-            <FontAwesome5 name="image" size={14} color={COLORS.primary} />
-            <Text style={styles.evidenciasButtonText}>Ver evidencias ({item.evidencias.length})</Text>
-          </TouchableOpacity>
-        )}
 
-        {/* Botón para subir evidencia - solo si forma de pago es Transferencia */}
-        {item.formaPago === 'T' && !item.liquidado && (
-          <TouchableOpacity
-            style={styles.subirEvidenciaButton}
-            onPress={() => abrirSubirEvidencia(item)}
-          >
-            <FontAwesome5 name="upload" size={14} color={COLORS.success} />
-            <Text style={styles.subirEvidenciaButtonText}>Subir evidencia</Text>
-          </TouchableOpacity>
-        )}
-        
         {puedeEditar && !item.confirmado && !item.liquidado && (
-          <View style={styles.confirmContainer}>
-            <TouchableOpacity
-              style={[styles.confirmButton, confirmandoId === item.id && styles.confirmButtonLoading]}
-              onPress={() => handleConfirmarRegistro(item.id)}
-              disabled={confirmandoId === item.id}
-            >
-              <Text style={styles.confirmButtonText}>
-                {confirmandoId === item.id ? '...' : 'Confirmar'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.confirmButton, confirmandoId === item.id && styles.confirmButtonLoading]}
+            onPress={() => handleConfirmarRegistro(item.id)}
+            disabled={confirmandoId === item.id}
+          >
+            <Text style={styles.confirmButtonText}>
+              {confirmandoId === item.id ? '...' : 'Confirmar'}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -739,7 +741,6 @@ export default function ListaRegistros() {
                   </View>
                 )}
 
-                <Text style={styles.uploadSectionTitle}>Seleccionar archivos</Text>
                 <View style={styles.uploadButtonsRow}>
                   <TouchableOpacity style={styles.uploadOptionButton} onPress={tomarFoto}>
                     <FontAwesome5 name="camera" size={20} color={COLORS.primary} />
@@ -747,7 +748,7 @@ export default function ListaRegistros() {
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.uploadOptionButton} onPress={seleccionarDocumento}>
                     <FontAwesome5 name="file-alt" size={20} color={COLORS.primary} />
-                    <Text style={styles.uploadOptionText}>Documento</Text>
+                    <Text style={styles.uploadOptionText}>Archivo</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1062,8 +1063,43 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   itemDetails: {
-    flex: 1,
     gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.sm,
+  },
+  itemActionsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  actionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.primarySurface,
+    borderRadius: RADIUS.full,
+  },
+  actionChipText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  actionChipUpload: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   itemDetailRow: {
     flexDirection: 'row',
@@ -1122,7 +1158,6 @@ const styles = StyleSheet.create({
   confirmContainer: {
     flexDirection: 'column',
     alignItems: 'flex-end',
-    marginLeft: SPACING.sm,
   },
   filtros: {
     backgroundColor: COLORS.white,
@@ -1279,11 +1314,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    paddingVertical: SPACING.xs,
-    marginTop: SPACING.sm,
   },
   evidenciasButtonText: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.xs,
     color: COLORS.primary,
     fontWeight: FONT_WEIGHT.semibold,
   },

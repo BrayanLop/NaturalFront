@@ -456,10 +456,6 @@ export default function ResumenYFormaPago() {
             <MaterialIcons name="photo-camera" size={28} color={COLORS.primary} />
             <Text style={styles.iconButtonLabel}>Cámara</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={seleccionarImagen} style={styles.iconButton}>
-            <MaterialIcons name="photo-library" size={28} color={COLORS.primary} />
-            <Text style={styles.iconButtonLabel}>Galería</Text>
-          </TouchableOpacity>
           <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
             <MaterialIcons name="attach-file" size={28} color={COLORS.primary} />
             <Text style={styles.iconButtonLabel}>Archivo</Text>

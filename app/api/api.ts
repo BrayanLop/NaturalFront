@@ -1,12 +1,22 @@
 import { logger } from '@/utils/logger';
 import { axiosWithRetry } from '@/utils/retry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { getDemoMode, handleDemoRequest } from './demoApi';
 
 const API_URL = 'https://naturalback.vip/api';
 //const API_URL = 'https://localhost:7049/api';
 //const API_URL = 'http://45.236.128.205:5000/api';
 
+// Error personalizado para modo demo
+class DemoModeError extends Error {
+  response: AxiosResponse;
+  constructor(response: AxiosResponse) {
+    super('DEMO_MODE');
+    this.name = 'DemoModeError';
+    this.response = response;
+  }
+}
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -20,6 +30,17 @@ export const api = axios.create({
 // Request interceptor - Agregar headers y token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // Si estamos en modo demo, interceptar el request
+    const isDemo = await getDemoMode();
+    if (isDemo) {
+      const demoResponse = await handleDemoRequest(config);
+      if (demoResponse) {
+        // Lanzar error especial con la respuesta mock
+        throw new DemoModeError(demoResponse);
+      }
+      return config;
+    }
+
     const empresaId = await AsyncStorage.getItem('empresaId');
     const token = await AsyncStorage.getItem('token');
     
@@ -44,7 +65,12 @@ api.interceptors.request.use(
     logger.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
-  (error: AxiosError) => {
+  (error: any) => {
+    // Si es un error de modo demo, devolver la respuesta mock
+    if (error instanceof DemoModeError || error?.name === 'DemoModeError') {
+      logger.log(`[DEMO Response] ${error.response.status}`);
+      return Promise.resolve(error.response);
+    }
     logger.error('[API Request Error]', error);
     return Promise.reject(error);
   }
@@ -53,13 +79,17 @@ api.interceptors.request.use(
 // Response interceptor - Manejo global de errores y reintentos
 api.interceptors.response.use(
   (response) => {
-    logger.log(`[API Response] ${response.status} ${response.config.url}`);
+    logger.log(`[API Response] ${response.status} ${response.config?.url || 'demo'}`);
     return response;
   },
-  async (error: AxiosError) => {
+  async (error: any) => {
+    // Si es un error de modo demo (por si llegó aquí), devolver la respuesta mock
+    if (error instanceof DemoModeError || error?.name === 'DemoModeError') {
+      return Promise.resolve(error.response);
+    }
+
     const status = error.response?.status;
     const url = error.config?.url;
-    const config = error.config;
     
     logger.error(`[API Response Error] ${status} ${url}`, error);
     

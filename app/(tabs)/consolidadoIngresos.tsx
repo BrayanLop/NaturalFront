@@ -119,7 +119,7 @@ export default function ConsolidadoIngresos() {
               <View style={styles.resultInfo}>
                 <Text style={styles.resultLabel}>Total Ingresos</Text>
                 <Text style={[styles.resultValue, styles.ingresos]}>
-                  {consolidado.totalIngresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                  {(consolidado.totalIngresos ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                 </Text>
               </View>
             </View>
@@ -133,7 +133,7 @@ export default function ConsolidadoIngresos() {
               <View style={styles.resultInfo}>
                 <Text style={styles.resultLabel}>Total Egresos</Text>
                 <Text style={[styles.resultValue, styles.egresos]}>
-                  {consolidado.totalEgresos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                  {(consolidado.totalEgresos ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                 </Text>
               </View>
             </View>
@@ -142,8 +142,8 @@ export default function ConsolidadoIngresos() {
 
             <View style={styles.consolidadoBox}>
               <Text style={styles.consolidadoLabel}>Consolidado</Text>
-              <Text style={[styles.consolidadoValue, consolidado.consolidado >= 0 ? styles.ingresos : styles.egresos]}>
-                {consolidado.consolidado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+              <Text style={[styles.consolidadoValue, (consolidado.consolidado ?? 0) >= 0 ? styles.ingresos : styles.egresos]}>
+                {(consolidado.consolidado ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
               </Text>
             </View>
           </View>

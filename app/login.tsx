@@ -4,30 +4,31 @@ import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
 
 export default function Login() {
-  const { login, usuario, cargando } = useAuth();
+  const { login, loginDemo, usuario, cargando } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingDemo, setLoadingDemo] = useState(false);
   const [focusedInput, setFocusedInput] = useState('');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -106,6 +107,18 @@ export default function Login() {
       showError(mensaje, 'Error de inicio de sesión');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoadingDemo(true);
+    try {
+      await loginDemo();
+      router.replace('/home');
+    } catch (error) {
+      showError('Error al iniciar la prueba gratuita', 'Error');
+    } finally {
+      setLoadingDemo(false);
     }
   };
 
@@ -209,6 +222,37 @@ export default function Login() {
             >
               <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
             </Pressable>
+
+            {/* Separador */}
+            <View style={styles.separatorContainer}>
+              <View style={styles.separatorLine} />
+              <Text style={styles.separatorText}>o</Text>
+              <View style={styles.separatorLine} />
+            </View>
+
+            {/* Botón de Prueba Gratuita */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.demoButton,
+                pressed && styles.demoButtonPressed,
+                loadingDemo && styles.demoButtonDisabled,
+              ]}
+              onPress={handleDemoLogin}
+              disabled={loadingDemo || loading}
+            >
+              {loadingDemo ? (
+                <ActivityIndicator color={COLORS.primary} />
+              ) : (
+                <View style={styles.demoButtonContent}>
+                  <Ionicons name="rocket-outline" size={20} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
+                  <Text style={styles.demoButtonText}>Iniciar Prueba Gratuita</Text>
+                </View>
+              )}
+            </Pressable>
+
+            <Text style={styles.demoDescription}>
+              Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
+            </Text>
           </View>
         </Animated.View>
       </ScrollView>
@@ -321,5 +365,53 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
+  },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: SPACING.lg,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  separatorText: {
+    marginHorizontal: SPACING.md,
+    color: COLORS.textTertiary,
+    fontSize: FONT_SIZE.sm,
+  },
+  demoButton: {
+    backgroundColor: COLORS.white,
+    paddingVertical: SPACING.md + 2,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  demoButtonPressed: {
+    backgroundColor: COLORS.surface,
+    transform: [{ scale: 0.98 }],
+  },
+  demoButtonDisabled: {
+    borderColor: COLORS.border,
+  },
+  demoButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoButtonText: {
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+    fontSize: FONT_SIZE.md,
+  },
+  demoDescription: {
+    marginTop: SPACING.md,
+    textAlign: 'center',
+    color: COLORS.textTertiary,
+    fontSize: FONT_SIZE.xs,
+    lineHeight: FONT_SIZE.xs * 1.4,
   },
 });

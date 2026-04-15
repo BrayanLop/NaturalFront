@@ -15,7 +15,7 @@ type MenuItem = {
 };
 
 export default function Home() {
-  const { usuario, logout, cargando } = useAuth();
+  const { usuario, logout, cargando, isDemo } = useAuth();
   const router = useRouter();
 
   if (cargando) {
@@ -158,6 +158,17 @@ export default function Home() {
           <Text style={styles.companyName}>{usuario.nombreEmpresa || 'Natural'}</Text>
         </View>
 
+        {/* Banner de modo demo */}
+        {isDemo && (
+          <View style={styles.demoBanner}>
+            <FontAwesome5 name="rocket" size={16} color={COLORS.warning} style={{ marginRight: SPACING.sm }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.demoBannerTitle}>Modo Prueba Gratuita</Text>
+              <Text style={styles.demoBannerText}>Los datos son de demostración y no se guardarán</Text>
+            </View>
+          </View>
+        )}
+
         {/* Grid de menú */}
         <View style={styles.grid}>
           {menuItems.map((item, index) => (
@@ -276,6 +287,26 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.caption,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.warningLight,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  demoBannerTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.warningDark,
+  },
+  demoBannerText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.warningDark,
+    marginTop: 2,
   },
   logoutButton: {
     flexDirection: 'row',

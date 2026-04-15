@@ -56,11 +56,13 @@ export default function IngresosEmpresa() {
   }, []);
 
   const formatFecha = (valor: string) => {
+    if (!valor) return 'Sin fecha';
     const date = new Date(valor);
     return date.toLocaleDateString('es-CO');
   };
 
   const formatMonto = (valor: number) => {
+    if (valor === null || valor === undefined) return '$0';
     return valor.toLocaleString('es-CO', {
       style: 'currency',
       currency: 'COP',

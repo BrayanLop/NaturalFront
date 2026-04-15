@@ -4,7 +4,6 @@
  */
 
 import { ConfiguracionServicio } from './modelos/configuracionServicio';
-import { Contabilidad, DetalleServicioPersona } from './modelos/contabilidad';
 import { EgresoEmpresa } from './modelos/egreso';
 import { Persona } from './modelos/persona';
 import { RegistroServicio } from './modelos/registroServicio';

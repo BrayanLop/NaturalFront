@@ -1,5 +1,6 @@
 import { Slot } from 'expo-router';
 import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/authContext';
 
 // Load Bootstrap CSS for web so HTML elements get Bootstrap styling
@@ -11,8 +12,10 @@ if (Platform.OS === 'web') {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <Slot />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <Slot />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

@@ -203,15 +203,18 @@ export default function ListaRegistros() {
         { headers: { empresaId: '1' } }
       );
 
+      // Actualizar solo el registro afectado en el estado local, sin recargar toda la lista
+      setRegistros(prev =>
+        prev.map(r => r.id === registroServicioId ? { ...r, confirmado: true } : r)
+      );
       showSuccess('Registro confirmado correctamente');
-      cargarDatos();
     } catch (e: any) {
       logger.error('Error confirmando registro:', e);
       showError(e?.response?.data?.message || 'No se pudo confirmar el registro');
     } finally {
       setConfirmandoId(null);
     }
-  }, [puedeEditar, cargarDatos]);
+  }, [puedeEditar]);
 
   const handleActualizarFormaPago = useCallback(async (registroServicioId: number, formaPago: 'T' | 'E') => {
     if (!puedeEditar) return;

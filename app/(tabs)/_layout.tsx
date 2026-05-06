@@ -5,11 +5,13 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Layout() {
   const { usuario, cargando, logout } = useAuth();
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -33,6 +35,10 @@ export default function Layout() {
     <>
       <Stack
         screenOptions={{
+          contentStyle: {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
           headerStyle: {
             backgroundColor: COLORS.primary,
           },

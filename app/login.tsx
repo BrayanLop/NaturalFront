@@ -253,6 +253,16 @@ export default function Login() {
             <Text style={styles.demoDescription}>
               Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
             </Text>
+
+            {/* Acceso al módulo de Citas */}
+            <Pressable
+              onPress={() => router.push('/citas/login')}
+              style={({ pressed }) => [styles.citasLink, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="calendar-outline" size={18} color={COLORS.secondary} />
+              <Text style={styles.citasLinkText}>Ir al módulo de Citas</Text>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.secondary} />
+            </Pressable>
           </View>
         </Animated.View>
       </ScrollView>
@@ -413,5 +423,20 @@ const styles = StyleSheet.create({
     color: COLORS.textTertiary,
     fontSize: FONT_SIZE.xs,
     lineHeight: FONT_SIZE.xs * 1.4,
+  },
+  citasLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  citasLinkText: {
+    color: COLORS.secondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
   },
 });

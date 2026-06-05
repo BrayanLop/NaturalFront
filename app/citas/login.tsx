@@ -3,7 +3,7 @@ import { useCitasAuth } from '@/context/citasAuthContext';
 import { logger, showError } from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,6 +21,8 @@ import { CitasMode, EmpresaCita } from '../api/modelos/citas';
 
 export default function CitasLogin() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ client?: string }>();
+  const clientOnly = params.client === 'true';
   const { session, cargando, login } = useCitasAuth();
 
   const [empresas, setEmpresas] = useState<EmpresaCita[]>([]);
@@ -35,7 +37,7 @@ export default function CitasLogin() {
     if (!cargando && session) {
       router.replace('/citas/home');
     }
-  }, [cargando, session]);
+  }, [cargando, session, router]);
 
   // Cargar empresas (endpoint anónimo) para el selector.
   useEffect(() => {
@@ -56,7 +58,12 @@ export default function CitasLogin() {
 
   const handleLogin = async () => {
     if (!tenant.trim()) {
-      showError('Selecciona o escribe el código de la empresa', 'Empresa requerida');
+      showError(
+        clientOnly
+          ? 'No se pudo determinar la empresa para el acceso de cliente. Intenta de nuevo más tarde.'
+          : 'Selecciona o escribe el código de la empresa',
+        'Empresa requerida'
+      );
       return;
     }
     if (!usuario.trim()) {
@@ -68,7 +75,8 @@ export default function CitasLogin() {
     try {
       const empresaNombre =
         empresas.find((e) => e.id === tenant)?.nombre || tenant;
-      await login({ tenant: tenant.trim(), empresaNombre, usuario: usuario.trim(), mode });
+      const currentMode: CitasMode = clientOnly ? 'cliente' : mode;
+      await login({ tenant: tenant.trim(), empresaNombre, usuario: usuario.trim(), mode: currentMode });
       router.replace('/citas/home');
     } catch (error: any) {
       const mensaje =
@@ -97,59 +105,82 @@ export default function CitasLogin() {
             <Text style={styles.welcomeTitle}>Bienvenido</Text>
             <Text style={styles.welcomeSubtitle}>Ingresa para agendar o gestionar citas</Text>
 
-            {/* Selector de modo */}
-            <View style={styles.modeRow}>
-              <Pressable
-                style={[styles.modeButton, mode === 'cliente' && styles.modeButtonActive]}
-                onPress={() => setMode('cliente')}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={mode === 'cliente' ? COLORS.white : COLORS.primary}
-                />
-                <Text style={[styles.modeText, mode === 'cliente' && styles.modeTextActive]}>
-                  Cliente
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modeButton, mode === 'empresa' && styles.modeButtonActive]}
-                onPress={() => setMode('empresa')}
-              >
-                <Ionicons
-                  name="business-outline"
-                  size={18}
-                  color={mode === 'empresa' ? COLORS.white : COLORS.primary}
-                />
-                <Text style={[styles.modeText, mode === 'empresa' && styles.modeTextActive]}>
-                  Empresa
-                </Text>
-              </Pressable>
-            </View>
+            <Pressable onPress={() => router.replace('/login')} style={styles.backOptionTop}>
+              <Text style={styles.backOptionText}>← Volver</Text>
+            </Pressable>
 
-            {/* Selector de empresa */}
-            <Text style={commonStyles.label}>Empresa</Text>
-            {cargandoEmpresas ? (
-              <View style={styles.loadingEmpresas}>
-                <ActivityIndicator color={COLORS.primary} />
+            {!clientOnly && (
+              <View style={styles.modeRow}>
+                <Pressable
+                  style={[styles.modeButton, mode === 'cliente' && styles.modeButtonActive]}
+                  onPress={() => setMode('cliente')}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={mode === 'cliente' ? COLORS.white : COLORS.primary}
+                  />
+                  <Text style={[styles.modeText, mode === 'cliente' && styles.modeTextActive]}>
+                    Cliente
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modeButton, mode === 'empresa' && styles.modeButtonActive]}
+                  onPress={() => setMode('empresa')}
+                >
+                  <Ionicons
+                    name="business-outline"
+                    size={18}
+                    color={mode === 'empresa' ? COLORS.white : COLORS.primary}
+                  />
+                  <Text style={[styles.modeText, mode === 'empresa' && styles.modeTextActive]}>
+                    Empresa
+                  </Text>
+                </Pressable>
               </View>
-            ) : empresas.length > 0 ? (
-              <View style={styles.pickerWrapper}>
-                <Picker selectedValue={tenant} onValueChange={(v) => setTenant(String(v))}>
-                  {empresas.map((e) => (
-                    <Picker.Item key={e.id} label={`${e.nombre} (${e.id})`} value={e.id} />
-                  ))}
-                </Picker>
-              </View>
+            )}
+
+            {clientOnly ? (
+              cargandoEmpresas ? (
+                <View style={styles.loadingEmpresas}>
+                  <ActivityIndicator color={COLORS.primary} />
+                </View>
+              ) : tenant ? (
+                <Text style={styles.infoText}>
+                  Ingresas como cliente con tu nombre. Al agendar podrás elegir la empresa y ver sus barberos.
+                </Text>
+              ) : (
+                <Text style={styles.infoText}>
+                  No se pudo determinar la empresa automáticamente. Intenta de nuevo más tarde.
+                </Text>
+              )
             ) : (
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Código de la empresa (ej: ACME)"
-                value={tenant}
-                onChangeText={setTenant}
-                autoCapitalize="characters"
-                placeholderTextColor={COLORS.textTertiary}
-              />
+              <>
+                {/* Selector de empresa */}
+                <Text style={commonStyles.label}>Empresa</Text>
+                {cargandoEmpresas ? (
+                  <View style={styles.loadingEmpresas}>
+                    <ActivityIndicator color={COLORS.primary} />
+                  </View>
+                ) : empresas.length > 0 ? (
+                  <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={tenant} onValueChange={(v) => setTenant(String(v))}>
+                      {empresas.map((e) => (
+                        <Picker.Item key={e.id} label={`${e.nombre} (${e.id})`} value={e.id} />
+                      ))}
+                    </Picker>
+                  </View>
+                ) : (
+                  <TextInput
+                    style={commonStyles.input}
+                    placeholder="Código de la empresa (ej: ACME)"
+                    value={tenant}
+                    onChangeText={setTenant}
+                    autoCapitalize="characters"
+                    placeholderTextColor={COLORS.textTertiary}
+                  />
+                )}
+              </>
             )}
 
             {/* Usuario */}
@@ -179,14 +210,6 @@ export default function CitasLogin() {
               ) : (
                 <Text style={styles.buttonText}>Ingresar</Text>
               )}
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.replace('/login')}
-              style={({ pressed }) => [styles.backLink, pressed && { opacity: 0.7 }]}
-            >
-              <Ionicons name="arrow-back" size={16} color={COLORS.primary} />
-              <Text style={styles.backLinkText}>Volver a Natural</Text>
             </Pressable>
           </View>
         </View>
@@ -239,10 +262,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.xl,
   },
+  backOption: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  backOptionTop: {
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  backOptionText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  infoText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.sm,
+    marginBottom: SPACING.lg,
+    textAlign: 'center',
+  },
   modeRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    marginBottom: SPACING.xl,
+    justifyContent: 'center',
+    marginBottom: SPACING.lg,
   },
   modeButton: {
     flex: 1,
@@ -252,17 +295,18 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   modeButtonActive: {
     backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   modeText: {
-    color: COLORS.primary,
+    color: COLORS.text,
+    fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.body,
   },
   modeTextActive: {
     color: COLORS.white,
@@ -299,17 +343,5 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: FONT_WEIGHT.semibold,
     fontSize: FONT_SIZE.md,
-  },
-  backLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.lg,
-  },
-  backLinkText: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.medium,
   },
 });

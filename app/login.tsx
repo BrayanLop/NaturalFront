@@ -4,17 +4,17 @@ import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { useAuth } from '../context/authContext';
@@ -30,6 +30,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
   const [focusedInput, setFocusedInput] = useState('');
+  const [selectedOption, setSelectedOption] = useState<'company' | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -41,7 +42,7 @@ export default function Login() {
     if (!cargando && usuario) {
       router.replace('/home');
     }
-  }, [cargando, usuario]);
+  }, [cargando, usuario, router]);
 
   useEffect(() => {
     Animated.parallel([
@@ -136,133 +137,150 @@ export default function Login() {
           </Animated.View>
 
           <View style={styles.formCard}>
-            <Text style={styles.welcomeTitle}>Bienvenido</Text>
-            <Text style={styles.welcomeSubtitle}>Inicia sesión para continuar</Text>
+            {selectedOption === null ? (
+              <>
+                <Text style={styles.welcomeTitle}>¿Cómo deseas ingresar?</Text>
+                <Text style={styles.welcomeSubtitle}>Selecciona una opción para continuar</Text>
 
-            <View style={styles.inputContainer}>
-              <Ionicons 
-                name="person-outline" 
-                size={20} 
-                color={focusedInput === 'email' ? COLORS.primary : COLORS.textTertiary} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[
-                  styles.input,
-                  focusedInput === 'email' && styles.inputFocused,
-                ]}
-                placeholder="Usuario"
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => setFocusedInput('email')}
-                onBlur={() => setFocusedInput('')}
-                placeholderTextColor={COLORS.textTertiary}
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                autoCapitalize="none"
-              />
-            </View>
+                <Pressable
+                  style={({ pressed }) => [styles.optionButton, pressed && styles.optionButtonPressed]}
+                  onPress={() => setSelectedOption('company')}
+                >
+                  <Text style={styles.optionButtonText}>Ingresar como empresa</Text>
+                </Pressable>
 
-            <View style={[
-              styles.passwordContainer,
-              focusedInput === 'password' && styles.passwordContainerFocused,
-            ]}>
-              <Ionicons 
-                name="lock-closed-outline" 
-                size={20} 
-                color={focusedInput === 'password' ? COLORS.primary : COLORS.textTertiary} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                ref={passwordRef}
-                style={styles.passwordInput}
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                onFocus={() => setFocusedInput('password')}
-                onBlur={() => setFocusedInput('')}
-                placeholderTextColor={COLORS.textTertiary}
-                returnKeyType="done"
-              />
-              <Pressable 
-                onPress={() => setShowPassword(!showPassword)}
-                hitSlop={8}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={COLORS.textTertiary}
-                />
-              </Pressable>
-            </View>
+                <Pressable
+                  style={({ pressed }) => [styles.optionButton, styles.optionButtonSecondary, pressed && styles.optionButtonPressed]}
+                  onPress={() => router.push('/citas/login?client=true')}
+                >
+                  <Text style={[styles.optionButtonText, styles.optionButtonTextSecondary]}>Ingresar como cliente</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.welcomeTitle}>Bienvenido</Text>
+                <Text style={styles.welcomeSubtitle}>Inicia sesión para continuar</Text>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                !(email && password) && styles.buttonDisabled,
-                pressed && styles.buttonPressed,
-              ]}
-              onPress={handleLogin}
-              disabled={!(email && password) || loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <Text style={styles.buttonText}>Ingresar</Text>
-              )}
-            </Pressable>
+                <Pressable onPress={() => setSelectedOption(null)} style={styles.backOption}>
+                  <Text style={styles.backOptionText}>← Volver</Text>
+                </Pressable>
 
-            <Pressable 
-              onPress={() => alert('Recuperación no implementada')}
-              style={({ pressed }) => [
-                styles.forgotPasswordContainer,
-                pressed && { opacity: 0.7 }
-              ]}
-            >
-              <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
-            </Pressable>
-
-            {/* Separador */}
-            <View style={styles.separatorContainer}>
-              <View style={styles.separatorLine} />
-              <Text style={styles.separatorText}>o</Text>
-              <View style={styles.separatorLine} />
-            </View>
-
-            {/* Botón de Prueba Gratuita */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.demoButton,
-                pressed && styles.demoButtonPressed,
-                loadingDemo && styles.demoButtonDisabled,
-              ]}
-              onPress={handleDemoLogin}
-              disabled={loadingDemo || loading}
-            >
-              {loadingDemo ? (
-                <ActivityIndicator color={COLORS.primary} />
-              ) : (
-                <View style={styles.demoButtonContent}>
-                  <Ionicons name="rocket-outline" size={20} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
-                  <Text style={styles.demoButtonText}>Iniciar Prueba Gratuita</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons 
+                    name="person-outline" 
+                    size={20} 
+                    color={focusedInput === 'email' ? COLORS.primary : COLORS.textTertiary} 
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={[
+                      styles.input,
+                      focusedInput === 'email' && styles.inputFocused,
+                    ]}
+                    placeholder="Usuario"
+                    value={email}
+                    onChangeText={setEmail}
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput('')}
+                    placeholderTextColor={COLORS.textTertiary}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    autoCapitalize="none"
+                  />
                 </View>
-              )}
-            </Pressable>
 
-            <Text style={styles.demoDescription}>
-              Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
-            </Text>
+                <View style={[
+                  styles.passwordContainer,
+                  focusedInput === 'password' && styles.passwordContainerFocused,
+                ]}>
+                  <Ionicons 
+                    name="lock-closed-outline" 
+                    size={20} 
+                    color={focusedInput === 'password' ? COLORS.primary : COLORS.textTertiary} 
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    ref={passwordRef}
+                    style={styles.passwordInput}
+                    placeholder="Contraseña"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput('')}
+                    placeholderTextColor={COLORS.textTertiary}
+                    returnKeyType="done"
+                  />
+                  <Pressable 
+                    onPress={() => setShowPassword(!showPassword)}
+                    hitSlop={8}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                      color={COLORS.textTertiary}
+                    />
+                  </Pressable>
+                </View>
 
-            {/* Acceso al módulo de Citas */}
-            <Pressable
-              onPress={() => router.push('/citas/login')}
-              style={({ pressed }) => [styles.citasLink, pressed && { opacity: 0.7 }]}
-            >
-              <Ionicons name="calendar-outline" size={18} color={COLORS.secondary} />
-              <Text style={styles.citasLinkText}>Ir al módulo de Citas</Text>
-              <Ionicons name="arrow-forward" size={16} color={COLORS.secondary} />
-            </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    !(email && password) && styles.buttonDisabled,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={handleLogin}
+                  disabled={!(email && password) || loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>Ingresar</Text>
+                  )}
+                </Pressable>
+
+                <Pressable 
+                  onPress={() => alert('Recuperación no implementada')}
+                  style={({ pressed }) => [
+                    styles.forgotPasswordContainer,
+                    pressed && { opacity: 0.7 }
+                  ]}
+                >
+                  <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
+                </Pressable>
+
+                {/* Separador */}
+                <View style={styles.separatorContainer}>
+                  <View style={styles.separatorLine} />
+                  <Text style={styles.separatorText}>o</Text>
+                  <View style={styles.separatorLine} />
+                </View>
+
+                {/* Botón de Prueba Gratuita */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.demoButton,
+                    pressed && styles.demoButtonPressed,
+                    loadingDemo && styles.demoButtonDisabled,
+                  ]}
+                  onPress={handleDemoLogin}
+                  disabled={loadingDemo || loading}
+                >
+                  {loadingDemo ? (
+                    <ActivityIndicator color={COLORS.primary} />
+                  ) : (
+                    <View style={styles.demoButtonContent}>
+                      <Ionicons name="rocket-outline" size={20} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
+                      <Text style={styles.demoButtonText}>Iniciar Prueba Gratuita</Text>
+                    </View>
+                  )}
+                </Pressable>
+
+                <Text style={styles.demoDescription}>
+                  Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
+                </Text>
+              </>
+            )}
           </View>
         </Animated.View>
       </ScrollView>
@@ -423,6 +441,40 @@ const styles = StyleSheet.create({
     color: COLORS.textTertiary,
     fontSize: FONT_SIZE.xs,
     lineHeight: FONT_SIZE.xs * 1.4,
+  },
+  optionButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    ...SHADOWS.primary,
+  },
+  optionButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  optionButtonSecondary: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  optionButtonText: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.white,
+  },
+  optionButtonTextSecondary: {
+    color: COLORS.text,
+  },
+  backOption: {
+    marginBottom: SPACING.md,
+  },
+  backOptionText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   citasLink: {
     flexDirection: 'row',

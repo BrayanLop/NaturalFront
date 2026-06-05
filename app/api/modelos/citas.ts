@@ -15,6 +15,8 @@ export interface EmpresaCita {
 export interface UsuarioCita {
   id: number;
   nombreUsuario: string;
+  empresaId?: string | null;
+  rol?: string | null;
 }
 
 export interface RolCita {

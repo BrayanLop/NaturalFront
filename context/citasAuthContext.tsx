@@ -26,6 +26,7 @@ type CitasAuthContextType = {
   session: CitasSession | null;
   cargando: boolean;
   login: (params: LoginParams) => Promise<void>;
+  switchTenant: (tenant: string, empresaNombre: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -138,8 +139,20 @@ export const CitasAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
+  const switchTenant = async (tenant: string, empresaNombre: string) => {
+    if (!session) {
+      throw new Error('No hay sesión activa');
+    }
+    await login({
+      tenant,
+      empresaNombre,
+      usuario: session.usuario,
+      mode: 'cliente',
+    });
+  };
+
   return (
-    <CitasAuthContext.Provider value={{ session, cargando, login, logout }}>
+    <CitasAuthContext.Provider value={{ session, cargando, login, switchTenant, logout }}>
       {children}
     </CitasAuthContext.Provider>
   );

@@ -54,9 +54,8 @@ export default function AgendarCita() {
         }
 
         setUsuarios(usuariosRes.data);
-        if (usuariosRes.data.length > 0) {
-          setIdEmpleado((current) => current ?? usuariosRes.data[0].id);
-          if (esEmpresa) setIdCliente((current) => current ?? usuariosRes.data[0].id);
+        if (esEmpresa && usuariosRes.data.length > 0) {
+          setIdCliente((current) => current ?? usuariosRes.data[0].id);
         }
       } catch (error) {
         logger.error('[Citas] Error al cargar empresas o usuarios:', error);
@@ -68,11 +67,19 @@ export default function AgendarCita() {
   }, [empresaSeleccionada, esEmpresa, session?.tenant, empresas.length]);
 
   useEffect(() => {
-    const filtrados = usuarios.filter((u) =>
-      u.empresaId ? u.empresaId === empresaSeleccionada : true
+    const filtrados = usuarios.filter(
+      (u) =>
+        String(u.rol) === '3' &&
+        (u.empresaId ? u.empresaId === empresaSeleccionada : true)
     );
-    setEmpleados(filtrados.length > 0 ? filtrados : usuarios);
+    setEmpleados(filtrados);
   }, [empresaSeleccionada, usuarios]);
+
+  useEffect(() => {
+    if (empleados.length > 0) {
+      setIdEmpleado((current) => current ?? empleados[0].id);
+    }
+  }, [empleados]);
 
   useEffect(() => {
     if (!esEmpresa && session?.userId != null) {

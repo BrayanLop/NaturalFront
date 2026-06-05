@@ -1,6 +1,7 @@
 import LoadingView from '@/components/LoadingView';
+import WorkerHome from '@/components/WorkerHome';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
-import { puedeRegistrarServicios } from '@/utils/roles';
+import { isTrabajador, puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +33,11 @@ export default function Home() {
 
   const rol = usuario.rol;
   const personaId = usuario.id;
+
+  // El trabajador (rol 02) tiene su propio dashboard "Mi Producción / Mi Saldo"
+  if (isTrabajador(rol)) {
+    return <WorkerHome />;
+  }
 
   // Menú según el rol del usuario
   let menuItems: MenuItem[] = puedeRegistrarServicios(rol)
@@ -101,46 +107,18 @@ export default function Home() {
           color: '#16a085',
           description: 'Ver pagos pendientes',
         },
-        {
-          title: 'Histórico',
-          route: '../contabilidad/historico',
-          icon: 'history',
-          color: '#8e44ad',
-          description: 'Historial de pagos',
-        },
-        {
-          title: 'Ingresos',
-          route: '../ingresos',
-          icon: 'dollar-sign',
-          color: '#27ae60',
-          description: 'Control de ingresos',
-        },
-        {
-          title: 'Egresos',
-          route: '../egresos',
-          icon: 'money-bill-wave',
-          color: '#e74c3c',
-          description: 'Control de gastos',
-        },
       ];
 
-  // Agregar Consolidado solo para admin
+  // Agregar Finanzas (dashboard) solo para admin
   if (rol === '01' || rol === '03') {
     menuItems = [
       ...menuItems,
       {
-        title: 'Consolidado',
-        route: '../consolidadoIngresos',
-        icon: 'chart-bar',
+        title: 'Finanzas',
+        route: '../finanzas',
+        icon: 'chart-pie',
         color: '#3498db',
-        description: 'Resumen de ingresos',
-      },
-      {
-        title: 'Formas de Pago',
-        route: '../consolidadoFormaPago',
-        icon: 'money-check-alt',
-        color: '#1abc9c',
-        description: 'Totales por forma de pago',
+        description: 'Ingresos, egresos y reportes',
       },
     ];
   }

@@ -1,4 +1,5 @@
 import FormField from '@/components/FormField';
+import KeyboardAware from '@/components/KeyboardAware';
 import PrimaryButton from '@/components/PrimaryButton';
 import { commonStyles } from '@/constants/theme';
 import { logger, showError, showSuccess } from '@/utils/logger';
@@ -51,7 +52,8 @@ export default function CrearServicio() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAware>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <FormField label="Nombre">
         <TextInput
           value={nombre}
@@ -99,6 +101,7 @@ export default function CrearServicio() {
         variant="blue"
       />
     </ScrollView>
+    </KeyboardAware>
   );
 }
 

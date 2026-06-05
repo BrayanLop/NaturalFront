@@ -1,3 +1,4 @@
+import KeyboardAware from '@/components/KeyboardAware';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -127,7 +128,8 @@ export default function CrearConfiguracion() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAware>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {/* ===================== SERVICIO ===================== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Servicio</Text>
@@ -199,9 +201,9 @@ export default function CrearConfiguracion() {
           </>
         )}
 
-        {errores.servicioId && (
+        {errores.servicioId ? (
           <Text style={styles.errorText}>{errores.servicioId}</Text>
-        )}
+        ) : null}
       </View>
 
       {/* ===================== PORCENTAJES ===================== */}
@@ -242,6 +244,7 @@ export default function CrearConfiguracion() {
         <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAware>
   );
 }
 

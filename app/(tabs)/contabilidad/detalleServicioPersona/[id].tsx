@@ -13,6 +13,8 @@ type ServicioDetalleItem = {
   registroServicioId?: number;
   RegistroServicioId?: number;
   valorTrabajador?: number;
+  propina?: number;
+  propinaPagada?: boolean;
 };
 
 type DetalleServicioPorDiaViewModel = {
@@ -38,6 +40,7 @@ export default function DetallePersona() {
   const [totalPorLiquidar, setTotalPorLiquidar] = useState<number | null>(null);
   const [cargandoTotal, setCargandoTotal] = useState(false);
   const [confirmandoServicio, setConfirmandoServicio] = useState<number | null>(null);
+  const [marcandoPropina, setMarcandoPropina] = useState<number | null>(null);
   
   // Estados para egresos
   const [egresos, setEgresos] = useState<EgresoEmpresa[]>([]);
@@ -136,6 +139,45 @@ export default function DetallePersona() {
 
   // Calcular total neto (total por liquidar - egresos seleccionados)
   const totalNeto = (totalPorLiquidar ?? 0) - totalEgresosSeleccionados;
+
+  // Total de propinas aún no entregadas de esta persona (en el período mostrado)
+  const totalPropinasPendientes = detalle.reduce(
+    (acc, dia) =>
+      acc +
+      dia.servicios.reduce(
+        (a, s) => a + ((s.propina ?? 0) > 0 && !s.propinaPagada ? (s.propina ?? 0) : 0),
+        0
+      ),
+    0
+  );
+
+  const handleMarcarPropina = async (registroServicioId: number | undefined, pagada: boolean) => {
+    if (!registroServicioId || !puedeConfirmar) return;
+    setMarcandoPropina(registroServicioId);
+    try {
+      await api.patch(
+        `/RegistroServicio/MarcarPropinaPagada/${registroServicioId}?pagada=${pagada}`,
+        {},
+        { headers: { empresaId: empresaId.toString() } }
+      );
+      setDetalle((prev) =>
+        prev.map((dia) => ({
+          ...dia,
+          servicios: dia.servicios.map((s) =>
+            (s.registroServicioId || s.RegistroServicioId) === registroServicioId
+              ? { ...s, propinaPagada: pagada }
+              : s
+          ),
+        }))
+      );
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'No se pudo actualizar la propina.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Error', msg);
+    } finally {
+      setMarcandoPropina(null);
+    }
+  };
 
 const handleLiquidar = async () => {
   if (!personaId) {
@@ -317,14 +359,21 @@ const handleLiquidar = async () => {
     }
   };
 
-  return (
-    <View style={styles.container}>
+  const ListHeader = (
+    <>
       <View style={styles.resumen}>
         <View style={styles.resumenLinea}>
           <Text style={styles.resumenLabel}>Total por liquidar</Text>
           <Text style={styles.resumenMonto}>{cargandoTotal ? "Calculando..." : formatMonto(totalPorLiquidar ?? 0)}</Text>
         </View>
-        
+
+        {totalPropinasPendientes > 0 && (
+          <View style={styles.resumenLinea}>
+            <Text style={styles.resumenLabelSecundario}>🤑 Propinas pendientes</Text>
+            <Text style={styles.resumenMontoPropina}>{formatMonto(totalPropinasPendientes)}</Text>
+          </View>
+        )}
+
         {totalEgresosSeleccionados > 0 && (
           <>
             <View style={styles.resumenLinea}>
@@ -341,7 +390,7 @@ const handleLiquidar = async () => {
           </>
         )}
       </View>
-      
+
       {/* Sección de Egresos */}
       {egresos.length > 0 && (
         <View style={styles.egresosSection}>
@@ -379,7 +428,7 @@ const handleLiquidar = async () => {
           )}
         </View>
       )}
-      
+
       {puedeActualmenteLiquidar && (
         Platform.OS === "web" ? (
           <div style={{ marginBottom: 16 }}>
@@ -404,53 +453,77 @@ const handleLiquidar = async () => {
           </TouchableOpacity>
         )
       )}
+    </>
+  );
 
-      {detalle.length === 0 ? (
-        <Text style={styles.emptyText}>No hay detalle disponible.</Text>
-      ) : (
-        <FlatList
-          data={detalle}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.fecha}>{formatFecha(item.fecha)}</Text>
-              <Text style={styles.total}>
-                Total de servicios: {item.totalServicios}
-              </Text>
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={detalle}
+        keyExtractor={(item, index) => index.toString()}
+        ListHeaderComponent={ListHeader}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        ListEmptyComponent={<Text style={styles.emptyText}>No hay detalle disponible.</Text>}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.fecha}>{formatFecha(item.fecha)}</Text>
+            <Text style={styles.total}>
+              Total de servicios: {item.totalServicios}
+            </Text>
 
-              {item.servicios.map((s, i) => (
-                <View key={i} style={styles.servicioItem}>
-                  <View style={styles.servicioContent}>
-                    <Text style={styles.hora}>{formatHora(s.hora)} ⏰</Text>
-                    <Text style={styles.nombre}>{s.nombreServicio}</Text>
-                    <Text style={styles.valor}>💰 {formatMonto(s.valorTrabajador)}</Text>
-                  </View>
-                  <View style={styles.estadoContainer}>
-                    {!s.confirmado && puedeConfirmar && (
-                      <TouchableOpacity
-                        style={[styles.confirmButton, confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) && styles.confirmButtonLoading]}
-                        onPress={() => {
-                          const id = s.registroServicioId || s.RegistroServicioId;
-                          console.log("🟡 TouchableOpacity presionado. ID:", id);
-                          handleConfirmarServicio(id);
-                        }}
-                        disabled={confirmandoServicio === (s.registroServicioId || s.RegistroServicioId)}
-                      >
-                        <Text style={styles.confirmButtonText}>
-                          {confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) ? "..." : "Confirmar"}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    {s.confirmado && (
-                      <Text style={styles.estadoConfirmado}>✓ Confirmado</Text>
-                    )}
-                  </View>
+            {item.servicios.map((s, i) => (
+              <View key={i} style={styles.servicioItem}>
+                <View style={styles.servicioContent}>
+                  <Text style={styles.hora}>{formatHora(s.hora)} ⏰</Text>
+                  <Text style={styles.nombre}>{s.nombreServicio}</Text>
+                  <Text style={styles.valor}>💰 {formatMonto(s.valorTrabajador)}</Text>
+                  {(s.propina ?? 0) > 0 && (
+                    <View style={styles.propinaContainer}>
+                      <Text style={styles.propinaLabel}>🤑 Propina: {formatMonto(s.propina)}</Text>
+                      {s.propinaPagada ? (
+                        <Text style={styles.propinaEntregadaText}>✓ Entregada</Text>
+                      ) : puedeConfirmar ? (
+                        <TouchableOpacity
+                          style={styles.propinaButton}
+                          onPress={() => handleMarcarPropina(s.registroServicioId || s.RegistroServicioId, true)}
+                          disabled={marcandoPropina === (s.registroServicioId || s.RegistroServicioId)}
+                        >
+                          <Text style={styles.propinaButtonText}>
+                            {marcandoPropina === (s.registroServicioId || s.RegistroServicioId) ? '...' : 'Confirmar propina'}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.propinaPendienteText}>Pendiente</Text>
+                      )}
+                    </View>
+                  )}
                 </View>
-              ))}
-            </View>
-          )}
-        />
-      )}
+                <View style={styles.estadoContainer}>
+                  {!s.confirmado && puedeConfirmar && (
+                    <TouchableOpacity
+                      style={[styles.confirmButton, confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) && styles.confirmButtonLoading]}
+                      onPress={() => {
+                        const id = s.registroServicioId || s.RegistroServicioId;
+                        console.log("🟡 TouchableOpacity presionado. ID:", id);
+                        handleConfirmarServicio(id);
+                      }}
+                      disabled={confirmandoServicio === (s.registroServicioId || s.RegistroServicioId)}
+                    >
+                      <Text style={styles.confirmButtonText}>
+                        {confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) ? "..." : "Confirmar"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {s.confirmado && (
+                    <Text style={styles.estadoConfirmado}>✓ Confirmado</Text>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      />
     </View>
   );
 }
@@ -588,6 +661,44 @@ const styles = StyleSheet.create({
   resumenLabelTotal: { color: "#2d3436", fontWeight: "700", fontSize: 16, flex: 1 },
   resumenMontoNeto: { color: "#00b894", fontWeight: "bold", fontSize: 18 },
   resumenMontoNegativo: { color: "#dc3545" },
+  resumenMontoPropina: { color: "#e58e26", fontWeight: "bold", fontSize: 14 },
+
+  /* Propina por servicio */
+  propinaContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  propinaLabel: {
+    fontSize: 13,
+    color: "#e58e26",
+    fontWeight: "600",
+  },
+  propinaEntregadaText: {
+    fontSize: 12,
+    color: "#00b894",
+    fontWeight: "700",
+  },
+  propinaPendienteText: {
+    fontSize: 12,
+    color: "#856404",
+    fontWeight: "600",
+  },
+  propinaButton: {
+    backgroundColor: "#fff3cd",
+    borderWidth: 1,
+    borderColor: "#ffc107",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  propinaButtonText: {
+    color: "#856404",
+    fontWeight: "700",
+    fontSize: 11,
+  },
   resumenDivider: {
     height: 1,
     backgroundColor: "#00b89466",

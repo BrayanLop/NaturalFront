@@ -263,6 +263,15 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
     return createMockResponse(registro);
   }
 
+  // Marcar propina entregada/pendiente (MarcarPropinaPagada/{id}?pagada=true|false)
+  if (url.match(/\/RegistroServicio\/MarcarPropinaPagada\/(\d+)/i)) {
+    const id = parseInt(url.match(/\/RegistroServicio\/MarcarPropinaPagada\/(\d+)/i)![1]);
+    const pagada = String(queryParams.pagada ?? 'true').toLowerCase() !== 'false';
+    const registro = demoStore.marcarPropinaPagada(id, pagada);
+    if (!registro) return createMockResponse({ message: 'No encontrado' }, 404);
+    return createMockResponse(registro);
+  }
+
   if (url.match(/\/RegistroServicio\/Eliminar\/(\d+)/i) && method === 'DELETE') {
     const id = parseInt(url.match(/\/RegistroServicio\/Eliminar\/(\d+)/i)![1]);
     demoStore.deleteRegistroServicio(id);

@@ -1,4 +1,5 @@
 import BackButton from '@/components/BackButton';
+import KeyboardAware from '@/components/KeyboardAware';
 import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
@@ -398,7 +399,8 @@ export default function ResumenYFormaPago() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <KeyboardAware>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <BackButton onPress={volverAServicios} color="#2d3436" />
         <Text style={styles.title}>Resumen del registro</Text>
@@ -544,6 +546,7 @@ export default function ResumenYFormaPago() {
         )}
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAware>
   );
 }
 

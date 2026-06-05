@@ -1,3 +1,4 @@
+import KeyboardAware from '@/components/KeyboardAware';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -105,6 +106,7 @@ export default function CambiarContrasena() {
   };
 
   return (
+    <KeyboardAware>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -190,6 +192,7 @@ export default function CambiarContrasena() {
         </View>
       </ScrollView>
     </View>
+    </KeyboardAware>
   );
 }
 

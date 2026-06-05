@@ -103,6 +103,7 @@ export default function Layout() {
       <Stack.Screen name="egresos/crear" options={{ title: 'Registrar egreso' }} />
       <Stack.Screen name="consolidadoIngresos" options={{ title: 'Consolidado' }} />
       <Stack.Screen name="consolidadoFormaPago" options={{ title: 'Total por formas de pago' }} />
+      <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
     </Stack>
 
     {/* Menú desplegable del usuario */}

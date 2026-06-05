@@ -49,6 +49,7 @@ export default function ListaRegistros() {
   const [formaPagoFiltro, setFormaPagoFiltro] = useState<'todos' | 'T' | 'E'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
   const [rechazandoId, setRechazandoId] = useState<number | null>(null);
+  const [marcandoPropinaId, setMarcandoPropinaId] = useState<number | null>(null);
 
   // Estado para el modal de rechazo
   const [registroParaRechazar, setRegistroParaRechazar] = useState<RegistroServicio | null>(null);
@@ -258,6 +259,33 @@ export default function ListaRegistros() {
       setRechazandoId(null);
     }
   }, [puedeEditar, registroParaRechazar, motivoRechazo]);
+
+  const handleMarcarPropina = useCallback(async (registroServicioId: number, pagada: boolean) => {
+    if (!puedeEditar) return;
+
+    setMarcandoPropinaId(registroServicioId);
+    try {
+      await api.patch(
+        `/RegistroServicio/MarcarPropinaPagada/${registroServicioId}?pagada=${pagada}`,
+        {},
+        { headers: { empresaId: '1' } }
+      );
+
+      setRegistros(prev =>
+        prev.map(r =>
+          r.id === registroServicioId
+            ? { ...r, propinaPagada: pagada, fechaPropinaPagada: pagada ? new Date().toISOString() : undefined }
+            : r
+        )
+      );
+      showSuccess(pagada ? 'Propina marcada como entregada' : 'Propina marcada como pendiente');
+    } catch (e: any) {
+      logger.error('Error actualizando propina:', e);
+      showError(e?.response?.data?.message || 'No se pudo actualizar la propina');
+    } finally {
+      setMarcandoPropinaId(null);
+    }
+  }, [puedeEditar]);
 
   const handleActualizarFormaPago = useCallback(async (registroServicioId: number, formaPago: 'T' | 'E') => {
     if (!puedeEditar) return;
@@ -479,7 +507,37 @@ export default function ListaRegistros() {
             <Text style={[styles.itemDetailText, { color: COLORS.success, fontWeight: FONT_WEIGHT.semibold }]}>
               Propina: {formatCurrency(item.propina)}
             </Text>
+            {item.propinaPagada ? (
+              <View style={styles.propinaEntregada}>
+                <FontAwesome5 name="check" size={9} color={COLORS.success} />
+                <Text style={styles.propinaEntregadaText}>Entregada</Text>
+              </View>
+            ) : (
+              <View style={styles.propinaPendiente}>
+                <Text style={styles.propinaPendienteText}>Pendiente</Text>
+              </View>
+            )}
           </View>
+        )}
+        {item.propina > 0 && puedeEditar && (
+          <TouchableOpacity
+            style={styles.propinaToggle}
+            onPress={() => handleMarcarPropina(item.id, !item.propinaPagada)}
+            disabled={marcandoPropinaId === item.id}
+          >
+            <FontAwesome5
+              name={item.propinaPagada ? 'undo' : 'hand-holding-usd'}
+              size={11}
+              color={COLORS.primary}
+            />
+            <Text style={styles.propinaToggleText}>
+              {marcandoPropinaId === item.id
+                ? '...'
+                : item.propinaPagada
+                ? 'Marcar como pendiente'
+                : 'Marcar propina entregada'}
+            </Text>
+          </TouchableOpacity>
         )}
         {item.comision > 0 && (
           <View style={styles.itemDetailRow}>
@@ -591,7 +649,7 @@ export default function ListaRegistros() {
         )}
       </View>
     </View>
-  ), [puedeEditar, confirmandoId, rechazandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias, abrirSubirEvidencia]);
+  ), [puedeEditar, confirmandoId, rechazandoId, marcandoPropinaId, handleConfirmarRegistro, handleMarcarPropina, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias, abrirSubirEvidencia]);
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
@@ -1245,6 +1303,47 @@ const styles = StyleSheet.create({
   itemDetailText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
+  },
+  propinaEntregada: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.successLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  propinaEntregadaText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.success,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  propinaPendiente: {
+    backgroundColor: COLORS.warningLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  propinaPendienteText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.warningDark,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  propinaToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primarySurface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
+    marginTop: SPACING.xs,
+  },
+  propinaToggleText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   formaPagoEditRow: {
     flexDirection: 'row',

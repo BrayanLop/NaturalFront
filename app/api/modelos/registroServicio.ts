@@ -13,6 +13,10 @@ export interface RegistroServicio {
   motivoRechazo?: string;
   /** Propina recibida por el trabajador. Pertenece 100% al trabajador. */
   propina?: number;
+  /** True si la propina ya fue entregada al trabajador (en mano o en liquidación). */
+  propinaPagada?: boolean;
+  /** Fecha en que se marcó la propina como entregada. */
+  fechaPropinaPagada?: string;
   /** Observaciones registradas por el trabajador al crear el servicio. */
   observaciones?: string;
   // --- Snapshot histórico inmutable (capturado al registrar el servicio) ---

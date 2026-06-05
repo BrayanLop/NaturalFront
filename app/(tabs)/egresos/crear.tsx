@@ -1,4 +1,5 @@
 import FormField from '@/components/FormField';
+import KeyboardAware from '@/components/KeyboardAware';
 import LoadingView from '@/components/LoadingView';
 import PrimaryButton from '@/components/PrimaryButton';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
@@ -122,7 +123,8 @@ export default function CrearEgreso() {
   const personaSeleccionada = personas.find((p) => p.id === personaId);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAware>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {/* Selector de persona */}
       <FormField label="Persona">
         {Platform.OS === 'web' ? (
@@ -250,6 +252,7 @@ export default function CrearEgreso() {
         variant="blue"
       />
     </ScrollView>
+    </KeyboardAware>
   );
 }
 

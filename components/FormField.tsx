@@ -13,7 +13,7 @@ const FormField = React.memo(function FormField({ label, error, children }: Form
     <View style={commonStyles.fieldContainer}>
       <Text style={commonStyles.label}>{label}</Text>
       {children}
-      {error && <Text style={commonStyles.errorText}>{error}</Text>}
+      {error ? <Text style={commonStyles.errorText}>{error}</Text> : null}
     </View>
   );
 });

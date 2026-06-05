@@ -153,6 +153,7 @@ function generarRegistrosIniciales(): RegistroServicio[] {
       rechazado,
       motivoRechazo: rechazado ? 'Evidencia de pago ilegible' : undefined,
       propina,
+      propinaPagada: propina > 0 ? Math.random() > 0.5 : false,
       observaciones: '',
       valorServicio,
       porcentajeTrabajador,
@@ -302,6 +303,7 @@ class DemoDataStore {
       liquidado: false,
       rechazado: false,
       propina: Number(data.propina) || 0,
+      propinaPagada: false,
       observaciones: data.observaciones || '',
       valorServicio,
       porcentajeTrabajador,
@@ -329,6 +331,14 @@ class DemoDataStore {
     registro.rechazado = true;
     registro.confirmado = false;
     registro.motivoRechazo = motivo || '';
+    return registro;
+  }
+
+  marcarPropinaPagada(id: number, pagada: boolean): RegistroServicio | null {
+    const registro = this.registrosServicio.find(r => r.id === id);
+    if (!registro) return null;
+    registro.propinaPagada = pagada;
+    registro.fechaPropinaPagada = pagada ? new Date().toISOString() : undefined;
     return registro;
   }
 
@@ -474,6 +484,8 @@ class DemoDataStore {
         registroServicioId: registro.id,
         RegistroServicioId: registro.id,
         valorTrabajador,
+        propina: registro.propina ?? 0,
+        propinaPagada: registro.propinaPagada ?? false,
       };
       
       if (!porFecha.has(fecha)) {

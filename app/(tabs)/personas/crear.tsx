@@ -1,4 +1,5 @@
 import FormField from '@/components/FormField';
+import KeyboardAware from '@/components/KeyboardAware';
 import PrimaryButton from '@/components/PrimaryButton';
 import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { toDateInputValue } from '@/utils/formatters';
@@ -102,6 +103,7 @@ export default function CrearPersona() {
   ];
 
   return (
+    <KeyboardAware>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.formCard}>
         {campos.map(({ key, label, keyboardType, isDate }) => (
@@ -120,6 +122,7 @@ export default function CrearPersona() {
         <PrimaryButton title="Guardar" onPress={guardar} />
       </View>
     </ScrollView>
+    </KeyboardAware>
   );
 }
 

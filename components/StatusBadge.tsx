@@ -4,13 +4,23 @@ import { Text, View } from 'react-native';
 
 interface StatusBadgeProps {
   label: string;
-  type: 'confirmado' | 'liquidado' | 'disponible' | 'info';
+  type:
+    | 'confirmado'
+    | 'liquidado'
+    | 'disponible'
+    | 'info'
+    | 'pendiente'
+    | 'aprobado'
+    | 'rechazado';
 }
 
 const BADGE_COLORS = {
   confirmado: '#00b894',
+  aprobado: '#00b894',
   liquidado: '#0984e3',
   disponible: '#1e8449', // Verde más oscuro y fuerte
+  pendiente: '#f39c12', // Ámbar
+  rechazado: '#e74c3c', // Rojo
   info: '#636e72',
 };
 

@@ -7,6 +7,21 @@ export interface RegistroServicio {
   fechaServicio: string;
   confirmado: boolean;
   liquidado: boolean;
+  /** Servicio rechazado por el administrador. Excluyente con confirmado. */
+  rechazado?: boolean;
+  /** Motivo del rechazo (cuando rechazado = true). */
+  motivoRechazo?: string;
+  /** Propina recibida por el trabajador. Pertenece 100% al trabajador. */
+  propina?: number;
+  /** Observaciones registradas por el trabajador al crear el servicio. */
+  observaciones?: string;
+  // --- Snapshot histórico inmutable (capturado al registrar el servicio) ---
+  /** Valor del servicio al momento del registro. No cambia si el servicio se edita después. */
+  valorServicio?: number;
+  /** Porcentaje del trabajador aplicado al momento del registro. */
+  porcentajeTrabajador?: number;
+  /** Comisión generada para el trabajador al momento del registro (valorServicio * porcentaje / 100). */
+  comision?: number;
   empresaId?: number;
   formaPago?: string;
   evidencias?: Evidencia[];
@@ -25,6 +40,10 @@ export interface RegistroServicioCreate {
   servicioId: number;
   fechaServicio: string;
   FormaPago?: string;
+  /** Propina recibida (100% del trabajador). */
+  propina?: number;
+  /** Observaciones del trabajador. */
+  observaciones?: string;
 }
 
 export interface ConsolidadoPersona {

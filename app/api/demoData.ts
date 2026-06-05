@@ -127,16 +127,36 @@ function generarRegistrosIniciales(): RegistroServicio[] {
     const personaIndex = Math.floor(Math.random() * INITIAL_PERSONAS.length);
     const servicioIndex = Math.floor(Math.random() * INITIAL_SERVICIOS.length);
     const formasPago: ('T' | 'E')[] = ['T', 'E'];
-    
+
+    const servicio = INITIAL_SERVICIOS[servicioIndex];
+    const config = INITIAL_CONFIG_SERVICIOS.find(c => c.servicioId === servicio.id);
+    const porcentajeTrabajador = config?.porcentajeTrabajador ?? 50;
+    const valorServicio = servicio.precio;
+    const comision = Math.round((valorServicio * porcentajeTrabajador) / 100);
+
+    // Distribución de estados: ~15% rechazados, ~55% aprobados, resto pendientes
+    const dado = Math.random();
+    const rechazado = dado < 0.15;
+    const confirmado = !rechazado && dado < 0.7;
+    // Propina ocasional (múltiplos de 1000 hasta 5000)
+    const propina = Math.random() > 0.5 ? Math.floor(Math.random() * 6) * 1000 : 0;
+
     registros.push({
       id: i + 1,
       personaId: INITIAL_PERSONAS[personaIndex].id,
-      servicioId: INITIAL_SERVICIOS[servicioIndex].id,
+      servicioId: servicio.id,
       nombrePersona: `${INITIAL_PERSONAS[personaIndex].nombre} ${INITIAL_PERSONAS[personaIndex].apellido}`,
-      nombreServicio: INITIAL_SERVICIOS[servicioIndex].nombre,
+      nombreServicio: servicio.nombre,
       fechaServicio: fecha.toISOString(),
-      confirmado: Math.random() > 0.3,
+      confirmado,
       liquidado: false,
+      rechazado,
+      motivoRechazo: rechazado ? 'Evidencia de pago ilegible' : undefined,
+      propina,
+      observaciones: '',
+      valorServicio,
+      porcentajeTrabajador,
+      comision,
       empresaId: 999,
       formaPago: formasPago[Math.floor(Math.random() * formasPago.length)],
     });
@@ -261,21 +281,34 @@ class DemoDataStore {
     return this.registrosServicio.find(r => r.id === id);
   }
 
-  createRegistroServicio(data: { personaId: number; servicioId: number; fechaServicio: string; formaPago?: string }): RegistroServicio {
+  createRegistroServicio(data: any): RegistroServicio {
     const persona = this.getPersonaById(data.personaId);
     const servicio = this.getServicioById(data.servicioId);
-    
+    const config = this.configuracionesServicio.find(c => c.servicioId === data.servicioId);
+
+    // Snapshot histórico inmutable: capturar valor + porcentaje + comisión al registrar
+    const valorServicio = servicio?.precio ?? 0;
+    const porcentajeTrabajador = config?.porcentajeTrabajador ?? 50;
+    const comision = Math.round((valorServicio * porcentajeTrabajador) / 100);
+
     const newRegistro: RegistroServicio = {
       id: this.nextIds.registro++,
       personaId: data.personaId,
       servicioId: data.servicioId,
       nombrePersona: persona ? `${persona.nombre} ${persona.apellido}` : 'Desconocido',
       nombreServicio: servicio?.nombre || 'Desconocido',
-      fechaServicio: data.fechaServicio,
-      confirmado: false,
+      fechaServicio: data.fechaServicio || new Date().toISOString(),
+      confirmado: data.confirmado === true,
       liquidado: false,
+      rechazado: false,
+      propina: Number(data.propina) || 0,
+      observaciones: data.observaciones || '',
+      valorServicio,
+      porcentajeTrabajador,
+      comision,
       empresaId: 999,
-      formaPago: data.formaPago,
+      // El payload puede venir como formaPago o FormaPago
+      formaPago: data.formaPago ?? data.FormaPago,
     };
     this.registrosServicio.push(newRegistro);
     return newRegistro;
@@ -285,6 +318,17 @@ class DemoDataStore {
     const registro = this.registrosServicio.find(r => r.id === id);
     if (!registro) return null;
     registro.confirmado = true;
+    registro.rechazado = false;
+    registro.motivoRechazo = undefined;
+    return registro;
+  }
+
+  rechazarRegistro(id: number, motivo?: string): RegistroServicio | null {
+    const registro = this.registrosServicio.find(r => r.id === id);
+    if (!registro) return null;
+    registro.rechazado = true;
+    registro.confirmado = false;
+    registro.motivoRechazo = motivo || '';
     return registro;
   }
 
@@ -366,7 +410,7 @@ class DemoDataStore {
     }>();
     
     this.registrosServicio
-      .filter(r => !r.liquidado)
+      .filter(r => !r.liquidado && !r.rechazado)
       .forEach(registro => {
         const servicio = this.servicios.find(s => s.id === registro.servicioId);
         const config = this.configuracionesServicio.find(c => c.servicioId === registro.servicioId);

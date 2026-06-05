@@ -9,7 +9,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
 
 type FormaPago = 'T' | 'E';
@@ -41,6 +42,8 @@ export default function ResumenYFormaPago() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [formaPago, setFormaPago] = useState<FormaPago | null>(null);
+  const [propina, setPropina] = useState('');
+  const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [archivosSeleccionados, setArchivosSeleccionados] = useState<ArchivoSeleccionado[]>([]);
@@ -294,12 +297,18 @@ export default function ResumenYFormaPago() {
     setGuardando(true);
     try {
       const esRol01 = usuario?.rol === '01' || usuario?.rol === '1';
+      const propinaValor = propina ? parseFloat(propina) : 0;
+      const observacionesValor = observaciones.trim();
 
-      const registros = servicios.map((servicio) => ({
+      // La propina pertenece a la visita completa: se adjunta solo al primer
+      // servicio para no multiplicarla entre los servicios seleccionados.
+      const registros = servicios.map((servicio, index) => ({
         personaId: parseInt(personaId as string),
         servicioId: servicio.id,
         confirmado: esRol01,
         FormaPago: formaPago,
+        propina: index === 0 ? propinaValor : 0,
+        observaciones: observacionesValor,
       }));
 
       // Guardar los registros
@@ -448,6 +457,40 @@ export default function ResumenYFormaPago() {
         </View>
       </View>
 
+      {/* Propina (100% del trabajador) */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>💰 Propina (Opcional)</Text>
+        <MaskedTextInput
+          type="currency"
+          options={{
+            prefix: '$',
+            decimalSeparator: ',',
+            groupSeparator: '.',
+            precision: 0,
+          }}
+          value={propina}
+          onChangeText={(_, unmasked) => setPropina(unmasked)}
+          style={styles.input}
+          keyboardType="numeric"
+          placeholder="$0"
+        />
+        <Text style={styles.helperText}>La propina pertenece 100% al trabajador.</Text>
+      </View>
+
+      {/* Observaciones */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📝 Observaciones (Opcional)</Text>
+        <TextInput
+          value={observaciones}
+          onChangeText={setObservaciones}
+          style={[styles.input, styles.textArea]}
+          placeholder="Ej: Cliente habitual, atención especial..."
+          multiline
+          numberOfLines={3}
+          maxLength={256}
+        />
+      </View>
+
       {/* Evidencias con todas las opciones */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
@@ -590,6 +633,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  // Inputs (propina / observaciones)
+  input: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '22',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  helperText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 6,
   },
   // Forma de pago
   formaPagoRow: {

@@ -1,7 +1,9 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
+import StatusBadge from '@/components/StatusBadge';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
-import { formatDate, toDateInputValue } from '@/utils/formatters';
+import { ESTADO_LABEL, estadoServicio } from '@/utils/estadoServicio';
+import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
 import { isAdmin, puedeRegistrarServicios } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -21,6 +23,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -42,9 +45,14 @@ export default function ListaRegistros() {
   const [loading, setLoading] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaFiltro, setPersonaFiltro] = useState<string>('');
-  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados'>('todos');
+  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'liquidados' | 'confirmados' | 'noLiquidados' | 'noConfirmados' | 'rechazados'>('todos');
   const [formaPagoFiltro, setFormaPagoFiltro] = useState<'todos' | 'T' | 'E'>('todos');
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+  const [rechazandoId, setRechazandoId] = useState<number | null>(null);
+
+  // Estado para el modal de rechazo
+  const [registroParaRechazar, setRegistroParaRechazar] = useState<RegistroServicio | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState('');
   const [editandoFormaPagoId, setEditandoFormaPagoId] = useState<number | null>(null);
   const [actualizandoFormaPago, setActualizandoFormaPago] = useState(false);
   
@@ -124,14 +132,18 @@ export default function ListaRegistros() {
         if (!item.liquidado) return false;
         break;
       case 'confirmados':
-        if (!item.confirmado) return false;
+        // Aprobados: confirmados y no rechazados
+        if (!item.confirmado || item.rechazado) return false;
         break;
       case 'noLiquidados':
         if (item.liquidado) return false;
         break;
       case 'noConfirmados':
-        // No confirmados: ni confirmado ni liquidado (porque liquidado implica confirmado)
-        if (item.confirmado || item.liquidado) return false;
+        // Pendientes: ni confirmado, ni liquidado, ni rechazado
+        if (item.confirmado || item.liquidado || item.rechazado) return false;
+        break;
+      case 'rechazados':
+        if (!item.rechazado) return false;
         break;
       case 'todos':
       default:
@@ -192,7 +204,7 @@ export default function ListaRegistros() {
   const handleConfirmarRegistro = useCallback(async (registroServicioId: number) => {
     if (!puedeEditar) return;
 
-    const confirmar = await showConfirm('¿Desea confirmar este registro?', 'Confirmar registro');
+    const confirmar = await showConfirm('¿Desea aprobar este registro?', 'Aprobar registro');
     if (!confirmar) return;
 
     setConfirmandoId(registroServicioId);
@@ -205,16 +217,47 @@ export default function ListaRegistros() {
 
       // Actualizar solo el registro afectado en el estado local, sin recargar toda la lista
       setRegistros(prev =>
-        prev.map(r => r.id === registroServicioId ? { ...r, confirmado: true } : r)
+        prev.map(r => r.id === registroServicioId ? { ...r, confirmado: true, rechazado: false } : r)
       );
-      showSuccess('Registro confirmado correctamente');
+      showSuccess('Registro aprobado correctamente');
     } catch (e: any) {
-      logger.error('Error confirmando registro:', e);
-      showError(e?.response?.data?.message || 'No se pudo confirmar el registro');
+      logger.error('Error aprobando registro:', e);
+      showError(e?.response?.data?.message || 'No se pudo aprobar el registro');
     } finally {
       setConfirmandoId(null);
     }
   }, [puedeEditar]);
+
+  const confirmarRechazo = useCallback(async () => {
+    if (!puedeEditar || !registroParaRechazar) return;
+
+    const registroServicioId = registroParaRechazar.id;
+    const motivo = motivoRechazo.trim();
+    setRechazandoId(registroServicioId);
+    try {
+      await api.patch(
+        `/RegistroServicio/Rechazar/${registroServicioId}?motivo=${encodeURIComponent(motivo)}`,
+        {},
+        { headers: { empresaId: '1' } }
+      );
+
+      setRegistros(prev =>
+        prev.map(r =>
+          r.id === registroServicioId
+            ? { ...r, confirmado: false, rechazado: true, motivoRechazo: motivo }
+            : r
+        )
+      );
+      showSuccess('Registro rechazado');
+      setRegistroParaRechazar(null);
+      setMotivoRechazo('');
+    } catch (e: any) {
+      logger.error('Error rechazando registro:', e);
+      showError(e?.response?.data?.message || 'No se pudo rechazar el registro');
+    } finally {
+      setRechazandoId(null);
+    }
+  }, [puedeEditar, registroParaRechazar, motivoRechazo]);
 
   const handleActualizarFormaPago = useCallback(async (registroServicioId: number, formaPago: 'T' | 'E') => {
     if (!puedeEditar) return;
@@ -413,29 +456,54 @@ export default function ListaRegistros() {
       <View style={styles.itemHeader}>
         <Text style={styles.itemTitle}>{item.nombrePersona ?? 'N/A'}</Text>
         <View style={styles.badges}>
-          {item.confirmado && (
-            <View style={[styles.badge, styles.badgeConfirmado]}>
-              <Text style={styles.badgeText}>Confirmado</Text>
-            </View>
-          )}
-          {item.liquidado && (
-            <View style={[styles.badge, styles.badgeLiquidado]}>
-              <Text style={styles.badgeText}>Liquidado</Text>
-            </View>
-          )}
+          {(() => {
+            const estado = estadoServicio(item);
+            return <StatusBadge label={ESTADO_LABEL[estado]} type={estado} />;
+          })()}
         </View>
       </View>
       
       {/* Detalles del servicio */}
       <View style={styles.itemDetails}>
         <View style={styles.itemDetailRow}>
-          <FontAwesome5 name="cut" size={12} color={COLORS.textSecondary} />
+          <FontAwesome5 name="concierge-bell" size={12} color={COLORS.textSecondary} />
           <Text style={styles.itemDetailText}>Servicio: {item.nombreServicio ?? 'N/A'}</Text>
         </View>
         <View style={styles.itemDetailRow}>
           <FontAwesome5 name="calendar" size={12} color={COLORS.textSecondary} />
           <Text style={styles.itemDetailText}>{item.fechaServicio ? formatDate(item.fechaServicio) : 'Sin fecha'}</Text>
         </View>
+        {item.propina > 0 && (
+          <View style={styles.itemDetailRow}>
+            <FontAwesome5 name="hand-holding-usd" size={12} color={COLORS.success} />
+            <Text style={[styles.itemDetailText, { color: COLORS.success, fontWeight: FONT_WEIGHT.semibold }]}>
+              Propina: {formatCurrency(item.propina)}
+            </Text>
+          </View>
+        )}
+        {item.comision > 0 && (
+          <View style={styles.itemDetailRow}>
+            <FontAwesome5 name="percentage" size={12} color={COLORS.textSecondary} />
+            <Text style={styles.itemDetailText}>
+              Comisión: {formatCurrency(item.comision)}
+              {item.porcentajeTrabajador ? ` (${item.porcentajeTrabajador}%)` : ''}
+            </Text>
+          </View>
+        )}
+        {!!item.observaciones && (
+          <View style={styles.itemDetailRow}>
+            <FontAwesome5 name="comment-alt" size={12} color={COLORS.textSecondary} />
+            <Text style={styles.itemDetailText}>{item.observaciones}</Text>
+          </View>
+        )}
+        {item.rechazado && !!item.motivoRechazo && (
+          <View style={styles.itemDetailRow}>
+            <FontAwesome5 name="times-circle" size={12} color={COLORS.error} />
+            <Text style={[styles.itemDetailText, { color: COLORS.error }]}>
+              Motivo: {item.motivoRechazo}
+            </Text>
+          </View>
+        )}
         
         {/* Forma de pago con opción de editar */}
         {puedeEditar && !item.liquidado && editandoFormaPagoId === item.id ? (
@@ -499,20 +567,31 @@ export default function ListaRegistros() {
           )}
         </View>
 
-        {puedeEditar && !item.confirmado && !item.liquidado && (
-          <TouchableOpacity
-            style={[styles.confirmButton, confirmandoId === item.id && styles.confirmButtonLoading]}
-            onPress={() => handleConfirmarRegistro(item.id)}
-            disabled={confirmandoId === item.id}
-          >
-            <Text style={styles.confirmButtonText}>
-              {confirmandoId === item.id ? '...' : 'Confirmar'}
-            </Text>
-          </TouchableOpacity>
+        {puedeEditar && !item.confirmado && !item.liquidado && !item.rechazado && (
+          <View style={styles.aprobarRechazarRow}>
+            <TouchableOpacity
+              style={[styles.rechazarButton, rechazandoId === item.id && styles.confirmButtonLoading]}
+              onPress={() => { setRegistroParaRechazar(item); setMotivoRechazo(''); }}
+              disabled={confirmandoId === item.id || rechazandoId === item.id}
+            >
+              <FontAwesome5 name="times" size={12} color={COLORS.error} />
+              <Text style={styles.rechazarButtonText}>Rechazar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.aprobarButton, confirmandoId === item.id && styles.confirmButtonLoading]}
+              onPress={() => handleConfirmarRegistro(item.id)}
+              disabled={confirmandoId === item.id || rechazandoId === item.id}
+            >
+              <FontAwesome5 name="check" size={12} color={COLORS.white} />
+              <Text style={styles.aprobarButtonText}>
+                {confirmandoId === item.id ? '...' : 'Aprobar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
-  ), [puedeEditar, confirmandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias, abrirSubirEvidencia]);
+  ), [puedeEditar, confirmandoId, rechazandoId, handleConfirmarRegistro, editandoFormaPagoId, actualizandoFormaPago, handleActualizarFormaPago, verEvidencias, abrirSubirEvidencia]);
 
   const keyExtractor = useCallback((item: any) => item.id.toString(), []);
 
@@ -606,10 +685,11 @@ export default function ListaRegistros() {
                 <View style={styles.chipsRow}>
                   {[
                     { key: 'todos', label: 'Todos' },
+                    { key: 'noConfirmados', label: 'Pendientes' },
+                    { key: 'confirmados', label: 'Aprobados' },
+                    { key: 'rechazados', label: 'Rechazados' },
                     { key: 'liquidados', label: 'Liquidados' },
-                    { key: 'confirmados', label: 'Confirmados' },
                     { key: 'noLiquidados', label: 'No liquidados' },
-                    { key: 'noConfirmados', label: 'No confirmados' },
                   ].map((opt) => (
                     <TouchableOpacity
                       key={opt.key}
@@ -847,6 +927,59 @@ export default function ListaRegistros() {
                 </View>
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Rechazo */}
+      <Modal
+        visible={registroParaRechazar !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setRegistroParaRechazar(null); setMotivoRechazo(''); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Rechazar registro</Text>
+              <TouchableOpacity onPress={() => { setRegistroParaRechazar(null); setMotivoRechazo(''); }}>
+                <FontAwesome5 name="times" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ padding: SPACING.lg }}>
+              {registroParaRechazar && (
+                <View style={styles.uploadRegistroInfo}>
+                  <Text style={styles.uploadRegistroNombre}>{registroParaRechazar.nombrePersona}</Text>
+                  <Text style={styles.uploadRegistroServicio}>
+                    {registroParaRechazar.nombreServicio} - {formatDate(registroParaRechazar.fechaServicio)}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={styles.filtroLabel}>Motivo del rechazo (opcional)</Text>
+              <TextInput
+                value={motivoRechazo}
+                onChangeText={setMotivoRechazo}
+                style={styles.motivoInput}
+                placeholder="Ej: Evidencia ilegible, valor incorrecto..."
+                multiline
+                numberOfLines={3}
+                maxLength={256}
+              />
+
+              <TouchableOpacity
+                style={[styles.rechazarConfirmButton, rechazandoId !== null && styles.uploadConfirmButtonDisabled]}
+                onPress={confirmarRechazo}
+                disabled={rechazandoId !== null}
+              >
+                {rechazandoId !== null ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Text style={styles.uploadConfirmButtonText}>Confirmar rechazo</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1286,6 +1419,62 @@ const styles = StyleSheet.create({
   },
   confirmButtonLoading: {
     opacity: 0.6,
+  },
+  aprobarRechazarRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'center',
+  },
+  aprobarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.success,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  aprobarButtonText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.bold,
+    fontSize: FONT_SIZE.xs,
+  },
+  rechazarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderWidth: 2,
+    borderColor: COLORS.error,
+  },
+  rechazarButtonText: {
+    color: COLORS.error,
+    fontWeight: FONT_WEIGHT.bold,
+    fontSize: FONT_SIZE.xs,
+  },
+  motivoInput: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+  },
+  rechazarConfirmButton: {
+    backgroundColor: COLORS.error,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   confirmButtonText: {
     color: COLORS.info,

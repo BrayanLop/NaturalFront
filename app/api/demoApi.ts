@@ -243,6 +243,26 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
     return createMockResponse(registro);
   }
 
+  // Aprobar / desaprobar (ActualizarConfirmado/{id}?confirmado=true|false)
+  if (url.match(/\/RegistroServicio\/ActualizarConfirmado\/(\d+)/i)) {
+    const id = parseInt(url.match(/\/RegistroServicio\/ActualizarConfirmado\/(\d+)/i)![1]);
+    const confirmadoParam = String(queryParams.confirmado ?? 'true').toLowerCase() !== 'false';
+    const registro = confirmadoParam
+      ? demoStore.confirmarRegistro(id)
+      : demoStore.getRegistroById(id) || null;
+    if (!registro) return createMockResponse({ message: 'No encontrado' }, 404);
+    return createMockResponse(registro);
+  }
+
+  // Rechazar (Rechazar/{id}?motivo=...)
+  if (url.match(/\/RegistroServicio\/Rechazar\/(\d+)/i)) {
+    const id = parseInt(url.match(/\/RegistroServicio\/Rechazar\/(\d+)/i)![1]);
+    const motivo = queryParams.motivo || '';
+    const registro = demoStore.rechazarRegistro(id, motivo);
+    if (!registro) return createMockResponse({ message: 'No encontrado' }, 404);
+    return createMockResponse(registro);
+  }
+
   if (url.match(/\/RegistroServicio\/Eliminar\/(\d+)/i) && method === 'DELETE') {
     const id = parseInt(url.match(/\/RegistroServicio\/Eliminar\/(\d+)/i)![1]);
     demoStore.deleteRegistroServicio(id);

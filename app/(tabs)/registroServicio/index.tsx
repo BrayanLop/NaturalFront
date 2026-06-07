@@ -27,7 +27,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { api } from '../../api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api, API_URL } from '../../api/api';
+import { getDemoMode } from '../../api/demoApi';
 import { Persona } from '../../api/modelos/persona';
 import { Evidencia, RegistroServicio } from '../../api/modelos/registroServicio';
 
@@ -409,35 +411,68 @@ export default function ListaRegistros() {
   const confirmarSubirEvidencias = async () => {
     if (!registroParaEvidencia || archivosSeleccionados.length === 0) return;
 
+    // En modo demo no subimos archivos reales al servidor.
+    if (await getDemoMode()) {
+      showSuccess('Evidencias subidas correctamente');
+      setSubirEvidenciaModalVisible(false);
+      setArchivosSeleccionados([]);
+      setRegistroParaEvidencia(null);
+      return;
+    }
+
     setSubiendoEvidencias(true);
     try {
-      for (const archivo of archivosSeleccionados) {
-        const formData = new FormData();
-        formData.append('registroServicioId', registroParaEvidencia.id.toString());
+      const [token, empresaId] = await Promise.all([
+        AsyncStorage.getItem('token'),
+        AsyncStorage.getItem('empresaId'),
+      ]);
 
-        if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
-          const response = await fetch(archivo.uri);
-          const blob = await response.blob();
-          const file = new File([blob], archivo.name, { type: archivo.type || 'image/jpeg' });
-          formData.append('archivo', file);
-        } else {
-          let fileUri = archivo.uri;
-          let mimeType = archivo.type;
-          if (!mimeType || mimeType === 'application/octet-stream') {
-            const extension = archivo.name.split('.').pop()?.toLowerCase();
-            const mimeMap: Record<string, string> = {
-              jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
-              gif: 'image/gif', heic: 'image/heic', heif: 'image/heic', pdf: 'application/pdf',
-            };
-            mimeType = mimeMap[extension || ''] || 'image/jpeg';
-          }
-          if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-            fileUri = 'file://' + fileUri;
-          }
-          formData.append('archivo', { uri: fileUri, name: archivo.name, type: mimeType } as any);
+      for (const archivo of archivosSeleccionados) {
+        // Resolver el tipo MIME a partir de la extensión si no viene.
+        let mimeType = archivo.type;
+        if (!mimeType || mimeType === 'application/octet-stream') {
+          const extension = archivo.name.split('.').pop()?.toLowerCase();
+          const mimeMap: Record<string, string> = {
+            jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+            gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf',
+          };
+          mimeType = mimeMap[extension || ''] || 'image/jpeg';
         }
 
-        await api.post('/Evidencia/SubirEvidencia', formData);
+        if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
+          // Web: convertir a File y enviar con axios.
+          const formData = new FormData();
+          formData.append('registroServicioId', registroParaEvidencia.id.toString());
+          const response = await fetch(archivo.uri);
+          const blob = await response.blob();
+          const file = new File([blob], archivo.name, { type: mimeType });
+          formData.append('archivo', file);
+          await api.post('/Evidencia/SubirEvidencia', formData);
+        } else {
+          // Mobile (iOS/Android): subir directo desde disco con uploadAsync.
+          // Evita el bug de axios + FormData multipart en Android.
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          if (empresaId) headers['empresaId'] = empresaId;
+
+          const uploadResult = await FileSystem.uploadAsync(
+            `${API_URL}/Evidencia/SubirEvidencia`,
+            archivo.uri,
+            {
+              httpMethod: 'POST',
+              uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+              fieldName: 'archivo',
+              mimeType,
+              parameters: { registroServicioId: registroParaEvidencia.id.toString() },
+              headers,
+            }
+          );
+
+          if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            logger.error('Fallo al subir evidencia:', uploadResult.status, uploadResult.body);
+            throw new Error(`Error ${uploadResult.status} al subir la evidencia`);
+          }
+        }
       }
 
       showSuccess('Evidencias subidas correctamente');
@@ -886,6 +921,10 @@ export default function ListaRegistros() {
                   <TouchableOpacity style={styles.uploadOptionButton} onPress={tomarFoto}>
                     <FontAwesome5 name="camera" size={20} color={COLORS.primary} />
                     <Text style={styles.uploadOptionText}>Cámara</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.uploadOptionButton} onPress={seleccionarImagen}>
+                    <FontAwesome5 name="images" size={20} color={COLORS.primary} />
+                    <Text style={styles.uploadOptionText}>Galería</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.uploadOptionButton} onPress={seleccionarDocumento}>
                     <FontAwesome5 name="file-alt" size={20} color={COLORS.primary} />

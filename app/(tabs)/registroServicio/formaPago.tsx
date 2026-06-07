@@ -12,7 +12,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
-import { api } from '../../api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDemoMode } from '../../api/demoApi';
+import { api, API_URL } from '../../api/api';
 
 type FormaPago = 'T' | 'E';
 
@@ -197,8 +199,22 @@ export default function ResumenYFormaPago() {
       return;
     }
 
+    // En modo demo no subimos archivos reales al servidor.
+    if (await getDemoMode()) {
+      console.log('[DEMO] Subida de evidencias omitida');
+      return;
+    }
+
     setSubiendoEvidencias(true);
     try {
+      // Token y empresaId que normalmente agrega el interceptor de axios.
+      // Como en móvil subimos con FileSystem.uploadAsync (fuera de axios),
+      // los adjuntamos manualmente.
+      const [token, empresaId] = await Promise.all([
+        AsyncStorage.getItem('token'),
+        AsyncStorage.getItem('empresaId'),
+      ]);
+
       // Subir cada evidencia para cada registro
       for (const registroId of registrosIds) {
         // Validar que el ID sea válido
@@ -208,77 +224,70 @@ export default function ResumenYFormaPago() {
         }
 
         for (const archivo of archivosSeleccionados) {
-          const formData = new FormData();
-          formData.append('registroServicioId', registroId.toString());
-          
-          console.log('Procesando archivo:', JSON.stringify(archivo, null, 2));
-          
-          // Manejar diferente según la plataforma
+          // Determinar el tipo MIME correcto basado en la extensión si no está presente
+          let mimeType = archivo.type;
+          if (!mimeType || mimeType === 'application/octet-stream') {
+            const extension = archivo.name.split('.').pop()?.toLowerCase();
+            if (extension === 'jpg' || extension === 'jpeg') {
+              mimeType = 'image/jpeg';
+            } else if (extension === 'png') {
+              mimeType = 'image/png';
+            } else if (extension === 'gif') {
+              mimeType = 'image/gif';
+            } else if (extension === 'webp') {
+              mimeType = 'image/webp';
+            } else if (extension === 'pdf') {
+              mimeType = 'application/pdf';
+            } else {
+              mimeType = 'image/jpeg'; // Default para imágenes
+            }
+          }
+
           if (Platform.OS === 'web' || archivo.uri.startsWith('blob:')) {
-            // En Web: convertir blob a File
+            // En Web: convertir blob a File y enviar con axios
+            const formData = new FormData();
+            formData.append('registroServicioId', registroId.toString());
             try {
               const response = await fetch(archivo.uri);
               const blob = await response.blob();
-              const file = new File([blob], archivo.name, { type: archivo.type || 'image/jpeg' });
-              
-              console.log('Archivo convertido para web:', file);
+              const file = new File([blob], archivo.name, { type: mimeType });
               formData.append('archivo', file);
             } catch (error) {
               console.error('Error al convertir blob:', error);
               throw new Error('No se pudo procesar el archivo para web');
             }
+            const response = await api.post('/Evidencia/SubirEvidencia', formData);
+            console.log('Evidencia subida exitosamente (web):', response.data);
           } else {
-            // En Mobile (iOS/Android): usar objeto con uri, name, type
-            let fileUri = archivo.uri;
-            
-            // Determinar el tipo MIME correcto basado en la extensión si no está presente
-            let mimeType = archivo.type;
-            if (!mimeType || mimeType === 'application/octet-stream') {
-              const extension = archivo.name.split('.').pop()?.toLowerCase();
-              if (extension === 'jpg' || extension === 'jpeg') {
-                mimeType = 'image/jpeg';
-              } else if (extension === 'png') {
-                mimeType = 'image/png';
-              } else if (extension === 'gif') {
-                mimeType = 'image/gif';
-              } else if (extension === 'heic' || extension === 'heif') {
-                mimeType = 'image/heic';
-              } else if (extension === 'pdf') {
-                mimeType = 'application/pdf';
-              } else {
-                mimeType = 'image/jpeg'; // Default para imágenes
+            // En Mobile (iOS/Android): subir directo desde disco con
+            // FileSystem.uploadAsync. Evita el bug de axios + FormData
+            // multipart en Android (boundary inestable / body vacío).
+            const headers: Record<string, string> = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            if (empresaId) headers['empresaId'] = empresaId;
+
+            console.log('Subiendo evidencia (mobile):', archivo.uri, mimeType);
+
+            const uploadResult = await FileSystem.uploadAsync(
+              `${API_URL}/Evidencia/SubirEvidencia`,
+              archivo.uri,
+              {
+                httpMethod: 'POST',
+                uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+                fieldName: 'archivo',
+                mimeType,
+                parameters: { registroServicioId: registroId.toString() },
+                headers,
               }
+            );
+
+            if (uploadResult.status < 200 || uploadResult.status >= 300) {
+              console.error('Fallo al subir evidencia:', uploadResult.status, uploadResult.body);
+              throw new Error(`Error ${uploadResult.status} al subir la evidencia`);
             }
-            
-            // En Android: agregar file:// solo si no tiene ningún esquema
-            if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-              fileUri = 'file://' + fileUri;
-            }
-            
-            // En iOS: la URI de DocumentPicker puede necesitar decodificación
-            if (Platform.OS === 'ios') {
-              // Asegurarse de que la URI esté correctamente formateada
-              fileUri = decodeURIComponent(fileUri.replace('file://', '')).startsWith('/') 
-                ? fileUri 
-                : fileUri;
-            }
-            
-            const fileToUpload: any = {
-              uri: fileUri,
-              name: archivo.name,
-              type: mimeType,
-            };
-            
-            console.log('Archivo para mobile:', JSON.stringify(fileToUpload, null, 2));
-            formData.append('archivo', fileToUpload as any);
+
+            console.log('Evidencia subida exitosamente (mobile):', uploadResult.body);
           }
-
-          console.log('Enviando FormData para registro', registroId);
-
-          // Enviar sin establecer Content-Type - axios lo detectará automáticamente
-          const response = await api.post('/Evidencia/SubirEvidencia', formData);
-          
-          console.log('Evidencia subida exitosamente:', response.data);
         }
       }
     } catch (error) {
@@ -501,6 +510,10 @@ export default function ResumenYFormaPago() {
             <MaterialIcons name="photo-camera" size={28} color={COLORS.primary} />
             <Text style={styles.iconButtonLabel}>Cámara</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={seleccionarImagen} style={styles.iconButton}>
+            <MaterialIcons name="photo-library" size={28} color={COLORS.primary} />
+            <Text style={styles.iconButtonLabel}>Galería</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
             <MaterialIcons name="attach-file" size={28} color={COLORS.primary} />
             <Text style={styles.iconButtonLabel}>Archivo</Text>
@@ -692,16 +705,17 @@ const styles = StyleSheet.create({
   // Evidencias
   evidenceOptionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12,
   },
   iconButton: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
-    padding: 16,
-    minWidth: 90,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: COLORS.primary + '33',
   },

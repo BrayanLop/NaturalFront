@@ -117,6 +117,9 @@ export default function Finanzas() {
   const pctEfectivo = totalFP > 0 ? Math.round(((fp?.totalEfectivo ?? 0) / totalFP) * 100) : 0;
   const pctTransfer = totalFP > 0 ? 100 - pctEfectivo : 0;
 
+  // Facturado (en vivo): total cobrado en los servicios registrados del período.
+  const facturado = totalFP;
+  // Utilidad neta de la empresa = Ingreso empresa (al liquidar) − Egresos.
   const utilidad = ie?.consolidado ?? 0;
 
   return (
@@ -144,16 +147,29 @@ export default function Finanzas() {
           </View>
         ) : (
           <>
+            {/* Facturado (en vivo) — total cobrado en servicios registrados */}
+            <View style={styles.facturadoCard}>
+              <View style={styles.facturadoHeader}>
+                <FontAwesome5 name="cash-register" size={14} color={COLORS.primary} />
+                <Text style={styles.facturadoLabel}>Facturado</Text>
+              </View>
+              <Text style={styles.facturadoValue} numberOfLines={1} adjustsFontSizeToFit>
+                {formatCurrency(facturado)}
+              </Text>
+              <Text style={styles.facturadoHint}>Total cobrado en los servicios registrados del período</Text>
+            </View>
+
             {/* KPIs */}
             <View style={styles.kpiRow}>
               <View style={[styles.kpiCard, { borderLeftColor: COLORS.success }]}>
                 <View style={[styles.kpiIcon, { backgroundColor: COLORS.successLight }]}>
                   <FontAwesome5 name="arrow-up" size={14} color={COLORS.success} />
                 </View>
-                <Text style={styles.kpiLabel}>Ingresos</Text>
+                <Text style={styles.kpiLabel}>Ingreso empresa</Text>
                 <Text style={[styles.kpiValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(ie?.totalIngresos ?? 0)}
                 </Text>
+                <Text style={styles.kpiHint}>Se genera al liquidar</Text>
               </View>
 
               <View style={[styles.kpiCard, { borderLeftColor: COLORS.error }]}>
@@ -164,6 +180,7 @@ export default function Finanzas() {
                 <Text style={[styles.kpiValue, { color: COLORS.error }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(ie?.totalEgresos ?? 0)}
                 </Text>
+                <Text style={styles.kpiHint}>Gastos del período</Text>
               </View>
             </View>
 
@@ -176,7 +193,7 @@ export default function Finanzas() {
               <Text style={styles.utilidadValue} numberOfLines={1} adjustsFontSizeToFit>
                 {formatCurrency(utilidad)}
               </Text>
-              <Text style={styles.utilidadHint}>Ingresos − Egresos</Text>
+              <Text style={styles.utilidadHint}>Ingreso empresa − Egresos</Text>
             </View>
 
             {/* Formas de pago */}
@@ -301,6 +318,20 @@ const styles = StyleSheet.create({
   },
   kpiLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
   kpiValue: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
+  kpiHint: { fontSize: 10, color: COLORS.textTertiary, marginTop: SPACING.xs },
+  facturadoCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+    ...SHADOWS.sm,
+  },
+  facturadoHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
+  facturadoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.semibold },
+  facturadoValue: { fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.bold, color: COLORS.primary },
+  facturadoHint: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: SPACING.xs },
   utilidadCard: {
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.lg,

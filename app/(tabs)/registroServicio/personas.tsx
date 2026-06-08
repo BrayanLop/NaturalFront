@@ -1,17 +1,18 @@
 import BackButton from '@/components/BackButton';
+import { logger } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { api } from '../../api/api';
+import { personaService } from '../../api/services';
 
 export default function SeleccionarPersona() {
   const [personas, setPersonas] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    api.get('/Persona/Obtener')
+    personaService.obtenerTodas()
       .then((res) => setPersonas(res.data))
-      .catch((err) => console.error('Error al cargar personas:', err));
+      .catch((err) => logger.error('Error al cargar personas:', err));
   }, []);
 
   const seleccionarPersona = (persona: any) => {

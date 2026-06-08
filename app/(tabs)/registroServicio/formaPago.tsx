@@ -3,6 +3,7 @@ import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
+import { logger, showError, showSuccess } from '@/utils/logger';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -65,8 +66,8 @@ export default function ResumenYFormaPago() {
       );
       setServicios(serviciosSeleccionados);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
+      logger.error('Error al cargar datos:', error);
+      showError('No se pudieron cargar los datos');
     } finally {
       setLoading(false);
     }
@@ -304,9 +305,9 @@ export default function ResumenYFormaPago() {
 
       // Guardar los registros
       const response = await api.post('/RegistroServicio/Guardar', registros);
-      
-      console.log('Respuesta del backend:', response.data);
-      
+
+      logger.log('Respuesta del backend:', response.data);
+
       // Si hay evidencias, subirlas
       if (archivosSeleccionados.length > 0) {
         try {
@@ -367,12 +368,12 @@ export default function ResumenYFormaPago() {
         }
       }
 
-      Alert.alert('\u00c9xito', 'Servicios registrados correctamente' + 
+      showSuccess('Servicios registrados correctamente' +
         (archivosSeleccionados.length > 0 && response.data ? ' con evidencias' : ''));
       router.replace('/(tabs)/registroServicio');
     } catch (error) {
-      console.error('Error al guardar registros:', error);
-      Alert.alert('Error', 'No se pudieron guardar los servicios');
+      logger.error('Error al guardar registros:', error);
+      showError('No se pudieron guardar los servicios');
     } finally {
       setGuardando(false);
     }

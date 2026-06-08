@@ -1,4 +1,4 @@
-import { showError } from '@/utils/logger';
+import { logger, showError } from '@/utils/logger';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
@@ -78,7 +78,9 @@ export default function Login() {
       // Convertir ArrayBuffer a Base64
       const hashBase64 = btoa(String.fromCharCode(...new Uint8Array(hashBytes)));
 
-      console.log('Hash generado:', hashBase64); // Para debug
+      // NOTA DE SEGURIDAD: Idealmente el hash debería hacerse solo en el servidor.
+      // Hashear en el cliente no agrega seguridad real si se envía por HTTP sin cifrado.
+      logger.log('Intentando autenticación');
 
       const res = await api.post('/Login/Autenticar', {
         Email: email,
@@ -96,8 +98,7 @@ export default function Login() {
         token: res.data.token // ← Token JWT del backend
       };
 
-      console.log('Datos del login:', res.data);
-      console.log('Nombre empresa:', res.data.persona.nombreEmpresa); // Para debug
+      logger.log('Login exitoso');
 
       await login(datosUsuario);
       router.replace('/home');

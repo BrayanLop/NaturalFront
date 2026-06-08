@@ -2,12 +2,11 @@ import FormField from '@/components/FormField';
 import LoadingView from '@/components/LoadingView';
 import PrimaryButton from '@/components/PrimaryButton';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, commonStyles } from '@/constants/theme';
+import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
-import { api } from '../../api/api';
+import { servicioService } from '../../api/services';
 
 export default function ServicioDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,7 +38,7 @@ export default function ServicioDetalle() {
 
   useEffect(() => {
     if (id) {
-      api.get(`/Servicio/Obtener/${id}`)
+      servicioService.obtenerPorId(Number(id))
         .then(res => {
           const data = res.data;
           setNombre(data.nombre);
@@ -48,8 +47,8 @@ export default function ServicioDetalle() {
           setDisponible(data.disponible);
         })
         .catch(err => {
-          console.error('Error al cargar servicio:', err);
-          Alert.alert('Error', 'No se pudo cargar el servicio');
+          logger.error('Error al cargar servicio:', err);
+          showError('No se pudo cargar el servicio');
         })
         .finally(() => setLoading(false));
     }
@@ -78,12 +77,12 @@ export default function ServicioDetalle() {
 
     if (Object.keys(nuevosErrores).length > 0) {
       setErrores(nuevosErrores);
-      Alert.alert('Error', 'Revisa los campos con errores');
+      showError('Revisa los campos con errores', 'Error de validación');
       return;
     }
 
     try {
-      await api.put(`/Servicio/Actualizar/${id}`, {
+      await servicioService.actualizar(Number(id), {
         id: Number(id),
         nombre,
         descripcion,
@@ -92,49 +91,28 @@ export default function ServicioDetalle() {
         fechaCreacion: new Date().toISOString(),
       });
 
-      Alert.alert('Éxito', 'Servicio actualizado');
+      showSuccess('Servicio actualizado');
       router.back();
     } catch (error) {
-      console.error('Error al actualizar:', error);
-      Alert.alert('Error', 'No se pudo actualizar el servicio');
+      logger.error('Error al actualizar:', error);
+      showError('No se pudo actualizar el servicio');
     }
   };
 
 const eliminar = async () => {
-  const confirmar = Platform.OS === 'web' 
-    ? window.confirm('¿Eliminar este servicio?')
-    : await new Promise((resolve) => {
-        Alert.alert(
-          "Confirmar",
-          "¿Eliminar este servicio?",
-          [
-            { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-            { text: "Eliminar", style: "destructive", onPress: () => resolve(true) }
-          ]
-        );
-      });
+  const confirmar = await showConfirm('¿Eliminar este servicio?');
 
   if (!confirmar) return;
 
   try {
-    console.log("Eliminando servicio con id:", id);
-    await api.delete(`/Servicio/Eliminar/${id}`);
+    logger.log("Eliminando servicio con id:", id);
+    await servicioService.eliminar(Number(id));
     
-    if (Platform.OS === 'web') {
-      window.alert("Servicio eliminado correctamente");
-    } else {
-      Alert.alert("Eliminado", "Servicio eliminado correctamente");
-    }
-    
+    showSuccess("Servicio eliminado correctamente");
     router.back();
   } catch (error) {
-    console.error("Error al eliminar:", error);
-    
-    if (Platform.OS === 'web') {
-      window.alert("No se pudo eliminar el servicio");
-    } else {
-      Alert.alert("Error", "No se pudo eliminar el servicio");
-    }
+    logger.error("Error al eliminar:", error);
+    showError("No se pudo eliminar el servicio");
   }
 };
 

@@ -2,11 +2,17 @@ import { logger } from '@/utils/logger';
 import { axiosWithRetry } from '@/utils/retry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import Constants from 'expo-constants';
 import { getDemoMode, handleDemoRequest } from './demoApi';
 
-const API_URL = 'https://naturalback.vip/api';
-//const API_URL = 'https://localhost:7049/api';
-//const API_URL = 'http://45.236.128.205:5000/api';
+// Obtener URL de las variables de entorno
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
+                process.env.EXPO_PUBLIC_API_URL || 
+                'https://localhost:7049/api';
+
+const API_TIMEOUT = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_TIMEOUT ||
+                    process.env.EXPO_PUBLIC_API_TIMEOUT ||
+                    50000;
 
 // Error personalizado para modo demo
 class DemoModeError extends Error {
@@ -20,9 +26,8 @@ class DemoModeError extends Error {
 
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 50000, // 30 segundos
+  timeout: Number(API_TIMEOUT),
   headers: {
-    //'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
 });
@@ -76,6 +81,9 @@ api.interceptors.request.use(
   }
 );
 
+// Variable para evitar múltiples redirecciones
+let isRedirectingToLogin = false;
+
 // Response interceptor - Manejo global de errores y reintentos
 api.interceptors.response.use(
   (response) => {
@@ -97,9 +105,18 @@ api.interceptors.response.use(
     if (status === 401) {
       // Token expirado o no autorizado
       logger.warn('No autorizado - Sesión expirada');
-      // Aquí podrías limpiar el storage y redirigir al login
-      // await AsyncStorage.clear();
-      // router.push('/login');
+      
+      // Limpiar storage y redirigir solo una vez
+      if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        await AsyncStorage.multiRemove(['usuario', 'empresaId', 'rol', 'personaId', 'token']);
+        
+        // Usar setTimeout para evitar problemas de sincronización
+        setTimeout(() => {
+          isRedirectingToLogin = false;
+          // El AuthContext manejará la redirección
+        }, 100);
+      }
     } else if (status === 403) {
       logger.warn('Acceso prohibido');
     } else if (status === 404) {

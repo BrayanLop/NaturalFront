@@ -1,9 +1,10 @@
 import BackButton from '@/components/BackButton';
 import { useAuth } from '@/context/authContext';
+import { logger } from '@/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { api } from '../../api/api';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { servicioService } from '../../api/services';
 
 export default function RegistroServicio() {
   const { usuario } = useAuth();
@@ -13,9 +14,9 @@ export default function RegistroServicio() {
   const { persona } = useLocalSearchParams();
 
   useEffect(() => {
-    api.get('/Servicio/Obtener')
+    servicioService.obtenerTodos()
       .then((res) => setServicios(res.data))
-      .catch((err) => console.error('Error al cargar servicios:', err));
+      .catch((err) => logger.error('Error al cargar servicios:', err));
   }, []);
 
   const toggleServicio = (id: string) => {

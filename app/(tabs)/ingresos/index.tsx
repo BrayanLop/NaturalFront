@@ -1,5 +1,6 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { logger } from '@/utils/logger';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useState } from 'react';
 import {
@@ -45,7 +46,7 @@ export default function IngresosEmpresa() {
       });
       setHistorial(response.data || []);
     } catch (error) {
-      console.error('❌ Error al cargar historial de ingresos:', error);
+      logger.error('Error al cargar historial de ingresos:', error);
     } finally {
       setLoading(false);
     }

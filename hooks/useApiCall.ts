@@ -56,8 +56,7 @@ export function useApiCall<T = any>(
         setLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [apiFunction, onSuccess, onError, showErrorAlert]
   );
 
   const reset = useCallback(() => {

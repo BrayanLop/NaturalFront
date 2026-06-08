@@ -2,6 +2,7 @@ import EmptyState from '@/components/EmptyState';
 import ListCard from '@/components/ListCard';
 import LoadingView from '@/components/LoadingView';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { logger } from '@/utils/logger';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -13,7 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { api } from '../../api/api';
+import { personaService } from '../../api/services';
 
 interface Persona {
   id: number;
@@ -32,23 +33,23 @@ export default function ListaPersonas() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const cargarPersonas = async () => {
+  const cargarPersonas = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('Persona/Obtener');
+      const response = await personaService.obtenerTodas();
       setPersonas(response.data);
     } catch (error) {
-      console.error('Error al cargar personas:', error);
+      logger.error('Error al cargar personas:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Refresca cuando regresa a esta pantalla
   useFocusEffect(
     useCallback(() => {
       cargarPersonas();
-    }, [])
+    }, [cargarPersonas])
   );
 
   const handleNavegar = useCallback(
@@ -130,6 +131,7 @@ export default function ListaPersonas() {
           ListEmptyComponent={emptyComponent}
           removeClippedSubviews
           maxToRenderPerBatch={10}
+          initialNumToRender={10}
           updateCellsBatchingPeriod={50}
           windowSize={10}
           contentContainerStyle={personas.length === 0 ? styles.emptyList : undefined}

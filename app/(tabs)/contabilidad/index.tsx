@@ -1,6 +1,7 @@
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency } from '@/utils/formatters';
+import { logger } from '@/utils/logger';
 import { isTrabajador } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Link, useFocusEffect } from 'expo-router';
@@ -45,7 +46,7 @@ export default function PagosPorPersona() {
       const response = await api.get('Contabilidad/PagosUltimosDias', { params });
       setPagos(response.data);
     } catch (error) {
-      console.error('❌ Error al cargar pagos:', error);
+      logger.error('Error al cargar pagos:', error);
     } finally {
       setLoading(false);
     }

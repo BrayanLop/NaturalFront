@@ -38,6 +38,9 @@ export default function Layout() {
           contentStyle: {
             paddingLeft: insets.left,
             paddingRight: insets.right,
+            // Evita que el contenido (y botones al fondo) queden ocultos tras la
+            // barra de navegación de Android / el home indicator de iOS.
+            paddingBottom: insets.bottom,
           },
           headerStyle: {
             backgroundColor: COLORS.primary,

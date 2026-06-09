@@ -1,3 +1,4 @@
+import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, toDateInputValue } from '@/utils/formatters';
@@ -5,7 +6,7 @@ import { logger } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -16,7 +17,7 @@ import {
 } from 'react-native';
 import { api } from '../../api/api';
 
-type Periodo = 'hoy' | 'semana' | 'mes';
+type Periodo = 'hoy' | 'semana' | 'mes' | 'personalizado';
 
 interface ConsolidadoIE {
   totalIngresos: number;
@@ -35,6 +36,7 @@ const PERIODOS: { key: Periodo; label: string }[] = [
   { key: 'hoy', label: 'Hoy' },
   { key: 'semana', label: 'Semana' },
   { key: 'mes', label: 'Mes' },
+  { key: 'personalizado', label: 'Rango' },
 ];
 
 const ACCESOS = [
@@ -64,23 +66,30 @@ function getRango(periodo: Periodo): { desde: string; hasta: string } {
 export default function Finanzas() {
   const { usuario } = useAuth();
   const router = useRouter();
+  const hoyStr = toDateInputValue(new Date());
   const [periodo, setPeriodo] = useState<Periodo>('mes');
+  const [desde, setDesde] = useState<string>(hoyStr);
+  const [hasta, setHasta] = useState<string>(hoyStr);
+  const [pickerVisible, setPickerVisible] = useState<null | 'desde' | 'hasta'>(null);
   const [loading, setLoading] = useState(false);
   const [ie, setIe] = useState<ConsolidadoIE | null>(null);
   const [fp, setFp] = useState<FormaPago | null>(null);
 
   const esAdmin = isAdmin(usuario?.rol);
 
-  const fetchData = useCallback(async (p: Periodo) => {
+  // El rango personalizado se guarda también en un ref para que el efecto de
+  // foco pueda releer la última selección sin re-ejecutarse en cada cambio.
+  const rangoRef = useRef({ desde: hoyStr, hasta: hoyStr });
+
+  const fetchData = useCallback(async (d: string, h: string) => {
     setLoading(true);
     try {
-      const { desde, hasta } = getRango(p);
       const [resIe, resFp] = await Promise.all([
         api.get('/Contabilidad/ConsolidadoIngresosEgresos', {
-          params: { fechaDesde: desde, fechaHasta: hasta },
+          params: { fechaDesde: d, fechaHasta: h },
         }),
         api.get('/Contabilidad/ConsolidadoFormaPago', {
-          params: { fechaDesde: desde + 'T00:00:00', fechaHasta: hasta + 'T23:59:59' },
+          params: { fechaDesde: d + 'T00:00:00', fechaHasta: h + 'T23:59:59' },
         }),
       ]);
       setIe(resIe.data);
@@ -94,14 +103,34 @@ export default function Finanzas() {
 
   useFocusEffect(
     useCallback(() => {
-      if (esAdmin) fetchData(periodo);
+      if (!esAdmin) return;
+      if (periodo === 'personalizado') {
+        fetchData(rangoRef.current.desde, rangoRef.current.hasta);
+      } else {
+        const r = getRango(periodo);
+        setDesde(r.desde);
+        setHasta(r.hasta);
+        rangoRef.current = r;
+        fetchData(r.desde, r.hasta);
+      }
     }, [esAdmin, periodo, fetchData])
   );
 
-  const cambiarPeriodo = (p: Periodo) => {
-    setPeriodo(p);
-    fetchData(p);
+  const cambiarPeriodo = (p: Periodo) => setPeriodo(p);
+
+  const onPickFecha = (dateStr?: string) => {
+    if (!dateStr || !pickerVisible) return;
+    if (pickerVisible === 'desde') {
+      setDesde(dateStr);
+      rangoRef.current.desde = dateStr;
+    } else {
+      setHasta(dateStr);
+      rangoRef.current.hasta = dateStr;
+    }
+    setPickerVisible(null);
   };
+
+  const buscarRango = () => fetchData(desde, hasta);
 
   if (!esAdmin) {
     return (
@@ -133,12 +162,46 @@ export default function Finanzas() {
               style={[styles.periodoChip, periodo === p.key && styles.periodoChipActive]}
               onPress={() => cambiarPeriodo(p.key)}
             >
-              <Text style={[styles.periodoText, periodo === p.key && styles.periodoTextActive]}>
+              <Text
+                style={[styles.periodoText, periodo === p.key && styles.periodoTextActive]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {p.label}
               </Text>
             </Pressable>
           ))}
         </View>
+
+        {/* Rango de fechas personalizado */}
+        {periodo === 'personalizado' && (
+          <View style={styles.rangoBox}>
+            <View style={styles.dateRow}>
+              <Pressable
+                style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
+                onPress={() => setPickerVisible('desde')}
+              >
+                <Text style={styles.chipLabel}>Desde</Text>
+                <Text style={styles.dateValue}>{desde}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
+                onPress={() => setPickerVisible('hasta')}
+              >
+                <Text style={styles.chipLabel}>Hasta</Text>
+                <Text style={styles.dateValue}>{hasta}</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.buscarBtn, pressed && styles.buscarBtnPressed, loading && styles.buscarBtnDisabled]}
+              onPress={buscarRango}
+              disabled={loading}
+            >
+              <FontAwesome5 name="search" size={13} color={COLORS.white} />
+              <Text style={styles.buscarBtnText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
+            </Pressable>
+          </View>
+        )}
 
         {loading ? (
           <View style={styles.loadingBox}>
@@ -253,6 +316,14 @@ export default function Finanzas() {
           </>
         )}
       </ScrollView>
+
+      <SimpleDatePicker
+        value={pickerVisible === 'desde' ? desde : hasta}
+        onChange={onPickFecha}
+        visible={pickerVisible !== null}
+        onClose={() => setPickerVisible(null)}
+        title={pickerVisible === 'desde' ? 'Selecciona la fecha de inicio' : 'Selecciona la fecha final'}
+      />
     </View>
   );
 }
@@ -297,6 +368,41 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   periodoTextActive: { color: COLORS.white },
+  rangoBox: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
+  },
+  dateRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
+  dateInputBox: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  dateInputBoxPressed: {
+    backgroundColor: COLORS.primarySurface,
+    borderColor: COLORS.primary,
+  },
+  chipLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
+  dateValue: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
+  buscarBtn: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.primary,
+  },
+  buscarBtnPressed: { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.98 }] },
+  buscarBtnDisabled: { backgroundColor: COLORS.border, ...SHADOWS.none },
+  buscarBtnText: { color: COLORS.white, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.sm },
   loadingBox: { paddingVertical: SPACING.huge, alignItems: 'center', gap: SPACING.md },
   loadingText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   kpiRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },

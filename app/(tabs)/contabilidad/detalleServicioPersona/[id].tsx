@@ -3,7 +3,7 @@ import { isAdmin } from "@/utils/roles";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { api } from "../../../api/api";
+import { api, apiWithRetry } from "../../../api/api";
 import { EgresoEmpresa } from "../../../api/modelos/egreso";
 
 type ServicioDetalleItem = {
@@ -155,10 +155,14 @@ export default function DetallePersona() {
     if (!registroServicioId || !puedeConfirmar) return;
     setMarcandoPropina(registroServicioId);
     try {
-      await api.patch(
-        `/RegistroServicio/MarcarPropinaPagada/${registroServicioId}?pagada=${pagada}`,
-        {},
-        { headers: { empresaId: empresaId.toString() } }
+      // PATCH idempotente: reintenta automáticamente ante errores de red
+      // (conexiones keep-alive muertas del proxy) para evitar falsos "error" cuando el servidor sí guardó.
+      await apiWithRetry(() =>
+        api.patch(
+          `/RegistroServicio/MarcarPropinaPagada/${registroServicioId}?pagada=${pagada}`,
+          {},
+          { headers: { empresaId: empresaId.toString() } }
+        )
       );
       setDetalle((prev) =>
         prev.map((dia) => ({
@@ -171,7 +175,7 @@ export default function DetallePersona() {
         }))
       );
     } catch (e: any) {
-      const msg = e?.response?.data?.message || 'No se pudo actualizar la propina.';
+      const msg = e?.response?.data?.message || 'No se pudo confirmar la propina. Verifica si ya quedó marcada como entregada.';
       if (Platform.OS === 'web') window.alert(msg);
       else Alert.alert('Error', msg);
     } finally {
@@ -306,10 +310,13 @@ const handleLiquidar = async () => {
     setConfirmandoServicio(registroServicioId);
     try {
       console.log("📤 Enviando PATCH a /RegistroServicio/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
-      const response = await api.patch(
-        `/RegistroServicio/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
-        {},
-        { headers: { empresaId: empresaId.toString() } }
+      // PATCH idempotente: reintenta automáticamente ante errores de red para evitar falsos "error" cuando el servidor sí guardó.
+      const response = await apiWithRetry(() =>
+        api.patch(
+          `/RegistroServicio/ActualizarConfirmado/${registroServicioId}?confirmado=true`,
+          {},
+          { headers: { empresaId: empresaId.toString() } }
+        )
       );
       console.log("✅ Respuesta PATCH:", response.data);
       

@@ -10,6 +10,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import { comprimirImagen } from '@/utils/imagen';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -332,10 +333,11 @@ export default function ListaRegistros() {
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        const uriComprimida = await comprimirImagen(asset.uri, asset.width);
         setArchivosSeleccionados(prev => [...prev, {
-          uri: asset.uri,
-          name: asset.fileName || `foto_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
+          uri: uriComprimida,
+          name: `foto_${Date.now()}.jpg`,
+          type: 'image/jpeg',
           size: asset.fileSize,
         }]);
       }
@@ -370,10 +372,14 @@ export default function ListaRegistros() {
             logger.error('Error al copiar imagen a cache:', copyError);
           }
         }
+
+        // Redimensionar/comprimir para no exceder el límite del proxy (nginx 1MB)
+        finalUri = await comprimirImagen(finalUri, asset.width);
+
         setArchivosSeleccionados(prev => [...prev, {
           uri: finalUri,
-          name: asset.fileName || `imagen_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
+          name: `imagen_${Date.now()}.jpg`,
+          type: 'image/jpeg',
           size: asset.fileSize,
         }]);
       }
@@ -391,10 +397,13 @@ export default function ListaRegistros() {
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        const esImagen = (asset.mimeType || '').startsWith('image/');
+        // Solo comprimir imágenes; los PDF u otros archivos van tal cual
+        const uriFinal = esImagen ? await comprimirImagen(asset.uri) : asset.uri;
         setArchivosSeleccionados(prev => [...prev, {
-          uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || 'application/octet-stream',
+          uri: uriFinal,
+          name: esImagen ? `imagen_${Date.now()}.jpg` : asset.name,
+          type: esImagen ? 'image/jpeg' : (asset.mimeType || 'application/octet-stream'),
           size: asset.size,
         }]);
       }

@@ -8,6 +8,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import { comprimirImagen } from '@/utils/imagen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -94,10 +95,11 @@ export default function ResumenYFormaPago() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        const uriComprimida = await comprimirImagen(asset.uri, asset.width);
         const archivo: ArchivoSeleccionado = {
-          uri: asset.uri,
-          name: asset.fileName || `foto_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
+          uri: uriComprimida,
+          name: `foto_${Date.now()}.jpg`,
+          type: 'image/jpeg',
           size: asset.fileSize,
         };
         console.log('Foto tomada:', archivo);
@@ -144,11 +146,14 @@ export default function ResumenYFormaPago() {
             // Si falla la copia, intentar con la URI original
           }
         }
-        
+
+        // Redimensionar/comprimir para no exceder el límite del proxy (nginx 1MB)
+        finalUri = await comprimirImagen(finalUri, asset.width);
+
         const archivo: ArchivoSeleccionado = {
           uri: finalUri,
-          name: asset.fileName || `imagen_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
+          name: `imagen_${Date.now()}.jpg`,
+          type: 'image/jpeg',
           size: asset.fileSize,
         };
         console.log('Imagen seleccionada:', archivo);
@@ -169,10 +174,13 @@ export default function ResumenYFormaPago() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        const esImagen = (asset.mimeType || '').startsWith('image/');
+        // Solo comprimir imágenes; los PDF u otros archivos van tal cual
+        const uriFinal = esImagen ? await comprimirImagen(asset.uri) : asset.uri;
         const archivo: ArchivoSeleccionado = {
-          uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || 'application/octet-stream',
+          uri: uriFinal,
+          name: esImagen ? `imagen_${Date.now()}.jpg` : asset.name,
+          type: esImagen ? 'image/jpeg' : (asset.mimeType || 'application/octet-stream'),
           size: asset.size,
         };
         console.log('Documento seleccionado:', archivo);

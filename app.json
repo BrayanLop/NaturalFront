@@ -2,12 +2,11 @@
   "expo": {
     "name": "Natural",
     "slug": "Natural",
-    "version": "1.3.10",
+    "version": "1.4.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "natural",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bray09.natural",
@@ -22,7 +21,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      
     },
     "web": {
       "bundler": "metro",

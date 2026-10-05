@@ -2,7 +2,6 @@ import KeyboardAware from '@/components/KeyboardAware';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -16,6 +15,8 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { logger } from '@/utils/logger';
+import { hashPassword } from '@/utils/password';
 import { api } from '../api/api';
 
 export default function CambiarContrasena() {
@@ -60,18 +61,7 @@ export default function CambiarContrasena() {
 
     setLoading(true);
     try {
-      // Convertir contraseña a bytes UTF-8
-      const encoder = new TextEncoder();
-      const passwordBytes = encoder.encode(nuevaContrasena);
-      
-      // Hashear con SHA256
-      const hashBytes = await Crypto.digest(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        passwordBytes
-      );
-      
-      // Convertir ArrayBuffer a Base64
-      const hashBase64 = btoa(String.fromCharCode(...new Uint8Array(hashBytes)));
+      const hashBase64 = await hashPassword(nuevaContrasena);
 
       await api.put('Usuario/ActualizarContrasena', {
         usuarioId: usuario?.idUsuario ?? usuario?.id,
@@ -93,7 +83,7 @@ export default function CambiarContrasena() {
       // Volver atrás
       router.back();
     } catch (error: any) {
-      console.error('❌ Error al cambiar contraseña:', error);
+      logger.error('Error al cambiar contraseña:', error?.response?.status ?? error?.message);
       const mensaje = error?.response?.data?.message || 'No se pudo cambiar la contraseña';
       if (Platform.OS === 'web') {
         window.alert(mensaje);

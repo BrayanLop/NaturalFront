@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export default function CrearPersona() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export default function CrearPersona() {
       Alert.alert('Éxito', 'Persona creada correctamente');
       router.back();
     } catch (error) {
-      console.error('Error al crear persona:', error);
+      logger.error('Error al crear persona:', error);
       Alert.alert('Error', 'No se pudo crear la persona');
     }
   };

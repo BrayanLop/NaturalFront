@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export default function ServicioDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,7 +49,7 @@ export default function ServicioDetalle() {
           setDisponible(data.disponible);
         })
         .catch(err => {
-          console.error('Error al cargar servicio:', err);
+          logger.error('Error al cargar servicio:', err);
           Alert.alert('Error', 'No se pudo cargar el servicio');
         })
         .finally(() => setLoading(false));
@@ -95,7 +96,7 @@ export default function ServicioDetalle() {
       Alert.alert('Éxito', 'Servicio actualizado');
       router.back();
     } catch (error) {
-      console.error('Error al actualizar:', error);
+      logger.error('Error al actualizar:', error);
       Alert.alert('Error', 'No se pudo actualizar el servicio');
     }
   };
@@ -117,7 +118,7 @@ const eliminar = async () => {
   if (!confirmar) return;
 
   try {
-    console.log("Eliminando servicio con id:", id);
+    logger.log("Eliminando servicio con id:", id);
     await api.delete(`/Servicio/Eliminar/${id}`);
     
     if (Platform.OS === 'web') {
@@ -128,7 +129,7 @@ const eliminar = async () => {
     
     router.back();
   } catch (error) {
-    console.error("Error al eliminar:", error);
+    logger.error("Error al eliminar:", error);
     
     if (Platform.OS === 'web') {
       window.alert("No se pudo eliminar el servicio");

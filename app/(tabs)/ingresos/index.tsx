@@ -12,6 +12,7 @@ import {
     View
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export type HistorialIngreso = {
   fecha: string;
@@ -45,7 +46,7 @@ export default function IngresosEmpresa() {
       });
       setHistorial(response.data || []);
     } catch (error) {
-      console.error('❌ Error al cargar historial de ingresos:', error);
+      logger.error('❌ Error al cargar historial de ingresos:', error);
     } finally {
       setLoading(false);
     }

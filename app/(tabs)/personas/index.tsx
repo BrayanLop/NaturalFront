@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 interface Persona {
   id: number;
@@ -38,7 +39,7 @@ export default function ListaPersonas() {
       const response = await api.get('Persona/Obtener');
       setPersonas(response.data);
     } catch (error) {
-      console.error('Error al cargar personas:', error);
+      logger.error('Error al cargar personas:', error);
     } finally {
       setLoading(false);
     }

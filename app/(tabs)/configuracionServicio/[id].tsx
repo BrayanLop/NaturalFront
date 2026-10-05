@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export default function ConfiguracionDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -107,7 +108,7 @@ export default function ConfiguracionDetalle() {
       Alert.alert('Éxito', 'Configuración actualizada correctamente');
       router.back();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       Alert.alert('Error', 'No se pudo actualizar la configuración');
     }
   };
@@ -129,7 +130,7 @@ const eliminarConfiguracion = () => {
         alert('Configuración eliminada');
         router.back();
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         alert('No se pudo eliminar');
       }
     })();
@@ -147,7 +148,7 @@ const eliminarConfiguracion = () => {
               Alert.alert('Eliminado', 'Configuración eliminada');
               router.back();
             } catch (error) {
-              console.error(error);
+              logger.error(error);
               Alert.alert('Error', 'No se pudo eliminar');
             }
           })();

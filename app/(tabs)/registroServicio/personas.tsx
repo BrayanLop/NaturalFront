@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export default function SeleccionarPersona() {
   const [personas, setPersonas] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function SeleccionarPersona() {
   useEffect(() => {
     api.get('/Persona/Obtener')
       .then((res) => setPersonas(res.data))
-      .catch((err) => console.error('Error al cargar personas:', err));
+      .catch((err) => logger.error('Error al cargar personas:', err));
   }, []);
 
   const seleccionarPersona = (persona: any) => {

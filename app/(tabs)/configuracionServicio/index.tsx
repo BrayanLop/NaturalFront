@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 interface ConfiguracionServicio {
   id: number;
@@ -35,7 +36,7 @@ export default function ListaConfiguraciones() {
       const response = await api.get('ConfiguracionServicio/Obtener');
       setConfiguraciones(response.data);
     } catch (error) {
-      console.error('Error al cargar configuraciones:', error);
+      logger.error('Error al cargar configuraciones:', error);
     } finally {
       setLoading(false);
     }

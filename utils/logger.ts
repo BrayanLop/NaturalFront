@@ -3,29 +3,48 @@ import { Alert, Platform } from 'react-native';
 // Configuración de logging
 const isDevelopment = __DEV__;
 
+/**
+ * Un AxiosError trae `config.headers` (con `Authorization: Bearer <token>`) y `config.data`
+ * (p.ej. el hash de la contraseña). Para no filtrar secretos ni en desarrollo, se reemplaza
+ * por un resumen con lo útil para depurar.
+ */
+function sanitize(arg: any): any {
+  if (arg && typeof arg === 'object' && arg.isAxiosError) {
+    return {
+      message: arg.message,
+      code: arg.code,
+      method: arg.config?.method?.toUpperCase(),
+      url: arg.config?.url,
+      status: arg.response?.status,
+      data: arg.response?.data,
+    };
+  }
+  return arg;
+}
+
 // Logger condicional que solo funciona en desarrollo
 export const logger = {
   log: (...args: any[]) => {
     if (isDevelopment) {
-      console.log('[LOG]', ...args);
+      console.log('[LOG]', ...args.map(sanitize));
     }
   },
   
   error: (...args: any[]) => {
     if (isDevelopment) {
-      console.error('[ERROR]', ...args);
+      console.error('[ERROR]', ...args.map(sanitize));
     }
   },
   
   warn: (...args: any[]) => {
     if (isDevelopment) {
-      console.warn('[WARN]', ...args);
+      console.warn('[WARN]', ...args.map(sanitize));
     }
   },
   
   info: (...args: any[]) => {
     if (isDevelopment) {
-      console.info('[INFO]', ...args);
+      console.info('[INFO]', ...args.map(sanitize));
     }
   },
 };

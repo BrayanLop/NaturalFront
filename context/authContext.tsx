@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { checkDemoMode, saveDemoMode } from '../app/api/demoApi';
 import { DEMO_USER } from '../app/api/demoData';
+import { limpiarSesionStorage, registrarHandlerSesionExpirada } from '../utils/sessionEvents';
 
 type Usuario = {
   id: number;
@@ -87,18 +88,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUsuario(null);
     setIsDemo(false);
     await saveDemoMode(false);
-    await AsyncStorage.removeItem('usuario');
-    await AsyncStorage.removeItem('empresaId');
-    await AsyncStorage.removeItem('rol');
-    await AsyncStorage.removeItem('personaId');
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('isDemo');
+    await limpiarSesionStorage();
     try {
       router.replace('/login');
     } catch (e) {
       // ignore routing errors
     }
   };
+
+  // Si el backend responde 401 (token vencido), el interceptor de api.ts cierra la sesión con este logout.
+  useEffect(() => registrarHandlerSesionExpirada(logout), []);
 
   return (
     <AuthContext.Provider value={{ usuario, login, loginDemo, logout, cargando, isDemo }}>

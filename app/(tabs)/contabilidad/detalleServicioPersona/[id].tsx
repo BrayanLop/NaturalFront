@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api, apiWithRetry } from "../../../api/api";
 import { EgresoEmpresa } from "../../../api/modelos/egreso";
+import { logger } from '@/utils/logger';
 
 type ServicioDetalleItem = {
   nombreServicio: string;
@@ -89,7 +90,7 @@ export default function DetallePersona() {
           setCargandoTotal(false);
         }
       } catch (e) {
-        console.error("❌ Error cargando detalle", e);
+        logger.error("❌ Error cargando detalle", e);
         Alert.alert("Error", "No se pudo cargar el detalle de servicios.");
       }
     };
@@ -113,7 +114,7 @@ export default function DetallePersona() {
         const data = res.data;
         setEgresos(Array.isArray(data) ? data : []);
       } catch (e) {
-        console.error("❌ Error cargando egresos", e);
+        logger.error("❌ Error cargando egresos", e);
       } finally {
         setCargandoEgresos(false);
       }
@@ -219,13 +220,13 @@ const handleLiquidar = async () => {
       const egresosIdParam = egresosSeleccionados.join(',');
       url += `&egresosId=${egresosIdParam}`;
     }
-    console.log("📤 Enviando POST a", url);
+    logger.log("📤 Enviando POST a", url);
     const response = await api.post(
       url,
       {},
       { headers: { empresaId: empresaId.toString() } }
     );
-    console.log("✅ Respuesta exitosa:", response.data);
+    logger.log("✅ Respuesta exitosa:", response.data);
     if (Platform.OS === "web") {
       window.alert("Persona liquidada correctamente.");
       if (router.canGoBack()) {
@@ -242,7 +243,7 @@ const handleLiquidar = async () => {
       }
     }
   } catch (e: any) {
-    console.error("❌ Error liquidando persona:", e);
+    logger.error("❌ Error liquidando persona:", e);
     if (Platform.OS === "web") {
       window.alert(e?.response?.data?.message || "No se pudo liquidar la persona.");
     } else {
@@ -281,10 +282,10 @@ const handleLiquidar = async () => {
   };
 
   const handleConfirmarServicio = async (registroServicioId?: number) => {
-    console.log("🔵 handleConfirmarServicio llamado con ID:", registroServicioId);
+    logger.log("🔵 handleConfirmarServicio llamado con ID:", registroServicioId);
     
     if (!registroServicioId) {
-      console.error("❌ registroServicioId es undefined o null");
+      logger.error("❌ registroServicioId es undefined o null");
       Alert.alert("Error", "No se puede confirmar este servicio.");
       return;
     }
@@ -309,7 +310,7 @@ const handleLiquidar = async () => {
 
     setConfirmandoServicio(registroServicioId);
     try {
-      console.log("📤 Enviando PATCH a /RegistroServicio/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
+      logger.log("📤 Enviando PATCH a /RegistroServicio/ActualizarConfirmado/" + registroServicioId + "?confirmado=true");
       // PATCH idempotente: reintenta automáticamente ante errores de red para evitar falsos "error" cuando el servidor sí guardó.
       const response = await apiWithRetry(() =>
         api.patch(
@@ -318,7 +319,7 @@ const handleLiquidar = async () => {
           { headers: { empresaId: empresaId.toString() } }
         )
       );
-      console.log("✅ Respuesta PATCH:", response.data);
+      logger.log("✅ Respuesta PATCH:", response.data);
       
       // Recargar datos después de confirmar
       const res = await api.get(
@@ -355,7 +356,7 @@ const handleLiquidar = async () => {
         Alert.alert("Éxito", "Servicio confirmado correctamente.");
       }
     } catch (e: any) {
-      console.error("❌ Error confirmando servicio:", e);
+      logger.error("❌ Error confirmando servicio:", e);
       if (Platform.OS === "web") {
         window.alert(e?.response?.data?.message || "No se pudo confirmar el servicio.");
       } else {
@@ -512,7 +513,7 @@ const handleLiquidar = async () => {
                       style={[styles.confirmButton, confirmandoServicio === (s.registroServicioId || s.RegistroServicioId) && styles.confirmButtonLoading]}
                       onPress={() => {
                         const id = s.registroServicioId || s.RegistroServicioId;
-                        console.log("🟡 TouchableOpacity presionado. ID:", id);
+                        logger.log("🟡 TouchableOpacity presionado. ID:", id);
                         handleConfirmarServicio(id);
                       }}
                       disabled={confirmandoServicio === (s.registroServicioId || s.RegistroServicioId)}

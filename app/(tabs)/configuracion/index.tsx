@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 type ConfiguracionGeneral = {
   periodicidad: string;
@@ -73,7 +74,7 @@ export default function ConfiguracionGeneral() {
         }
       } catch (e) {
         // si no existe, lo dejamos en blanco (no mostrar error)
-        console.warn('No se encontró configuración para la empresa', e);
+        logger.warn('No se encontró configuración para la empresa', e);
       } finally {
         setLoading(false);
       }
@@ -118,7 +119,7 @@ export default function ConfiguracionGeneral() {
       }
       router.back();
     } catch (e: any) {
-      console.error('Error al guardar configuración', e);
+      logger.error('Error al guardar configuración', e);
       Alert.alert('Error', e?.response?.data || 'No se pudo guardar la configuración');
     } finally {
       setLoading(false);

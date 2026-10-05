@@ -1,5 +1,6 @@
 import { logger } from '@/utils/logger';
 import { axiosWithRetry } from '@/utils/retry';
+import { notificarSesionExpirada } from '@/utils/sessionEvents';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { getDemoMode, handleDemoRequest } from './demoApi';
@@ -17,9 +18,11 @@ class DemoModeError extends Error {
   }
 }
 
+const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT) || 50000; // ms
+
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 50000, // 30 segundos
+  timeout: API_TIMEOUT,
   headers: {
     //'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
@@ -50,7 +53,6 @@ api.interceptors.request.use(
     // Agregar token JWT si existe
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
-      logger.log(`[API] Token incluido: ${token.substring(0, 20)}...`);
     } else {
       logger.warn('[API] Sin token JWT');
     }
@@ -94,11 +96,12 @@ api.interceptors.response.use(
     
     // Manejo específico de errores
     if (status === 401) {
-      // Token expirado o no autorizado
-      logger.warn('No autorizado - Sesión expirada');
-      // Aquí podrías limpiar el storage y redirigir al login
-      // await AsyncStorage.clear();
-      // router.push('/login');
+      // Token vencido o inválido: se cierra la sesión. En el login un 401 es "credenciales incorrectas".
+      const esLogin = String(url ?? '').includes('Login/Autenticar');
+      if (!esLogin) {
+        logger.warn('No autorizado - Sesión expirada');
+        await notificarSesionExpirada();
+      }
     } else if (status === 403) {
       logger.warn('Acceso prohibido');
     } else if (status === 404) {

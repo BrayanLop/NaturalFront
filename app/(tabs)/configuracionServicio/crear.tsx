@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 export default function CrearConfiguracion() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function CrearConfiguracion() {
         setConfiguracionesExistentes(serviciosConfigurados);
       })
       .catch(() => {
-        console.error('No se pudieron cargar las configuraciones existentes');
+        logger.error('No se pudieron cargar las configuraciones existentes');
       });
   }, []);
 
@@ -113,7 +114,7 @@ export default function CrearConfiguracion() {
       Alert.alert('Éxito', 'Configuración creada');
       router.back();
     } catch (error) {
-      console.error('Error al guardar', error);
+      logger.error('Error al guardar', error);
       Alert.alert('Error', 'No se pudo guardar la configuración');
     }
   };

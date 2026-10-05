@@ -17,6 +17,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { DEMO_USER, demoStore } from './demoData';
+import { logger } from '@/utils/logger';
 
 // Flag para saber si estamos en modo demo (cache en memoria)
 let isDemoModeCache: boolean | null = null;
@@ -100,7 +101,7 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
   // Merge params from config.params
   const queryParams = { ...getQueryParams(url), ...(config.params || {}) };
 
-  console.log(`[DEMO API] ${method} ${url}`, { data, queryParams });
+  logger.log(`[DEMO API] ${method} ${url}`, { data, queryParams });
 
   // ═══════════════════════════════════════════════════════════════════
   // LOGIN
@@ -383,7 +384,7 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
   // ═══════════════════════════════════════════════════════════════════
   // FALLBACK - Ruta no manejada
   // ═══════════════════════════════════════════════════════════════════
-  console.warn(`[DEMO API] ⚠️ Ruta no manejada: ${method} ${url}`);
+  logger.warn(`[DEMO API] ⚠️ Ruta no manejada: ${method} ${url}`);
   return createMockResponse([], 200);
 }
 

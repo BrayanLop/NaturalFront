@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 type ServicioRealizado = {
   nombre: string;
@@ -45,7 +46,7 @@ export default function PagosPorPersona() {
       const response = await api.get('Contabilidad/PagosUltimosDias', { params });
       setPagos(response.data);
     } catch (error) {
-      console.error('❌ Error al cargar pagos:', error);
+      logger.error('❌ Error al cargar pagos:', error);
     } finally {
       setLoading(false);
     }

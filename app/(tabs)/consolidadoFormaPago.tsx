@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 import { api } from '../api/api';
+import { logger } from '@/utils/logger';
 
 interface ConsolidadoFormaPago {
   cantidadTransferencia: number;
@@ -32,7 +33,7 @@ export default function ConsolidadoFormaPagoScreen() {
       if (fechaFin) params.fechaHasta = fechaFin + 'T23:59:59';
       params.formaPago = formaPago !== 'todos' ? formaPago : undefined;
       const res = await api.get('/Contabilidad/ConsolidadoFormaPago', { params });
-      console.log('API ConsolidadoFormaPago:', res.data);
+      logger.log('API ConsolidadoFormaPago:', res.data);
       setData(res.data);
     } catch (err) {
       setData(null);

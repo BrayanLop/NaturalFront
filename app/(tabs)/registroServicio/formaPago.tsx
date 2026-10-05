@@ -16,6 +16,7 @@ import { MaskedTextInput } from 'react-native-mask-text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDemoMode } from '../../api/demoApi';
 import { api, API_URL } from '../../api/api';
+import { logger } from '@/utils/logger';
 
 type FormaPago = 'T' | 'E';
 
@@ -72,7 +73,7 @@ export default function ResumenYFormaPago() {
       );
       setServicios(serviciosSeleccionados);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      logger.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos');
     } finally {
       setLoading(false);
@@ -102,11 +103,11 @@ export default function ResumenYFormaPago() {
           type: 'image/jpeg',
           size: asset.fileSize,
         };
-        console.log('Foto tomada:', archivo);
+        logger.log('Foto tomada:', archivo);
         setArchivosSeleccionados(prev => [...prev, archivo]);
       }
     } catch (error) {
-      console.error('Error al tomar foto:', error);
+      logger.error('Error al tomar foto:', error);
       Alert.alert('Error', 'No se pudo tomar la foto');
     }
   };
@@ -140,9 +141,9 @@ export default function ResumenYFormaPago() {
               to: cacheUri,
             });
             finalUri = cacheUri;
-            console.log('Imagen copiada a cache:', cacheUri);
+            logger.log('Imagen copiada a cache:', cacheUri);
           } catch (copyError) {
-            console.error('Error al copiar imagen a cache:', copyError);
+            logger.error('Error al copiar imagen a cache:', copyError);
             // Si falla la copia, intentar con la URI original
           }
         }
@@ -156,11 +157,11 @@ export default function ResumenYFormaPago() {
           type: 'image/jpeg',
           size: asset.fileSize,
         };
-        console.log('Imagen seleccionada:', archivo);
+        logger.log('Imagen seleccionada:', archivo);
         setArchivosSeleccionados(prev => [...prev, archivo]);
       }
     } catch (error) {
-      console.error('Error al seleccionar imagen:', error);
+      logger.error('Error al seleccionar imagen:', error);
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
     }
   };
@@ -183,11 +184,11 @@ export default function ResumenYFormaPago() {
           type: esImagen ? 'image/jpeg' : (asset.mimeType || 'application/octet-stream'),
           size: asset.size,
         };
-        console.log('Documento seleccionado:', archivo);
+        logger.log('Documento seleccionado:', archivo);
         setArchivosSeleccionados(prev => [...prev, archivo]);
       }
     } catch (error) {
-      console.error('Error al seleccionar documento:', error);
+      logger.error('Error al seleccionar documento:', error);
       Alert.alert('Error', 'No se pudo seleccionar el documento');
     }
   };
@@ -203,13 +204,13 @@ export default function ResumenYFormaPago() {
 
     // Validar que tengamos IDs válidos
     if (!registrosIds || registrosIds.length === 0) {
-      console.warn('No hay IDs de registros para subir evidencias');
+      logger.warn('No hay IDs de registros para subir evidencias');
       return;
     }
 
     // En modo demo no subimos archivos reales al servidor.
     if (await getDemoMode()) {
-      console.log('[DEMO] Subida de evidencias omitida');
+      logger.log('[DEMO] Subida de evidencias omitida');
       return;
     }
 
@@ -227,7 +228,7 @@ export default function ResumenYFormaPago() {
       for (const registroId of registrosIds) {
         // Validar que el ID sea válido
         if (!registroId || isNaN(registroId)) {
-          console.warn('ID de registro inválido:', registroId);
+          logger.warn('ID de registro inválido:', registroId);
           continue;
         }
 
@@ -261,11 +262,11 @@ export default function ResumenYFormaPago() {
               const file = new File([blob], archivo.name, { type: mimeType });
               formData.append('archivo', file);
             } catch (error) {
-              console.error('Error al convertir blob:', error);
+              logger.error('Error al convertir blob:', error);
               throw new Error('No se pudo procesar el archivo para web');
             }
             const response = await api.post('/Evidencia/SubirEvidencia', formData);
-            console.log('Evidencia subida exitosamente (web):', response.data);
+            logger.log('Evidencia subida exitosamente (web):', response.data);
           } else {
             // En Mobile (iOS/Android): subir directo desde disco con
             // FileSystem.uploadAsync. Evita el bug de axios + FormData
@@ -274,7 +275,7 @@ export default function ResumenYFormaPago() {
             if (token) headers['Authorization'] = `Bearer ${token}`;
             if (empresaId) headers['empresaId'] = empresaId;
 
-            console.log('Subiendo evidencia (mobile):', archivo.uri, mimeType);
+            logger.log('Subiendo evidencia (mobile):', archivo.uri, mimeType);
 
             const uploadResult = await FileSystem.uploadAsync(
               `${API_URL}/Evidencia/SubirEvidencia`,
@@ -290,16 +291,16 @@ export default function ResumenYFormaPago() {
             );
 
             if (uploadResult.status < 200 || uploadResult.status >= 300) {
-              console.error('Fallo al subir evidencia:', uploadResult.status, uploadResult.body);
+              logger.error('Fallo al subir evidencia:', uploadResult.status, uploadResult.body);
               throw new Error(`Error ${uploadResult.status} al subir la evidencia`);
             }
 
-            console.log('Evidencia subida exitosamente (mobile):', uploadResult.body);
+            logger.log('Evidencia subida exitosamente (mobile):', uploadResult.body);
           }
         }
       }
     } catch (error) {
-      console.error('Error al subir evidencias:', error);
+      logger.error('Error al subir evidencias:', error);
       throw error;
     } finally {
       setSubiendoEvidencias(false);
@@ -332,7 +333,7 @@ export default function ResumenYFormaPago() {
       // Guardar los registros
       const response = await api.post('/RegistroServicio/Guardar', registros);
       
-      console.log('Respuesta del backend:', response.data);
+      logger.log('Respuesta del backend:', response.data);
       
       // Si hay evidencias, subirlas
       if (archivosSeleccionados.length > 0) {
@@ -352,7 +353,7 @@ export default function ResumenYFormaPago() {
           
           // Si no hay IDs en la respuesta, consultar los últimos registros de esta persona
           if (registrosIds.length === 0) {
-            console.log('Backend no retornó IDs, consultando registros recientes...');
+            logger.log('Backend no retornó IDs, consultando registros recientes...');
             
             // Obtener todos los registros de la persona
             const registrosResponse = await api.get(`/RegistroServicio/ObtenerPorPersona/${personaId}`);
@@ -371,22 +372,22 @@ export default function ResumenYFormaPago() {
                 .slice(0, servicios.length);
               
               registrosIds = registrosRecientes.map((r: any) => r.id || r.Id).filter(Boolean);
-              console.log('IDs obtenidos de consulta:', registrosIds);
+              logger.log('IDs obtenidos de consulta:', registrosIds);
             }
           }
           
           if (registrosIds.length > 0) {
-            console.log('Subiendo evidencias para', registrosIds.length, 'registros');
+            logger.log('Subiendo evidencias para', registrosIds.length, 'registros');
             await subirEvidencias(registrosIds);
           } else {
-            console.warn('No se pudieron obtener los IDs de los registros');
+            logger.warn('No se pudieron obtener los IDs de los registros');
             Alert.alert(
               'Advertencia',
               'Servicios registrados correctamente, pero no se pudieron subir las evidencias automáticamente.'
             );
           }
         } catch (errorEvidencias) {
-          console.error('Error al procesar evidencias:', errorEvidencias);
+          logger.error('Error al procesar evidencias:', errorEvidencias);
           Alert.alert(
             'Advertencia',
             'Servicios registrados correctamente, pero hubo un error al subir las evidencias.'
@@ -398,7 +399,7 @@ export default function ResumenYFormaPago() {
         (archivosSeleccionados.length > 0 && response.data ? ' con evidencias' : ''));
       router.replace('/(tabs)/registroServicio');
     } catch (error) {
-      console.error('Error al guardar registros:', error);
+      logger.error('Error al guardar registros:', error);
       Alert.alert('Error', 'No se pudieron guardar los servicios');
     } finally {
       setGuardando(false);

@@ -4,7 +4,7 @@ import { useAuth } from '@/context/authContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { toDateInputValue } from '../../utils/formatters';
+import { formatCurrency, toDateInputValue } from '../../utils/formatters';
 import { api } from '../api/api';
 
 export default function ConsolidadoIngresos() {
@@ -20,6 +20,7 @@ export default function ConsolidadoIngresos() {
     totalIngresos: number;
     totalEgresos: number;
     consolidado: number;
+    deduccionesRecuperadas?: number;
   } | null>(null);
   // Eliminado filtro de persona
 
@@ -49,6 +50,7 @@ export default function ConsolidadoIngresos() {
         totalIngresos: res.data.totalIngresos,
         totalEgresos: res.data.totalEgresos,
         consolidado: res.data.consolidado,
+        deduccionesRecuperadas: res.data.deduccionesRecuperadas,
       });
     } catch (e) {
       Alert.alert('Error', 'No se pudo obtener el consolidado');
@@ -146,6 +148,16 @@ export default function ConsolidadoIngresos() {
                 {(consolidado.consolidado ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
               </Text>
             </View>
+
+            {/* Informativo: egresos descontados a los barberos en liquidaciones (no altera el consolidado) */}
+            {consolidado.deduccionesRecuperadas !== undefined && consolidado.deduccionesRecuperadas !== null && (
+              <View style={styles.deduccionesRow}>
+                <Text style={styles.resultLabel}>Deducciones recuperadas</Text>
+                <Text style={styles.deduccionesValue}>
+                  {formatCurrency(consolidado.deduccionesRecuperadas)}
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -309,6 +321,17 @@ const styles = StyleSheet.create({
   consolidadoValue: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: FONT_WEIGHT.bold,
+  },
+  deduccionesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  deduccionesValue: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.info,
   },
   ingresos: {
     color: COLORS.success,

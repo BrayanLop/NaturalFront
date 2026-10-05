@@ -75,6 +75,15 @@ function getQueryParams(url: string): Record<string, string> {
   return params;
 }
 
+// Convierte "1,2,3" (o un número) en [1, 2, 3]
+function parseIdList(value: unknown): number[] {
+  if (value === undefined || value === null || value === '') return [];
+  return String(value)
+    .split(',')
+    .map(v => parseInt(v, 10))
+    .filter(n => !Number.isNaN(n));
+}
+
 // Función para manejar requests en modo demo
 export async function handleDemoRequest(config: AxiosRequestConfig): Promise<AxiosResponse<any> | null> {
   // Verificar modo demo desde AsyncStorage
@@ -288,16 +297,25 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
 
   if (url.match(/\/EgresosEmpresa\/ObtenerEgresosPorPersona/i) && method === 'GET') {
     const personaId = parseInt(queryParams.personaId || '0');
-    const egresos = demoStore.getEgresos().filter(e => e.personaId === personaId);
+    // Solo los egresos que aún no se han descontado en una liquidación
+    const egresos = demoStore.getEgresosPendientesPorPersona(personaId);
     return createMockResponse(egresos);
   }
 
   if (url.match(/\/EgresosEmpresa\/RegistrarEgreso/i) && method === 'POST') {
-    const persona = demoStore.getPersonaById(data.personaId);
+    // El front envía el payload en PascalCase; se normaliza a camelCase como lo devuelve el back
+    const personaId = Number(data.personaId ?? data.PersonaId);
+    const persona = demoStore.getPersonaById(personaId);
+    const formaPago = data.formaPago ?? data.FormaPago;
     const newEgreso = demoStore.createEgreso({
-      ...data,
-      nombrePersona: persona ? `${persona.nombre} ${persona.apellido}` : 'Desconocido',
       empresaId: 999,
+      personaId,
+      nombrePersona: persona ? `${persona.nombre} ${persona.apellido}` : 'Desconocido',
+      valorEgreso: Number(data.valorEgreso ?? data.ValorEgreso ?? 0),
+      motivo: data.motivo ?? data.Motivo ?? '',
+      fechaRegistro: data.fechaRegistro ?? data.FechaRegistro ?? new Date().toISOString(),
+      seDescuenta: Boolean(data.seDescuenta ?? data.SeDescuenta),
+      formaPago: formaPago === 'E' || formaPago === 'T' ? formaPago : null,
     });
     return createMockResponse(newEgreso, 201);
   }
@@ -323,16 +341,36 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
     return createMockResponse(demoStore.getDetalleServicioPersona(id));
   }
 
-  // Liquidar persona
+  // Resumen (vista previa) de liquidación
+  if (url.match(/\/Contabilidad\/ResumenLiquidacion\/(\d+)/i) && method === 'GET') {
+    const id = parseInt(url.match(/\/Contabilidad\/ResumenLiquidacion\/(\d+)/i)![1]);
+    return createMockResponse(demoStore.getResumenLiquidacion(id, parseIdList(queryParams.egresosId)));
+  }
+
+  // Liquidar persona (body opcional { pagos: [{ formaPago, valor }] })
   if (url.match(/\/Contabilidad\/LiquidarPersona/i) && method === 'POST') {
     const personaId = parseInt(queryParams.personaId || '0');
-    demoStore.liquidarPersona(personaId);
-    return createMockResponse({ message: 'Persona liquidada correctamente' });
+    const pagos = Array.isArray(data?.pagos) ? data.pagos : [];
+    const resultado = demoStore.liquidarPersona(personaId, parseIdList(queryParams.egresosId), pagos);
+    if (resultado.error) {
+      // En demo el interceptor resuelve cualquier status; el front valida antes de enviar.
+      return createMockResponse(resultado.error, 400);
+    }
+    return createMockResponse({ idLiquidacion: resultado.idLiquidacion });
+  }
+
+  // Comprobante de liquidación
+  if (url.match(/\/Contabilidad\/Comprobante\/(\d+)/i) && method === 'GET') {
+    const id = parseInt(url.match(/\/Contabilidad\/Comprobante\/(\d+)/i)![1]);
+    const comprobante = demoStore.getComprobante(id);
+    if (!comprobante) return createMockResponse('Liquidación no encontrada', 404);
+    return createMockResponse(comprobante);
   }
 
   // Historial de liquidaciones
   if (url.match(/\/Contabilidad\/HistorialLiquidaciones/i) && method === 'GET') {
-    return createMockResponse(demoStore.getHistorialLiquidaciones());
+    const personaId = queryParams.personaId ? Number(queryParams.personaId) : undefined;
+    return createMockResponse(demoStore.getHistorialLiquidaciones(personaId));
   }
 
   // Historial de ingresos de empresa

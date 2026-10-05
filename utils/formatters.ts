@@ -74,3 +74,10 @@ export function formatFullName(nombre: string, apellido?: string): string {
 export function formatPesos(value: number): string {
   return value.toLocaleString('es-CO');
 }
+
+// Nombre legible de la forma de pago ('E' efectivo, 'T' transferencia)
+export function formatFormaPago(formaPago?: string | null): string {
+  if (formaPago === 'E') return 'Efectivo';
+  if (formaPago === 'T') return 'Transferencia';
+  return 'Sin especificar';
+}

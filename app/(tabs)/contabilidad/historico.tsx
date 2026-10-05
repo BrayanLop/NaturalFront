@@ -5,6 +5,7 @@ import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters
 import { logger } from '@/utils/logger';
 import { isTrabajador } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -23,6 +24,7 @@ import { Persona } from '../../api/modelos/persona';
 
 export default function HistoricoLiquidaciones() {
   const { usuario } = useAuth();
+  const router = useRouter();
   const [historial, setHistorial] = useState<HistorialLiquidacion[]>([]);
   const [loading, setLoading] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -100,9 +102,22 @@ export default function HistoricoLiquidaciones() {
     setPickerVisible(null);
   }, [pickerVisible]);
 
+  // Abre el comprobante (admin y trabajador; el trabajador solo recibe sus propias liquidaciones)
+  const abrirComprobante = useCallback(
+    (item: HistorialLiquidacion) => {
+      if (!item.idLiquidacion) return;
+      router.push(`/contabilidad/comprobante/${item.idLiquidacion}` as any);
+    },
+    [router]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: HistorialLiquidacion }) => (
-      <View style={styles.card}>
+      <Pressable
+        style={({ pressed }) => [styles.card, pressed && !!item.idLiquidacion && styles.cardPressed]}
+        onPress={() => abrirComprobante(item)}
+        disabled={!item.idLiquidacion}
+      >
         <View style={styles.cardHeader}>
           <View style={styles.cardAvatarContainer}>
             <FontAwesome5 name="user" size={14} color={COLORS.primary} />
@@ -116,9 +131,15 @@ export default function HistoricoLiquidaciones() {
         <View style={styles.cardTotal}>
           <Text style={styles.total}>{formatCurrency(item.totalPagado)}</Text>
         </View>
-      </View>
+        {!!item.idLiquidacion && (
+          <View style={styles.cardRow}>
+            <FontAwesome5 name="file-invoice-dollar" size={12} color={COLORS.primary} />
+            <Text style={styles.verComprobante}>Ver comprobante</Text>
+          </View>
+        )}
+      </Pressable>
     ),
-    []
+    [abrirComprobante]
   );
 
   const keyExtractor = useCallback(
@@ -390,6 +411,16 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.xs,
     maxWidth: '48%',
     ...SHADOWS.sm,
+  },
+  cardPressed: {
+    backgroundColor: COLORS.primarySurface,
+    transform: [{ scale: 0.98 }],
+  },
+  verComprobante: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+    marginTop: SPACING.sm,
   },
   cardHeader: {
     flexDirection: 'row',

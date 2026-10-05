@@ -4,7 +4,7 @@ import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
-import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
+import { formatCurrency, formatDate, formatFormaPago, toDateInputValue } from '@/utils/formatters';
 import { logger, showError } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -74,7 +74,7 @@ export default function ListaEgresos() {
     ({ item }: { item: EgresoEmpresa }) => (
       <ListCard
         title={item.nombrePersona || 'Sin persona'}
-        subtitle={`💵 ${formatCurrency(item.valorEgreso)}`}
+        subtitle={`💵 ${formatCurrency(item.valorEgreso)} · ${formatFormaPago(item.formaPago)}`}
         description={item.motivo || 'Sin motivo'}
         leftIcon={<FontAwesome5 name="arrow-down" size={16} color={COLORS.error} />}
         rightContent={

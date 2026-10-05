@@ -4,7 +4,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api, apiWithRetry } from "../../../api/api";
+import {
+  LiquidarPersonaRequest,
+  LiquidarPersonaResponse,
+  PagoLiquidacion,
+  ResumenLiquidacion,
+} from "../../../api/modelos/contabilidad";
 import { EgresoEmpresa } from "../../../api/modelos/egreso";
+import ResumenLiquidacionModal from "@/components/ResumenLiquidacionModal";
+import { formatFormaPago } from "@/utils/formatters";
 import { logger } from '@/utils/logger';
 
 type ServicioDetalleItem = {
@@ -47,6 +55,12 @@ export default function DetallePersona() {
   const [egresos, setEgresos] = useState<EgresoEmpresa[]>([]);
   const [egresosSeleccionados, setEgresosSeleccionados] = useState<number[]>([]);
   const [cargandoEgresos, setCargandoEgresos] = useState(false);
+
+  // Paso de resumen de liquidación
+  const [resumenVisible, setResumenVisible] = useState(false);
+  const [cargandoResumen, setCargandoResumen] = useState(false);
+  const [resumen, setResumen] = useState<ResumenLiquidacion | null>(null);
+  const [errorResumen, setErrorResumen] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -184,75 +198,83 @@ export default function DetallePersona() {
     }
   };
 
-const handleLiquidar = async () => {
-  if (!personaId) {
-    alert("ID de persona no disponible.");
-    return;
-  }
+  // Mensaje de error del back: puede venir como texto plano (400) o como { message }
+  const mensajeError = (data: unknown, porDefecto: string): string => {
+    if (typeof data === "string" && data.trim()) return data;
+    const msg = (data as { message?: string; title?: string } | undefined)?.message;
+    return msg || porDefecto;
+  };
 
-  const personaIdNum = parseInt(personaId as string, 10);
+  const mostrarMensaje = (titulo: string, mensaje: string) => {
+    if (Platform.OS === "web") window.alert(mensaje);
+    else Alert.alert(titulo, mensaje);
+  };
 
-  // Confirmación según plataforma
-  let confirmar = false;
-  if (Platform.OS === "web") {
-    confirmar = window.confirm("¿Está seguro de que desea liquidar a esta persona?");
-    if (!confirmar) return;
-  } else {
-    confirmar = await new Promise<boolean>((resolve) => {
-      Alert.alert(
-        "Confirmar liquidación",
-        "¿Está seguro de que desea liquidar a esta persona?",
-        [
-          { text: "Cancelar", onPress: () => resolve(false), style: "cancel" },
-          { text: "Liquidar", onPress: () => resolve(true), style: "destructive" },
-        ]
+  const egresosQuery = () =>
+    egresosSeleccionados.length > 0 ? `egresosId=${egresosSeleccionados.join(",")}` : "";
+
+  // Paso 1: abrir el resumen (vista previa) de la liquidación con los egresos seleccionados
+  const handleLiquidar = async () => {
+    if (!puedeActualmenteLiquidar) return; // Solo admin 01 puede liquidar
+    if (!personaId) {
+      mostrarMensaje("Error", "ID de persona no disponible.");
+      return;
+    }
+    setResumen(null);
+    setErrorResumen(null);
+    setResumenVisible(true);
+    setCargandoResumen(true);
+    try {
+      const query = egresosQuery();
+      const res = await api.get<ResumenLiquidacion>(
+        `Contabilidad/ResumenLiquidacion/${personaId}${query ? `?${query}` : ""}`,
+        { headers: { empresaId: empresaId.toString() } }
       );
-    });
-    if (!confirmar) return;
-  }
+      if (res.status >= 400) throw { response: res };
+      setResumen(res.data);
+    } catch (e: any) {
+      logger.error("❌ Error cargando resumen de liquidación", e);
+      setErrorResumen(mensajeError(e?.response?.data, "No se pudo calcular el resumen de la liquidación."));
+    } finally {
+      setCargandoResumen(false);
+    }
+  };
 
-  // ✅ Aquí se ejecuta la liquidación
-  setLoadingLiquidar(true);
-  try {
-    // Construir URL con egresosId si hay egresos seleccionados
-    let url = `/Contabilidad/LiquidarPersona?personaId=${personaIdNum}`;
-    if (egresosSeleccionados.length > 0) {
-      const egresosIdParam = egresosSeleccionados.join(',');
-      url += `&egresosId=${egresosIdParam}`;
-    }
-    logger.log("📤 Enviando POST a", url);
-    const response = await api.post(
-      url,
-      {},
-      { headers: { empresaId: empresaId.toString() } }
-    );
-    logger.log("✅ Respuesta exitosa:", response.data);
-    if (Platform.OS === "web") {
-      window.alert("Persona liquidada correctamente.");
+  // Paso 2: confirmar la liquidación con el reparto del pago
+  const confirmarLiquidacion = async (pagos: PagoLiquidacion[]) => {
+    if (!personaId || !puedeActualmenteLiquidar) return;
+    const personaIdNum = parseInt(personaId as string, 10);
+    setLoadingLiquidar(true);
+    try {
+      const query = egresosQuery();
+      const url = `/Contabilidad/LiquidarPersona?personaId=${personaIdNum}${query ? `&${query}` : ""}`;
+      const body: LiquidarPersonaRequest = pagos.length > 0 ? { pagos } : {};
+      logger.log("📤 Enviando POST a", url, body);
+      const response = await api.post<LiquidarPersonaResponse>(url, body, {
+        headers: { empresaId: empresaId.toString() },
+      });
+      // En modo demo el interceptor resuelve también las respuestas 4xx
+      if (response.status >= 400) throw { response };
+      logger.log("✅ Respuesta exitosa:", response.data);
+      setResumenVisible(false);
+      const idLiquidacion = response.data?.idLiquidacion;
+      if (idLiquidacion) {
+        router.replace(`/contabilidad/comprobante/${idLiquidacion}` as any);
+        return;
+      }
+      mostrarMensaje("Éxito", "Persona liquidada correctamente.");
       if (router.canGoBack()) {
         router.back();
       } else {
         router.replace("/(tabs)/contabilidad");
       }
-    } else {
-      Alert.alert("Éxito", "Persona liquidada correctamente.");
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace("/(tabs)/contabilidad");
-      }
+    } catch (e: any) {
+      logger.error("❌ Error liquidando persona:", e);
+      mostrarMensaje("Error", mensajeError(e?.response?.data, "No se pudo liquidar la persona."));
+    } finally {
+      setLoadingLiquidar(false);
     }
-  } catch (e: any) {
-    logger.error("❌ Error liquidando persona:", e);
-    if (Platform.OS === "web") {
-      window.alert(e?.response?.data?.message || "No se pudo liquidar la persona.");
-    } else {
-      Alert.alert("Error", e?.response?.data?.message || "No se pudo liquidar la persona.");
-    }
-  } finally {
-    setLoadingLiquidar(false);
-  }
-};
+  };
 
   const formatFecha = (fecha: string) => {
     const date = new Date(fecha);
@@ -420,6 +442,7 @@ const handleLiquidar = async () => {
                 <View style={styles.egresoInfo}>
                   <Text style={styles.egresoMotivo}>{egreso.motivo}</Text>
                   <Text style={styles.egresoValor}>{formatMonto(egreso.valorEgreso)}</Text>
+                  <Text style={styles.egresoFecha}>Método: {formatFormaPago(egreso.formaPago)}</Text>
                   {egreso.fechaRegistro && (
                     <Text style={styles.egresoFecha}>
                       {new Date(egreso.fechaRegistro).toLocaleDateString('es-CO')}
@@ -532,6 +555,18 @@ const handleLiquidar = async () => {
           </View>
         )}
       />
+
+      {puedeActualmenteLiquidar && (
+        <ResumenLiquidacionModal
+          visible={resumenVisible}
+          cargando={cargandoResumen}
+          resumen={resumen}
+          error={errorResumen}
+          liquidando={loadingLiquidar}
+          onCerrar={() => setResumenVisible(false)}
+          onConfirmar={confirmarLiquidacion}
+        />
+      )}
     </View>
   );
 }

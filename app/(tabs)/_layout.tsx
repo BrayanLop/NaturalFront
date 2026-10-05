@@ -100,6 +100,7 @@ export default function Layout() {
       <Stack.Screen name="contabilidad/index" options={{ title: 'Pagos' }} />
       <Stack.Screen name="contabilidad/historico" options={{ title: 'Histórico pagos' }} />
       <Stack.Screen name="contabilidad/detalleServicioPersona/[id]" options={{ title: 'Detalle pago' }} />
+      <Stack.Screen name="contabilidad/comprobante/[id]" options={{ title: 'Comprobante' }} />
       <Stack.Screen name="cambiarContrasena" options={{ title: 'Cambiar contraseña' }} />
       <Stack.Screen name="ingresos/index" options={{ title: 'Ingresos' }} />
       <Stack.Screen name="egresos/index" options={{ title: 'Egresos' }} />

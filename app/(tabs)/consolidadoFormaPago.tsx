@@ -1,19 +1,43 @@
 import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
-import { toDateInputValue } from '@/utils/formatters';
+import { formatCurrency, toDateInputValue } from '@/utils/formatters';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 import { api } from '../api/api';
+import { ConsolidadoFormaPago } from '../api/modelos/contabilidad';
 import { logger } from '@/utils/logger';
 
-interface ConsolidadoFormaPago {
-  cantidadTransferencia: number;
-  totalTransferencia: number;
-  cantidadEfectivo: number;
-  totalEfectivo: number;
+// Fila opcional: si el back es antiguo y no envía el campo, la fila se omite
+function FilaOpcional({
+  label,
+  valor,
+  negativo,
+  destacado,
+}: {
+  label: string;
+  valor?: number | null;
+  negativo?: boolean;
+  destacado?: boolean;
+}) {
+  if (valor === undefined || valor === null) return null;
+  return (
+    <View style={styles.resultRow}>
+      <Text style={[styles.resultLabel, destacado && styles.resultLabelDestacado]}>{label}</Text>
+      <Text
+        style={[
+          styles.resultValue,
+          negativo && { color: COLORS.error },
+          destacado && { color: valor >= 0 ? COLORS.success : COLORS.error, fontWeight: FONT_WEIGHT.bold },
+        ]}
+      >
+        {negativo ? '- ' : ''}
+        {formatCurrency(valor)}
+      </Text>
+    </View>
+  );
 }
 
 export default function ConsolidadoFormaPagoScreen() {
@@ -128,11 +152,14 @@ export default function ConsolidadoFormaPagoScreen() {
                 <Text style={styles.resultValue}>{data?.cantidadTransferencia ?? 0}</Text>
               </View>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Total</Text>
+                <Text style={styles.resultLabel}>Ingresos</Text>
                 <Text style={[styles.resultValue, styles.resultHighlight]}>
                   ${data?.totalTransferencia?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
                 </Text>
               </View>
+              <FilaOpcional label="Egresos pagados" valor={data?.egresosPagadosTransferencia} negativo />
+              <FilaOpcional label="Pagos de liquidaciones" valor={data?.pagosLiquidacionesTransferencia} negativo />
+              <FilaOpcional label="Neto transferencia" valor={data?.netoTransferencia} destacado />
             </View>
 
             <View style={styles.resultCard}>
@@ -145,11 +172,14 @@ export default function ConsolidadoFormaPagoScreen() {
                 <Text style={styles.resultValue}>{data?.cantidadEfectivo ?? 0}</Text>
               </View>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Total</Text>
+                <Text style={styles.resultLabel}>Ingresos</Text>
                 <Text style={[styles.resultValue, { color: COLORS.success }]}>
                   ${data?.totalEfectivo?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
                 </Text>
               </View>
+              <FilaOpcional label="Egresos pagados" valor={data?.egresosPagadosEfectivo} negativo />
+              <FilaOpcional label="Pagos de liquidaciones" valor={data?.pagosLiquidacionesEfectivo} negativo />
+              <FilaOpcional label="Neto efectivo" valor={data?.netoEfectivo} destacado />
             </View>
           </View>
         )}
@@ -334,6 +364,10 @@ const styles = StyleSheet.create({
   resultLabel: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
+  },
+  resultLabelDestacado: {
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.bold,
   },
   resultValue: {
     fontSize: FONT_SIZE.md,

@@ -4,6 +4,14 @@
  */
 
 import { ConfiguracionServicio } from './modelos/configuracionServicio';
+import {
+  ComprobanteLiquidacion,
+  ConsolidadoFormaPago,
+  ConsolidadoIngresosEgresos,
+  HistorialLiquidacion,
+  PagoLiquidacion,
+  ResumenLiquidacion,
+} from './modelos/contabilidad';
 import { EgresoEmpresa } from './modelos/egreso';
 import { Persona } from './modelos/persona';
 import { RegistroServicio } from './modelos/registroServicio';
@@ -176,8 +184,11 @@ const INITIAL_EGRESOS: EgresoEmpresa[] = [
     motivo: 'Adelanto de nómina',
     fechaRegistro: new Date().toISOString(),
     seDescuenta: true,
+    formaPago: 'E',
   },
 ];
+
+const DEMO_NIT = '900.123.456-7';
 
 // Clase para manejar el estado demo en memoria
 class DemoDataStore {
@@ -186,12 +197,15 @@ class DemoDataStore {
   private registrosServicio: RegistroServicio[] = [];
   private configuracionesServicio: ConfiguracionServicio[] = [];
   private egresos: EgresoEmpresa[] = [];
+  private liquidaciones: ComprobanteLiquidacion[] = [];
+  private egresosDescontados = new Set<number>();
   private nextIds = {
     persona: 4,
     servicio: 6,
     registro: 11,
     configuracion: 6,
     egreso: 2,
+    liquidacion: 2,
   };
 
   constructor() {
@@ -205,7 +219,38 @@ class DemoDataStore {
     this.registrosServicio = generarRegistrosIniciales();
     this.configuracionesServicio = JSON.parse(JSON.stringify(INITIAL_CONFIG_SERVICIOS));
     this.egresos = JSON.parse(JSON.stringify(INITIAL_EGRESOS));
-    this.nextIds = { persona: 4, servicio: 6, registro: 11, configuracion: 6, egreso: 2 };
+    this.nextIds = { persona: 4, servicio: 6, registro: 11, configuracion: 6, egreso: 2, liquidacion: 2 };
+    this.egresosDescontados = new Set<number>();
+    this.liquidaciones = [this.crearLiquidacionAnteriorDemo()];
+  }
+
+  // Liquidación "antigua" (previa al registro de métodos de pago) para mostrar un comprobante reconstruido
+  private crearLiquidacionAnteriorDemo(): ComprobanteLiquidacion {
+    const persona = INITIAL_PERSONAS[0];
+    const hace10 = new Date();
+    hace10.setDate(hace10.getDate() - 10);
+    const hace17 = new Date(hace10);
+    hace17.setDate(hace17.getDate() - 7);
+    return {
+      idLiquidacion: 1,
+      empresa: { nombre: DEMO_USER.nombreEmpresa, nit: DEMO_NIT },
+      persona: { id: persona.id, nombreCompleto: `${persona.nombre} ${persona.apellido}`, cedula: persona.cedula ?? null },
+      fechaLiquidacion: hace10.toISOString(),
+      periodoDesde: hace17.toISOString(),
+      periodoHasta: hace10.toISOString(),
+      cantidadServicios: 3,
+      servicios: [
+        { nombre: 'Corte de cabello', cantidad: 2, valorFacturado: 50000, comision: 25000 },
+        { nombre: 'Barba', cantidad: 1, valorFacturado: 15000, comision: 7500 },
+      ],
+      totalFacturado: 65000,
+      totalComision: 32500,
+      deducciones: [],
+      totalDeducciones: 0,
+      netoPagado: 32500,
+      pagos: [],
+      esReconstruido: true,
+    };
   }
 
   // === PERSONAS ===
@@ -389,6 +434,11 @@ class DemoDataStore {
     return this.egresos;
   }
 
+  // Egresos de una persona que aún no se han descontado en una liquidación
+  getEgresosPendientesPorPersona(personaId: number): EgresoEmpresa[] {
+    return this.egresos.filter(e => e.personaId === personaId && !this.egresosDescontados.has(e.egresoId));
+  }
+
   createEgreso(data: Omit<EgresoEmpresa, 'egresoId'>): EgresoEmpresa {
     const newEgreso: EgresoEmpresa = {
       ...data,
@@ -507,20 +557,114 @@ class DemoDataStore {
     }).sort((a, b) => b.fecha.localeCompare(a.fecha));
   }
 
-  liquidarPersona(personaId: number): boolean {
-    this.registrosServicio
-      .filter(r => r.personaId === personaId && r.confirmado && !r.liquidado)
-      .forEach(r => { r.liquidado = true; });
-    return true;
+  // Calcula los datos de la liquidación pendiente de una persona
+  private calcularLiquidacion(personaId: number, egresosIds: number[]) {
+    const registros = this.registrosServicio
+      .filter(r => r.personaId === personaId && r.confirmado && !r.liquidado && !r.rechazado);
+    const serviciosMap = new Map<string, { nombre: string; cantidad: number; valorFacturado: number; comision: number }>();
+    let totalFacturado = 0;
+    let totalComision = 0;
+    registros.forEach(r => {
+      const servicio = this.servicios.find(s => s.id === r.servicioId);
+      const config = this.configuracionesServicio.find(c => c.servicioId === r.servicioId);
+      const precio = servicio?.precio || 0;
+      const porcentaje = config?.porcentajeTrabajador || 50;
+      const comision = (precio * porcentaje) / 100;
+      const nombre = r.nombreServicio || servicio?.nombre || 'Servicio';
+      totalFacturado += precio;
+      totalComision += comision;
+      const item = serviciosMap.get(nombre) ?? { nombre, cantidad: 0, valorFacturado: 0, comision: 0 };
+      item.cantidad += 1;
+      item.valorFacturado += precio;
+      item.comision += comision;
+      serviciosMap.set(nombre, item);
+    });
+    const deducciones = this.getEgresosPendientesPorPersona(personaId).filter(e => egresosIds.includes(e.egresoId));
+    const totalDeducciones = deducciones.reduce((acc, e) => acc + e.valorEgreso, 0);
+    const fechas = registros.map(r => r.fechaServicio).sort();
+    const persona = this.getPersonaById(personaId);
+    return {
+      registros,
+      persona,
+      nombrePersona: persona ? `${persona.nombre} ${persona.apellido}` : (registros[0]?.nombrePersona ?? 'Desconocido'),
+      fechaDesde: fechas[0] ?? null,
+      fechaHasta: fechas[fechas.length - 1] ?? null,
+      servicios: Array.from(serviciosMap.values()),
+      totalFacturado,
+      totalComision,
+      deducciones,
+      totalDeducciones,
+      netoAPagar: totalComision - totalDeducciones,
+    };
+  }
+
+  getResumenLiquidacion(personaId: number, egresosIds: number[] = []): ResumenLiquidacion {
+    const c = this.calcularLiquidacion(personaId, egresosIds);
+    return {
+      personaId,
+      nombrePersona: c.nombrePersona,
+      fechaDesde: c.fechaDesde,
+      fechaHasta: c.fechaHasta,
+      cantidadServicios: c.registros.length,
+      totalFacturado: c.totalFacturado,
+      totalComision: c.totalComision,
+      totalDeducciones: c.totalDeducciones,
+      netoAPagar: c.netoAPagar,
+    };
+  }
+
+  /**
+   * Liquida a la persona. Devuelve { idLiquidacion } (null si no había servicios)
+   * o { error } si los pagos no cuadran con el neto (el back real responde 400).
+   */
+  liquidarPersona(
+    personaId: number,
+    egresosIds: number[] = [],
+    pagos: PagoLiquidacion[] = []
+  ): { idLiquidacion: number | null; error?: string } {
+    const c = this.calcularLiquidacion(personaId, egresosIds);
+    if (c.registros.length === 0) return { idLiquidacion: null };
+    const pagosValidos = c.netoAPagar > 0 ? pagos.filter(p => p.valor > 0) : [];
+    if (pagosValidos.length > 0) {
+      const suma = pagosValidos.reduce((acc, p) => acc + p.valor, 0);
+      if (Math.abs(suma - c.netoAPagar) > 0.01) {
+        return { idLiquidacion: null, error: 'La suma de los pagos no coincide con el neto a pagar.' };
+      }
+    }
+    c.registros.forEach(r => { r.liquidado = true; });
+    c.deducciones.forEach(e => this.egresosDescontados.add(e.egresoId));
+    const comprobante: ComprobanteLiquidacion = {
+      idLiquidacion: this.nextIds.liquidacion++,
+      empresa: { nombre: DEMO_USER.nombreEmpresa, nit: DEMO_NIT },
+      persona: { id: personaId, nombreCompleto: c.nombrePersona, cedula: c.persona?.cedula ?? null },
+      fechaLiquidacion: new Date().toISOString(),
+      periodoDesde: c.fechaDesde,
+      periodoHasta: c.fechaHasta,
+      cantidadServicios: c.registros.length,
+      servicios: c.servicios,
+      totalFacturado: c.totalFacturado,
+      totalComision: c.totalComision,
+      deducciones: c.deducciones.map(e => ({
+        fecha: e.fechaRegistro ?? null,
+        motivo: e.motivo,
+        valor: e.valorEgreso,
+        formaPago: e.formaPago ?? null,
+      })),
+      totalDeducciones: c.totalDeducciones,
+      netoPagado: c.netoAPagar,
+      pagos: pagosValidos,
+      esReconstruido: false,
+    };
+    this.liquidaciones.push(comprobante);
+    return { idLiquidacion: comprobante.idLiquidacion };
+  }
+
+  getComprobante(idLiquidacion: number): ComprobanteLiquidacion | undefined {
+    return this.liquidaciones.find(l => l.idLiquidacion === idLiquidacion);
   }
 
   // === CONSOLIDADOS ===
-  getConsolidadoFormaPago(fechaInicio?: string, fechaFin?: string): { 
-    cantidadTransferencia: number; 
-    totalTransferencia: number; 
-    cantidadEfectivo: number; 
-    totalEfectivo: number;
-  } {
+  getConsolidadoFormaPago(fechaInicio?: string, fechaFin?: string): ConsolidadoFormaPago {
     const registros = this.registrosServicio.filter(r => {
       if (!r.confirmado) return false;
       if (fechaInicio && r.fechaServicio < fechaInicio) return false;
@@ -546,11 +690,30 @@ class DemoDataStore {
       }
     });
 
+    // Egresos pagados por la empresa según método (los registros antiguos sin método no suman)
+    const sumaEgresos = (fp: 'E' | 'T') => this.egresos
+      .filter(e => e.formaPago === fp)
+      .reduce((acc, e) => acc + e.valorEgreso, 0);
+    const sumaPagosLiquidaciones = (fp: 'E' | 'T') => this.liquidaciones
+      .flatMap(l => l.pagos)
+      .filter(p => p.formaPago === fp)
+      .reduce((acc, p) => acc + p.valor, 0);
+    const egresosPagadosEfectivo = sumaEgresos('E');
+    const egresosPagadosTransferencia = sumaEgresos('T');
+    const pagosLiquidacionesEfectivo = sumaPagosLiquidaciones('E');
+    const pagosLiquidacionesTransferencia = sumaPagosLiquidaciones('T');
+
     return {
       cantidadTransferencia,
       totalTransferencia,
       cantidadEfectivo,
       totalEfectivo,
+      egresosPagadosEfectivo,
+      egresosPagadosTransferencia,
+      pagosLiquidacionesEfectivo,
+      pagosLiquidacionesTransferencia,
+      netoEfectivo: totalEfectivo - egresosPagadosEfectivo - pagosLiquidacionesEfectivo,
+      netoTransferencia: totalTransferencia - egresosPagadosTransferencia - pagosLiquidacionesTransferencia,
     };
   }
 
@@ -577,36 +740,17 @@ class DemoDataStore {
   }
 
   // === HISTORIAL DE LIQUIDACIONES ===
-  getHistorialLiquidaciones(): any[] {
-    // Retornar liquidaciones ficticias basadas en registros liquidados
-    const liquidados = this.registrosServicio.filter(r => r.liquidado);
-    const personasLiquidadas = new Map<number, { nombrePersona: string; total: number; fecha: string }>();
-    
-    liquidados.forEach(r => {
-      const servicio = this.servicios.find(s => s.id === r.servicioId);
-      const config = this.configuracionesServicio.find(c => c.servicioId === r.servicioId);
-      const precio = servicio?.precio || 0;
-      const porcentaje = config?.porcentajeTrabajador || 50;
-      const ganancia = (precio * porcentaje) / 100;
-      
-      const existing = personasLiquidadas.get(r.personaId);
-      if (existing) {
-        existing.total += ganancia;
-      } else {
-        personasLiquidadas.set(r.personaId, {
-          nombrePersona: r.nombrePersona,
-          total: ganancia,
-          fecha: new Date().toISOString(),
-        });
-      }
-    });
-
-    return Array.from(personasLiquidadas.entries()).map(([personaId, data]) => ({
-      personaId,
-      nombrePersona: data.nombrePersona,
-      fechaLiquidacion: data.fecha,
-      totalPagado: data.total,
-    }));
+  getHistorialLiquidaciones(personaId?: number): HistorialLiquidacion[] {
+    return this.liquidaciones
+      .filter(l => !personaId || l.persona.id === personaId)
+      .map(l => ({
+        idLiquidacion: l.idLiquidacion,
+        personaId: l.persona.id,
+        nombrePersona: l.persona.nombreCompleto,
+        fechaLiquidacion: l.fechaLiquidacion,
+        totalPagado: l.netoPagado,
+      }))
+      .sort((a, b) => b.fechaLiquidacion.localeCompare(a.fechaLiquidacion));
   }
 
   // === HISTORIAL DE INGRESOS ===
@@ -636,7 +780,7 @@ class DemoDataStore {
   }
 
   // === CONSOLIDADO INGRESOS Y EGRESOS ===
-  getConsolidadoIngresosEgresos(): any {
+  getConsolidadoIngresosEgresos(): ConsolidadoIngresosEgresos & Record<string, unknown> {
     const ingresos = this.registrosServicio
       .filter(r => r.confirmado)
       .reduce((acc, r) => {
@@ -651,6 +795,8 @@ class DemoDataStore {
       totalEgresos: egresos,
       consolidado: ingresos - egresos,
       balance: ingresos - egresos, // Mantener ambos por compatibilidad
+      // Informativo: egresos descontados al trabajador en liquidaciones
+      deduccionesRecuperadas: this.liquidaciones.reduce((acc, l) => acc + l.totalDeducciones, 0),
       detalleIngresos: this.getConsolidadoIngresos(),
       detalleEgresos: this.egresos.map(e => ({
         fecha: e.fechaRegistro,

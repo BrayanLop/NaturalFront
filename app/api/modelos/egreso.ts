@@ -7,4 +7,6 @@ export interface EgresoEmpresa {
   motivo: string;
   fechaRegistro?: string;
   seDescuenta: boolean;
+  /** E = efectivo, T = transferencia; null en registros antiguos. */
+  formaPago?: 'E' | 'T' | null;
 }

@@ -3,7 +3,7 @@ import KeyboardAware from '@/components/KeyboardAware';
 import LoadingView from '@/components/LoadingView';
 import PrimaryButton from '@/components/PrimaryButton';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { commonStyles } from '@/constants/theme';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { toDateInputValue } from '@/utils/formatters';
 import { logger, showError, showSuccess } from '@/utils/logger';
@@ -33,6 +33,7 @@ export default function CrearEgreso() {
   const [valorEgreso, setValorEgreso] = useState('');
   const [motivo, setMotivo] = useState('');
   const [seDescuenta, setSeDescuenta] = useState(false);
+  const [formaPago, setFormaPago] = useState<'E' | 'T' | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingPersonas, setLoadingPersonas] = useState(true);
 
@@ -66,6 +67,11 @@ export default function CrearEgreso() {
       return;
     }
 
+    if (!formaPago) {
+      showError('Selecciona el método de pago del egreso', 'Campos obligatorios');
+      return;
+    }
+
     if (!esAdmin) {
       showError('No tienes permisos para realizar esta acción');
       return;
@@ -79,7 +85,8 @@ export default function CrearEgreso() {
         NombrePersona: personaSeleccionada ? `${personaSeleccionada.nombre} ${personaSeleccionada.apellido}` : '',
         ValorEgreso: parseFloat(valorEgreso),
         Motivo: motivo,
-        SeDescuenta: seDescuenta
+        SeDescuenta: seDescuenta,
+        FormaPago: formaPago,
       };
       
       await api.post('/EgresosEmpresa/RegistrarEgreso', payload);
@@ -240,6 +247,30 @@ export default function CrearEgreso() {
         />
       )}
 
+      <FormField label="Método de pago">
+        <View style={styles.formaPagoRow}>
+          <TouchableOpacity
+            style={[styles.option, formaPago === 'E' && styles.optionSelected]}
+            onPress={() => setFormaPago('E')}
+          >
+            <Text style={styles.optionIcon}>💵</Text>
+            <Text style={[styles.optionText, formaPago === 'E' && styles.optionTextSelected]}>
+              Efectivo
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.option, formaPago === 'T' && styles.optionSelected]}
+            onPress={() => setFormaPago('T')}
+          >
+            <Text style={styles.optionIcon}>💳</Text>
+            <Text style={[styles.optionText, formaPago === 'T' && styles.optionTextSelected]}>
+              Transferencia
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </FormField>
+
       <View style={styles.switchRow}>
          <Text style={commonStyles.label}>Aplica para descuento al pagar</Text>
          <Switch value={seDescuenta} onValueChange={setSeDescuenta} />
@@ -249,7 +280,7 @@ export default function CrearEgreso() {
         title="Registrar egreso"
         onPress={guardar}
         loading={loading}
-        variant="blue"
+        variant="primary"
       />
     </ScrollView>
     </KeyboardAware>
@@ -285,6 +316,38 @@ const styles = StyleSheet.create({
   personaOptionTextSelected: {
     color: '#0984e3',
     fontWeight: '600',
+  },
+  // Método de pago (mismo estilo que registroServicio/formaPago)
+  formaPagoRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  option: {
+    flex: 1,
+    backgroundColor: COLORS.cardBackground,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+  },
+  optionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+  },
+  optionIcon: {
+    fontSize: 24,
+  },
+  optionText: {
+    fontSize: FONT_SIZE.callout,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  optionTextSelected: {
+    color: COLORS.primary,
   },
   charCount: {
     fontSize: 12,

@@ -16,20 +16,31 @@ import {
   View,
 } from 'react-native';
 import { api } from '../../api/api';
+import { ConsolidadoFormaPago, ConsolidadoIngresosEgresos } from '../../api/modelos/contabilidad';
 
 type Periodo = 'hoy' | 'semana' | 'mes' | 'personalizado';
 
-interface ConsolidadoIE {
-  totalIngresos: number;
-  totalEgresos: number;
-  consolidado: number;
-}
+type ConsolidadoIE = ConsolidadoIngresosEgresos;
+type FormaPago = ConsolidadoFormaPago;
 
-interface FormaPago {
-  cantidadTransferencia: number;
-  totalTransferencia: number;
-  cantidadEfectivo: number;
-  totalEfectivo: number;
+// Fila del flujo de caja por método; se omite si el back (antiguo) no envía el campo
+function FilaFlujo({ label, valor, signo, destacado }: { label: string; valor?: number | null; signo?: '-'; destacado?: boolean }) {
+  if (valor === undefined || valor === null) return null;
+  return (
+    <View style={styles.flujoRow}>
+      <Text style={[styles.flujoLabel, destacado && styles.flujoLabelDestacado]}>{label}</Text>
+      <Text
+        style={[
+          styles.flujoValor,
+          signo === '-' && { color: COLORS.error },
+          destacado && { color: valor >= 0 ? COLORS.success : COLORS.error, fontWeight: FONT_WEIGHT.bold },
+        ]}
+      >
+        {signo === '-' ? '- ' : ''}
+        {formatCurrency(valor)}
+      </Text>
+    </View>
+  );
 }
 
 const PERIODOS: { key: Periodo; label: string }[] = [
@@ -150,6 +161,15 @@ export default function Finanzas() {
   const facturado = totalFP;
   // Utilidad neta de la empresa = Ingreso empresa (al liquidar) − Egresos.
   const utilidad = ie?.consolidado ?? 0;
+  // Campos nuevos del consolidado por forma de pago (un back antiguo no los envía)
+  const hayFlujoPorMetodo = [
+    fp?.egresosPagadosEfectivo,
+    fp?.egresosPagadosTransferencia,
+    fp?.pagosLiquidacionesEfectivo,
+    fp?.pagosLiquidacionesTransferencia,
+    fp?.netoEfectivo,
+    fp?.netoTransferencia,
+  ].some((v) => v !== undefined && v !== null);
 
   return (
     <View style={styles.container}>
@@ -258,6 +278,34 @@ export default function Finanzas() {
               </Text>
               <Text style={styles.utilidadHint}>Ingreso empresa − Egresos</Text>
             </View>
+
+            {/* Informativo: egresos descontados a los barberos en liquidaciones */}
+            {ie?.deduccionesRecuperadas !== undefined && ie?.deduccionesRecuperadas !== null && (
+              <View style={styles.card}>
+                <View style={styles.fpHeaderRow}>
+                  <Text style={styles.fpLabel}>Deducciones recuperadas</Text>
+                  <Text style={styles.fpAmount}>{formatCurrency(ie.deduccionesRecuperadas)}</Text>
+                </View>
+                <Text style={styles.kpiHint}>Egresos descontados en liquidaciones (informativo)</Text>
+              </View>
+            )}
+
+            {/* Flujo de caja por método (solo si el back envía los campos nuevos) */}
+            {hayFlujoPorMetodo && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Caja por método de pago</Text>
+                <Text style={styles.flujoTitulo}>💵 Efectivo</Text>
+                <FilaFlujo label="Ingresos" valor={fp?.totalEfectivo ?? 0} />
+                <FilaFlujo label="Egresos pagados" valor={fp?.egresosPagadosEfectivo} signo="-" />
+                <FilaFlujo label="Pagos de liquidaciones" valor={fp?.pagosLiquidacionesEfectivo} signo="-" />
+                <FilaFlujo label="Neto" valor={fp?.netoEfectivo} destacado />
+                <Text style={[styles.flujoTitulo, { marginTop: SPACING.md }]}>💳 Transferencia</Text>
+                <FilaFlujo label="Ingresos" valor={fp?.totalTransferencia ?? 0} />
+                <FilaFlujo label="Egresos pagados" valor={fp?.egresosPagadosTransferencia} signo="-" />
+                <FilaFlujo label="Pagos de liquidaciones" valor={fp?.pagosLiquidacionesTransferencia} signo="-" />
+                <FilaFlujo label="Neto" valor={fp?.netoTransferencia} destacado />
+              </View>
+            )}
 
             {/* Formas de pago */}
             <View style={styles.card}>
@@ -464,6 +512,11 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: SPACING.md },
   fpRow: { marginBottom: SPACING.md },
+  flujoTitulo: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: COLORS.text, marginBottom: SPACING.xs },
+  flujoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: SPACING.xxs },
+  flujoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  flujoLabelDestacado: { color: COLORS.text, fontWeight: FONT_WEIGHT.bold },
+  flujoValor: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
   fpHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xs },
   fpLabel: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: FONT_WEIGHT.medium },
   fpAmount: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.semibold },

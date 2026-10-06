@@ -134,7 +134,7 @@ export default function ResumenLiquidacionModal({
               )}
 
               <View style={styles.bloque}>
-                <Fila label="Cortes" valor={String(resumen.cantidadServicios)} />
+                <Fila label="Servicios" valor={String(resumen.cantidadServicios)} />
                 <Fila label="Total facturado" valor={formatCurrency(resumen.totalFacturado)} />
                 <Fila label="Comisión del barbero" valor={formatCurrency(resumen.totalComision)} />
                 <Fila

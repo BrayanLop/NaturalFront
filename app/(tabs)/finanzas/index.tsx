@@ -1,7 +1,7 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
-import { formatCurrency, toDateInputValue } from '@/utils/formatters';
+import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -23,25 +23,40 @@ type Periodo = 'hoy' | 'semana' | 'mes' | 'personalizado';
 type ConsolidadoIE = ConsolidadoIngresosEgresos;
 type FormaPago = ConsolidadoFormaPago;
 
-// Fila del flujo de caja por método; se omite si el back (antiguo) no envía el campo
+// Fila del movimiento de caja; se omite si el back (antiguo) no envía el campo
 function FilaFlujo({ label, valor, signo, destacado }: { label: string; valor?: number | null; signo?: '-'; destacado?: boolean }) {
   if (valor === undefined || valor === null) return null;
   return (
-    <View style={styles.flujoRow}>
+    <View style={[styles.flujoRow, destacado && styles.flujoRowDestacado]}>
       <Text style={[styles.flujoLabel, destacado && styles.flujoLabelDestacado]}>{label}</Text>
       <Text
         style={[
           styles.flujoValor,
           signo === '-' && { color: COLORS.error },
-          destacado && { color: valor >= 0 ? COLORS.success : COLORS.error, fontWeight: FONT_WEIGHT.bold },
+          destacado && { color: valor >= 0 ? COLORS.successDark : COLORS.error, fontWeight: FONT_WEIGHT.bold },
         ]}
       >
-        {signo === '-' ? '- ' : ''}
+        {signo === '-' && valor !== 0 ? '− ' : ''}
         {formatCurrency(valor)}
       </Text>
     </View>
   );
 }
+
+// Encabezado de sección con una línea de ayuda
+function Seccion({ icon, titulo, ayuda }: { icon: string; titulo: string; ayuda: string }) {
+  return (
+    <View style={styles.seccionHeader}>
+      <View style={styles.seccionTituloRow}>
+        <FontAwesome5 name={icon} size={14} color={COLORS.primary} />
+        <Text style={styles.seccionTitulo}>{titulo}</Text>
+      </View>
+      <Text style={styles.seccionAyuda}>{ayuda}</Text>
+    </View>
+  );
+}
+
+const definido = (v?: number | null): v is number => v !== undefined && v !== null;
 
 const PERIODOS: { key: Periodo; label: string }[] = [
   { key: 'hoy', label: 'Hoy' },
@@ -85,6 +100,8 @@ export default function Finanzas() {
   const [loading, setLoading] = useState(false);
   const [ie, setIe] = useState<ConsolidadoIE | null>(null);
   const [fp, setFp] = useState<FormaPago | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [rangoConsultado, setRangoConsultado] = useState<{ desde: string; hasta: string } | null>(null);
 
   const esAdmin = isAdmin(usuario?.rol);
 
@@ -94,6 +111,7 @@ export default function Finanzas() {
 
   const fetchData = useCallback(async (d: string, h: string) => {
     setLoading(true);
+    setError(null);
     try {
       const [resIe, resFp] = await Promise.all([
         api.get('/Contabilidad/ConsolidadoIngresosEgresos', {
@@ -103,10 +121,15 @@ export default function Finanzas() {
           params: { fechaDesde: d + 'T00:00:00', fechaHasta: h + 'T23:59:59' },
         }),
       ]);
-      setIe(resIe.data);
-      setFp(resFp.data);
+      setIe(resIe.data ?? null);
+      setFp(resFp.data ?? null);
+      setRangoConsultado({ desde: d, hasta: h });
     } catch (e) {
       logger.error('Error cargando finanzas:', e);
+      // No mostrar cifras de otro período como si fueran las actuales
+      setIe(null);
+      setFp(null);
+      setError('No se pudieron cargar las finanzas. Revisa tu conexión e intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -152,15 +175,13 @@ export default function Finanzas() {
     );
   }
 
-  // Cálculo de proporciones de forma de pago
-  const totalFP = (fp?.totalEfectivo ?? 0) + (fp?.totalTransferencia ?? 0);
-  const pctEfectivo = totalFP > 0 ? Math.round(((fp?.totalEfectivo ?? 0) / totalFP) * 100) : 0;
-  const pctTransfer = totalFP > 0 ? 100 - pctEfectivo : 0;
+  // Movimiento de caja (por fecha del servicio): lo cobrado a clientes por cada medio de pago
+  const cobradoEfectivo = fp?.totalEfectivo ?? 0;
+  const cobradoTransfer = fp?.totalTransferencia ?? 0;
+  const totalCobrado = cobradoEfectivo + cobradoTransfer;
+  const pctEfectivo = totalCobrado > 0 ? Math.round((cobradoEfectivo / totalCobrado) * 100) : 0;
+  const pctTransfer = totalCobrado > 0 ? 100 - pctEfectivo : 0;
 
-  // Facturado (en vivo): total cobrado en los servicios registrados del período.
-  const facturado = totalFP;
-  // Utilidad neta de la empresa = Ingreso empresa (al liquidar) − Egresos.
-  const utilidad = ie?.consolidado ?? 0;
   // Campos nuevos del consolidado por forma de pago (un back antiguo no los envía)
   const hayFlujoPorMetodo = [
     fp?.egresosPagadosEfectivo,
@@ -169,7 +190,43 @@ export default function Finanzas() {
     fp?.pagosLiquidacionesTransferencia,
     fp?.netoEfectivo,
     fp?.netoTransferencia,
-  ].some((v) => v !== undefined && v !== null);
+  ].some(definido);
+  const haySaldoTotal = definido(fp?.netoEfectivo) || definido(fp?.netoTransferencia);
+  const saldoTotalCaja = (fp?.netoEfectivo ?? 0) + (fp?.netoTransferencia ?? 0);
+  const haySalidas = [
+    fp?.egresosPagadosEfectivo,
+    fp?.egresosPagadosTransferencia,
+    fp?.pagosLiquidacionesEfectivo,
+    fp?.pagosLiquidacionesTransferencia,
+  ].some((v) => definido(v) && v !== 0);
+  const sinMovimientoCaja = totalCobrado === 0 && !haySalidas;
+
+  // Rentabilidad (por fecha de liquidación): solo la parte de la empresa
+  const utilidad = ie?.consolidado ?? 0;
+  const rangoTexto = rangoConsultado
+    ? rangoConsultado.desde === rangoConsultado.hasta
+      ? formatDate(rangoConsultado.desde)
+      : `${formatDate(rangoConsultado.desde)} – ${formatDate(rangoConsultado.hasta)}`
+    : null;
+
+  const metodos = [
+    {
+      key: 'E',
+      titulo: '💵 Efectivo',
+      entro: cobradoEfectivo,
+      gastos: fp?.egresosPagadosEfectivo,
+      personal: fp?.pagosLiquidacionesEfectivo,
+      saldo: fp?.netoEfectivo,
+    },
+    {
+      key: 'T',
+      titulo: '💳 Transferencia',
+      entro: cobradoTransfer,
+      gastos: fp?.egresosPagadosTransferencia,
+      personal: fp?.pagosLiquidacionesTransferencia,
+      saldo: fp?.netoTransferencia,
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -223,6 +280,8 @@ export default function Finanzas() {
           </View>
         )}
 
+        {rangoTexto && !loading && !error && <Text style={styles.rangoTexto}>Período: {rangoTexto}</Text>}
+
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={COLORS.primary} />
@@ -230,116 +289,144 @@ export default function Finanzas() {
           </View>
         ) : (
           <>
-            {/* Facturado (en vivo) — total cobrado en servicios registrados */}
-            <View style={styles.facturadoCard}>
-              <View style={styles.facturadoHeader}>
-                <FontAwesome5 name="cash-register" size={14} color={COLORS.primary} />
-                <Text style={styles.facturadoLabel}>Facturado</Text>
+            {error ? (
+              <View style={styles.errorBox}>
+                <FontAwesome5 name="exclamation-triangle" size={16} color={COLORS.error} />
+                <Text style={styles.errorText}>{error}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.reintentarBtn, pressed && styles.buscarBtnPressed]}
+                  onPress={() => fetchData(rangoRef.current.desde, rangoRef.current.hasta)}
+                >
+                  <Text style={styles.buscarBtnText}>Reintentar</Text>
+                </Pressable>
               </View>
-              <Text style={styles.facturadoValue} numberOfLines={1} adjustsFontSizeToFit>
-                {formatCurrency(facturado)}
-              </Text>
-              <Text style={styles.facturadoHint}>Total cobrado en los servicios registrados del período</Text>
-            </View>
-
-            {/* KPIs */}
-            <View style={styles.kpiRow}>
-              <View style={[styles.kpiCard, { borderLeftColor: COLORS.success }]}>
-                <View style={[styles.kpiIcon, { backgroundColor: COLORS.successLight }]}>
-                  <FontAwesome5 name="arrow-up" size={14} color={COLORS.success} />
-                </View>
-                <Text style={styles.kpiLabel}>Ingreso empresa</Text>
-                <Text style={[styles.kpiValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatCurrency(ie?.totalIngresos ?? 0)}
-                </Text>
-                <Text style={styles.kpiHint}>Se genera al liquidar</Text>
-              </View>
-
-              <View style={[styles.kpiCard, { borderLeftColor: COLORS.error }]}>
-                <View style={[styles.kpiIcon, { backgroundColor: COLORS.errorLight }]}>
-                  <FontAwesome5 name="arrow-down" size={14} color={COLORS.error} />
-                </View>
-                <Text style={styles.kpiLabel}>Egresos</Text>
-                <Text style={[styles.kpiValue, { color: COLORS.error }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatCurrency(ie?.totalEgresos ?? 0)}
-                </Text>
-                <Text style={styles.kpiHint}>Gastos del período</Text>
-              </View>
-            </View>
-
-            {/* Utilidad destacada */}
-            <View style={styles.utilidadCard}>
-              <View style={styles.utilidadHeader}>
-                <FontAwesome5 name="wallet" size={16} color={COLORS.white} />
-                <Text style={styles.utilidadLabel}>Utilidad neta</Text>
-              </View>
-              <Text style={styles.utilidadValue} numberOfLines={1} adjustsFontSizeToFit>
-                {formatCurrency(utilidad)}
-              </Text>
-              <Text style={styles.utilidadHint}>Ingreso empresa − Egresos</Text>
-            </View>
-
-            {/* Informativo: egresos descontados a los barberos en liquidaciones */}
-            {ie?.deduccionesRecuperadas !== undefined && ie?.deduccionesRecuperadas !== null && (
-              <View style={styles.card}>
-                <View style={styles.fpHeaderRow}>
-                  <Text style={styles.fpLabel}>Deducciones recuperadas</Text>
-                  <Text style={styles.fpAmount}>{formatCurrency(ie.deduccionesRecuperadas)}</Text>
-                </View>
-                <Text style={styles.kpiHint}>Egresos descontados en liquidaciones (informativo)</Text>
-              </View>
-            )}
-
-            {/* Flujo de caja por método (solo si el back envía los campos nuevos) */}
-            {hayFlujoPorMetodo && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Caja por método de pago</Text>
-                <Text style={styles.flujoTitulo}>💵 Efectivo</Text>
-                <FilaFlujo label="Ingresos" valor={fp?.totalEfectivo ?? 0} />
-                <FilaFlujo label="Egresos pagados" valor={fp?.egresosPagadosEfectivo} signo="-" />
-                <FilaFlujo label="Pagos de liquidaciones" valor={fp?.pagosLiquidacionesEfectivo} signo="-" />
-                <FilaFlujo label="Neto" valor={fp?.netoEfectivo} destacado />
-                <Text style={[styles.flujoTitulo, { marginTop: SPACING.md }]}>💳 Transferencia</Text>
-                <FilaFlujo label="Ingresos" valor={fp?.totalTransferencia ?? 0} />
-                <FilaFlujo label="Egresos pagados" valor={fp?.egresosPagadosTransferencia} signo="-" />
-                <FilaFlujo label="Pagos de liquidaciones" valor={fp?.pagosLiquidacionesTransferencia} signo="-" />
-                <FilaFlujo label="Neto" valor={fp?.netoTransferencia} destacado />
-              </View>
-            )}
-
-            {/* Formas de pago */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Formas de pago</Text>
-              {totalFP === 0 ? (
-                <Text style={styles.emptyText}>Sin movimientos en este período</Text>
-              ) : (
-                <>
-                  <View style={styles.fpRow}>
-                    <View style={styles.fpHeaderRow}>
-                      <Text style={styles.fpLabel}>💵 Efectivo</Text>
-                      <Text style={styles.fpAmount}>
-                        {formatCurrency(fp?.totalEfectivo ?? 0)} · {pctEfectivo}%
-                      </Text>
+            ) : (
+              <>
+                {/* Rentabilidad del negocio */}
+                <Seccion
+                  icon="chart-line"
+                  titulo="Rentabilidad del negocio"
+                  ayuda="Lo que gana la empresa: solo su parte de cada servicio, registrada al liquidar al personal (por fecha de liquidación)."
+                />
+                <View style={styles.kpiRow}>
+                  <View style={[styles.kpiCard, { borderLeftColor: COLORS.success }]}>
+                    <View style={[styles.kpiIcon, { backgroundColor: COLORS.successLight }]}>
+                      <FontAwesome5 name="arrow-up" size={14} color={COLORS.success} />
                     </View>
-                    <View style={styles.barTrack}>
-                      <View style={[styles.barFill, { width: `${pctEfectivo}%`, backgroundColor: COLORS.success }]} />
-                    </View>
+                    <Text style={styles.kpiLabel}>Ingresos de la empresa</Text>
+                    <Text style={[styles.kpiValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit>
+                      {formatCurrency(ie?.totalIngresos ?? 0)}
+                    </Text>
+                    <Text style={styles.kpiHint}>Parte de la empresa en las liquidaciones</Text>
                   </View>
 
-                  <View style={styles.fpRow}>
-                    <View style={styles.fpHeaderRow}>
-                      <Text style={styles.fpLabel}>💳 Transferencia</Text>
-                      <Text style={styles.fpAmount}>
-                        {formatCurrency(fp?.totalTransferencia ?? 0)} · {pctTransfer}%
+                  <View style={[styles.kpiCard, { borderLeftColor: COLORS.error }]}>
+                    <View style={[styles.kpiIcon, { backgroundColor: COLORS.errorLight }]}>
+                      <FontAwesome5 name="arrow-down" size={14} color={COLORS.error} />
+                    </View>
+                    <Text style={styles.kpiLabel}>Gastos del negocio</Text>
+                    <Text style={[styles.kpiValue, { color: COLORS.error }]} numberOfLines={1} adjustsFontSizeToFit>
+                      {formatCurrency(ie?.totalEgresos ?? 0)}
+                    </Text>
+                    <Text style={styles.kpiHint}>Sin adelantos descontados al personal</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.utilidadCard, utilidad < 0 && { backgroundColor: COLORS.error }]}>
+                  <View style={styles.utilidadHeader}>
+                    <FontAwesome5 name="wallet" size={16} color={COLORS.white} />
+                    <Text style={styles.utilidadLabel}>Utilidad neta</Text>
+                  </View>
+                  <Text style={styles.utilidadValue} numberOfLines={1} adjustsFontSizeToFit>
+                    {formatCurrency(utilidad)}
+                  </Text>
+                  <Text style={styles.utilidadHint}>Ingresos de la empresa − Gastos del negocio</Text>
+                </View>
+
+                {definido(ie?.deduccionesRecuperadas) && (
+                  <View style={styles.infoRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fpLabel}>Deducciones recuperadas</Text>
+                      <Text style={styles.kpiHint}>
+                        Adelantos y gastos descontados al personal al liquidar. Informativo: no suma a la utilidad.
                       </Text>
                     </View>
-                    <View style={styles.barTrack}>
-                      <View style={[styles.barFill, { width: `${pctTransfer}%`, backgroundColor: COLORS.info }]} />
-                    </View>
+                    <Text style={styles.fpAmount}>{formatCurrency(ie?.deduccionesRecuperadas ?? 0)}</Text>
                   </View>
-                </>
-              )}
-            </View>
+                )}
+
+                {/* Movimiento de caja */}
+                <Seccion
+                  icon="cash-register"
+                  titulo="Movimiento de caja"
+                  ayuda="Dinero que entró y salió por cada medio de pago (por fecha del servicio o del gasto). Incluye la parte del personal, por eso no es igual a la utilidad."
+                />
+
+                {sinMovimientoCaja ? (
+                  <View style={styles.card}>
+                    <Text style={styles.emptyText}>Sin movimientos de caja en este período</Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Cobrado a clientes y distribución por medio de pago */}
+                    <View style={styles.card}>
+                      <View style={styles.fpHeaderRow}>
+                        <Text style={styles.fpLabel}>Cobrado a clientes por servicios</Text>
+                        <Text style={styles.cobradoValor}>{formatCurrency(totalCobrado)}</Text>
+                      </View>
+                      {totalCobrado > 0 && (
+                        <>
+                          <View style={[styles.barTrack, styles.barStack]}>
+                            <View style={{ width: `${pctEfectivo}%`, backgroundColor: COLORS.success }} />
+                            <View style={{ width: `${pctTransfer}%`, backgroundColor: COLORS.info }} />
+                          </View>
+                          <View style={styles.leyendaRow}>
+                            <Text style={styles.leyenda}>
+                              <Text style={{ color: COLORS.success }}>●</Text> Efectivo {formatCurrency(cobradoEfectivo)} · {pctEfectivo}%
+                            </Text>
+                            <Text style={styles.leyenda}>
+                              <Text style={{ color: COLORS.info }}>●</Text> Transferencia {formatCurrency(cobradoTransfer)} · {pctTransfer}%
+                            </Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+
+                    {hayFlujoPorMetodo && (
+                      <>
+                        <View style={styles.metodosGrid}>
+                          {metodos.map((m) => (
+                            <View key={m.key} style={[styles.card, styles.metodoCard]}>
+                              <Text style={styles.flujoTitulo}>{m.titulo}</Text>
+                              <FilaFlujo label="Entró por servicios" valor={m.entro} />
+                              <FilaFlujo label="Salió en gastos y adelantos" valor={m.gastos} signo="-" />
+                              <FilaFlujo label="Salió en pagos al personal" valor={m.personal} signo="-" />
+                              <FilaFlujo label="Saldo" valor={m.saldo} destacado />
+                            </View>
+                          ))}
+                        </View>
+
+                        {haySaldoTotal && (
+                          <View style={styles.saldoTotalCard}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.saldoTotalLabel}>Saldo total de caja</Text>
+                              <Text style={styles.kpiHint}>Saldo en efectivo + saldo en transferencia</Text>
+                            </View>
+                            <Text
+                              style={[styles.saldoTotalValor, saldoTotalCaja < 0 && { color: COLORS.error }]}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                            >
+                              {formatCurrency(saldoTotalCaja)}
+                            </Text>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
             {/* Accesos a detalle */}
             <Text style={styles.sectionTitle}>Ver detalle</Text>
@@ -473,19 +560,6 @@ const styles = StyleSheet.create({
   kpiLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
   kpiValue: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
   kpiHint: { fontSize: 10, color: COLORS.textTertiary, marginTop: SPACING.xs },
-  facturadoCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-    ...SHADOWS.sm,
-  },
-  facturadoHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
-  facturadoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.semibold },
-  facturadoValue: { fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.bold, color: COLORS.primary },
-  facturadoHint: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: SPACING.xs },
   utilidadCard: {
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.lg,
@@ -510,11 +584,61 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: SPACING.md,
   },
+  rangoTexto: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.md, textAlign: 'center' },
+  errorBox: {
+    backgroundColor: COLORS.errorLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  errorText: { fontSize: FONT_SIZE.sm, color: COLORS.errorDark, textAlign: 'center' },
+  reintentarBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
+  },
+  seccionHeader: { marginBottom: SPACING.md, marginTop: SPACING.xs },
+  seccionTituloRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  seccionTitulo: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  seccionAyuda: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: SPACING.xxs },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cobradoValor: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  barStack: { flexDirection: 'row', marginTop: SPACING.xs },
+  leyendaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: SPACING.xs, marginTop: SPACING.xs },
+  leyenda: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
+  metodosGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: SPACING.md },
+  metodoCard: { flexGrow: 1, flexBasis: '45%', minWidth: 240 },
+  saldoTotalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: COLORS.primarySurface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+  },
+  saldoTotalLabel: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  saldoTotalValor: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy, color: COLORS.successDark },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: SPACING.md },
-  fpRow: { marginBottom: SPACING.md },
   flujoTitulo: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: COLORS.text, marginBottom: SPACING.xs },
-  flujoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: SPACING.xxs },
-  flujoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  flujoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.sm, paddingVertical: SPACING.xxs },
+  flujoRowDestacado: { borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: SPACING.xs, paddingTop: SPACING.sm },
+  flujoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, flexShrink: 1 },
   flujoLabelDestacado: { color: COLORS.text, fontWeight: FONT_WEIGHT.bold },
   flujoValor: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
   fpHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xs },
@@ -526,7 +650,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
   },
-  barFill: { height: '100%', borderRadius: RADIUS.full },
   sectionTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold,

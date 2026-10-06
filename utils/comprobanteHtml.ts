@@ -60,7 +60,8 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
   h1 { font-size: 20px; margin: 0 0 4px; }
   h2 { font-size: 15px; margin: 20px 0 8px; border-bottom: 1px solid #ced4da; padding-bottom: 4px; }
   .muted { color: #6c757d; }
-  .encabezado { display: flex; justify-content: space-between; gap: 16px; }
+  .encabezado { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #00b894; padding-bottom: 8px; margin-bottom: 8px; }
+  .datos td { border: none; padding: 3px 8px 3px 0; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 6px 8px; border-bottom: 1px solid #e9ecef; text-align: left; }
   th { background: #f1f3f5; font-weight: 600; }
@@ -75,8 +76,7 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
 <body>
   <div class="encabezado">
     <div>
-      <h1>${esc(c.empresa?.nombre)}</h1>
-      <div class="muted">NIT: ${esc(c.empresa?.nit || '—')}</div>
+      <h1>${esc(c.empresa?.nombre)} <span class="muted" style="font-size:13px;font-weight:400">· NIT ${esc(c.empresa?.nit || '—')}</span></h1>
     </div>
     <div style="text-align:right">
       <strong>Comprobante de liquidación</strong><br />
@@ -84,12 +84,9 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
     </div>
   </div>
 
-  <h2>Datos del barbero</h2>
-  <table>
-    <tr><td>Barbero</td><td>${esc(c.persona?.nombreCompleto)}</td></tr>
-    <tr><td>Cédula</td><td>${esc(c.persona?.cedula || '—')}</td></tr>
-    <tr><td>Fecha de liquidación</td><td>${esc(fecha(c.fechaLiquidacion))}</td></tr>
-    <tr><td>Periodo</td><td>${esc(fecha(c.periodoDesde))} – ${esc(fecha(c.periodoHasta))}</td></tr>
+  <table class="datos">
+    <tr><td class="muted">Barbero</td><td>${esc(c.persona?.nombreCompleto)}</td><td class="muted">Cédula</td><td>${esc(c.persona?.cedula || '—')}</td></tr>
+    <tr><td class="muted">Fecha de liquidación</td><td>${esc(fecha(c.fechaLiquidacion))}</td><td class="muted">Periodo</td><td>${esc(fecha(c.periodoDesde))} – ${esc(fecha(c.periodoHasta))}</td></tr>
   </table>
 
   <h2>Detalle por servicio</h2>
@@ -106,7 +103,7 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
 
   <div class="totales">
     <table>
-      <tr><td>Total cortes</td><td class="num">${esc(c.cantidadServicios)}</td></tr>
+      <tr><td>Total servicios</td><td class="num">${esc(c.cantidadServicios)}</td></tr>
       <tr><td>Total generado (facturado)</td><td class="num">${esc(formatCurrency(c.totalFacturado))}</td></tr>
       <tr><td>Comisión del barbero</td><td class="num">${esc(formatCurrency(c.totalComision))}</td></tr>
       <tr><td>Total deducciones</td><td class="num">- ${esc(formatCurrency(c.totalDeducciones))}</td></tr>

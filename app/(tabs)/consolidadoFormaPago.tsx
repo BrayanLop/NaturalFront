@@ -148,18 +148,18 @@ export default function ConsolidadoFormaPagoScreen() {
               </View>
               <Text style={styles.resultadoTitulo}>Transferencia</Text>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Cantidad</Text>
+                <Text style={styles.resultLabel}>Servicios cobrados</Text>
                 <Text style={styles.resultValue}>{data?.cantidadTransferencia ?? 0}</Text>
               </View>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Ingresos</Text>
+                <Text style={styles.resultLabel}>Entró por servicios</Text>
                 <Text style={[styles.resultValue, styles.resultHighlight]}>
-                  ${data?.totalTransferencia?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
+                  {formatCurrency(data?.totalTransferencia ?? 0)}
                 </Text>
               </View>
-              <FilaOpcional label="Egresos pagados" valor={data?.egresosPagadosTransferencia} negativo />
-              <FilaOpcional label="Pagos de liquidaciones" valor={data?.pagosLiquidacionesTransferencia} negativo />
-              <FilaOpcional label="Neto transferencia" valor={data?.netoTransferencia} destacado />
+              <FilaOpcional label="Salió en gastos y adelantos" valor={data?.egresosPagadosTransferencia} negativo />
+              <FilaOpcional label="Salió en pagos al personal" valor={data?.pagosLiquidacionesTransferencia} negativo />
+              <FilaOpcional label="Saldo de caja (transferencia)" valor={data?.netoTransferencia} destacado />
             </View>
 
             <View style={styles.resultCard}>
@@ -168,18 +168,18 @@ export default function ConsolidadoFormaPagoScreen() {
               </View>
               <Text style={styles.resultadoTitulo}>Efectivo</Text>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Cantidad</Text>
+                <Text style={styles.resultLabel}>Servicios cobrados</Text>
                 <Text style={styles.resultValue}>{data?.cantidadEfectivo ?? 0}</Text>
               </View>
               <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Ingresos</Text>
+                <Text style={styles.resultLabel}>Entró por servicios</Text>
                 <Text style={[styles.resultValue, { color: COLORS.success }]}>
-                  ${data?.totalEfectivo?.toLocaleString('es-CO', { minimumFractionDigits: 2 }) ?? '0.00'}
+                  {formatCurrency(data?.totalEfectivo ?? 0)}
                 </Text>
               </View>
-              <FilaOpcional label="Egresos pagados" valor={data?.egresosPagadosEfectivo} negativo />
-              <FilaOpcional label="Pagos de liquidaciones" valor={data?.pagosLiquidacionesEfectivo} negativo />
-              <FilaOpcional label="Neto efectivo" valor={data?.netoEfectivo} destacado />
+              <FilaOpcional label="Salió en gastos y adelantos" valor={data?.egresosPagadosEfectivo} negativo />
+              <FilaOpcional label="Salió en pagos al personal" valor={data?.pagosLiquidacionesEfectivo} negativo />
+              <FilaOpcional label="Saldo de caja (efectivo)" valor={data?.netoEfectivo} destacado />
             </View>
           </View>
         )}

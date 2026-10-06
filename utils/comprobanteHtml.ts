@@ -13,6 +13,20 @@ function esc(valor: unknown): string {
 
 const fecha = (valor?: string | null) => (valor ? formatDate(valor) : '—');
 
+/**
+ * Nombre del archivo del comprobante: Liquidacion_<Nombre_Persona>_<AAAA-MM-DD>.
+ * Sin tildes ni caracteres especiales para que sea válido en cualquier sistema.
+ */
+export function nombreArchivoComprobante(c: ComprobanteLiquidacion): string {
+  const persona = (c.persona?.nombreCompleto ?? 'Persona')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const fechaLiquidacion = (c.fechaLiquidacion ?? '').slice(0, 10) || 'sin-fecha';
+  return `Liquidacion_${persona || 'Persona'}_${fechaLiquidacion}`;
+}
+
 /** Genera el HTML imprimible (PDF) del comprobante de liquidación. */
 export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
   const filasServicios = c.servicios.length
@@ -54,7 +68,7 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Comprobante de liquidación #${esc(c.idLiquidacion)}</title>
+<title>${esc(nombreArchivoComprobante(c))}</title>
 <style>
   body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #212529; margin: 24px; font-size: 13px; }
   h1 { font-size: 20px; margin: 0 0 4px; }

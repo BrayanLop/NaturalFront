@@ -4,10 +4,11 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { useRole } from '@/hooks/useRole';
-import { generarHtmlComprobante } from '@/utils/comprobanteHtml';
+import { generarHtmlComprobante, nombreArchivoComprobante } from '@/utils/comprobanteHtml';
 import { formatCurrency, formatDate, formatFormaPago } from '@/utils/formatters';
 import { logger, showError } from '@/utils/logger';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -63,7 +64,22 @@ export default function ComprobanteScreen() {
     if (!comprobante) return;
     setAbriendo(true);
     try {
-      await Print.printAsync({ html: generarHtmlComprobante(comprobante) });
+      const html = generarHtmlComprobante(comprobante);
+      if (Platform.OS === 'web') {
+        // En web expo-print imprime la página actual; se abre el comprobante en otra pestaña.
+        // El <title> del HTML es el nombre sugerido al "Guardar como PDF".
+        const ventana = window.open('', '_blank');
+        if (!ventana) {
+          showError('El navegador bloqueó la ventana del comprobante. Permite las ventanas emergentes e inténtalo de nuevo.');
+          return;
+        }
+        ventana.document.write(html);
+        ventana.document.close();
+        ventana.focus();
+        ventana.print();
+      } else {
+        await Print.printAsync({ html });
+      }
     } catch (e) {
       logger.error('Error abriendo la vista previa del comprobante:', e);
       showError('No se pudo abrir la vista previa del comprobante.');
@@ -77,12 +93,19 @@ export default function ComprobanteScreen() {
     if (!comprobante) return;
     setCompartiendo(true);
     try {
-      const { uri } = await Print.printToFileAsync({ html: generarHtmlComprobante(comprobante) });
+      const { uri: uriTemporal } = await Print.printToFileAsync({ html: generarHtmlComprobante(comprobante) });
+
+      // expo-print genera un nombre aleatorio: se renombra a Liquidacion_<Persona>_<fecha>.pdf
+      const nombreArchivo = nombreArchivoComprobante(comprobante);
+      const uri = `${FileSystem.cacheDirectory}${nombreArchivo}.pdf`;
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+      await FileSystem.moveAsync({ from: uriTemporal, to: uri });
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
           UTI: 'com.adobe.pdf',
-          dialogTitle: `Comprobante de liquidación #${comprobante.idLiquidacion}`,
+          dialogTitle: nombreArchivo,
         });
       } else {
         showError('Compartir no está disponible en este dispositivo. Usa "Ver / imprimir" para guardarlo como PDF.');

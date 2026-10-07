@@ -6,7 +6,7 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { getDemoMode, handleDemoRequest } from './demoApi';
 
 export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://naturalback.vip/v2/api';
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://naturalback.vip/api';
 
 // Error personalizado para modo demo
 class DemoModeError extends Error {

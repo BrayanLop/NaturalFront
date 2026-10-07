@@ -46,18 +46,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (datos: Usuario) => {
-    setUsuario(datos);
-    setIsDemo(false);
+    // Primero se persiste la sesión (incluido el token) y solo después se actualiza el estado:
+    // setUsuario muestra las pantallas, que piden datos de inmediato y necesitan el token ya guardado.
     await saveDemoMode(false);
-    await AsyncStorage.setItem('usuario', JSON.stringify(datos));
-    await AsyncStorage.setItem('empresaId', String(datos.empresaId));
-    await AsyncStorage.setItem('rol', String(datos.rol));
-    await AsyncStorage.setItem('personaId', String(datos.id));
-    
-    // Guardar token JWT si existe
+    const claves: [string, string][] = [
+      ['usuario', JSON.stringify(datos)],
+      ['empresaId', String(datos.empresaId)],
+      ['rol', String(datos.rol)],
+      ['personaId', String(datos.id)],
+    ];
     if (datos.token) {
-      await AsyncStorage.setItem('token', datos.token);
+      claves.push(['token', datos.token]);
     }
+    await AsyncStorage.multiSet(claves);
+
+    setIsDemo(false);
+    setUsuario(datos);
   };
 
   const loginDemo = async () => {

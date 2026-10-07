@@ -97,8 +97,11 @@ api.interceptors.response.use(
     // Manejo específico de errores
     if (status === 401) {
       // Token vencido o inválido: se cierra la sesión. En el login un 401 es "credenciales incorrectas".
+      // Solo se cierra la sesión si se envió un token y el back lo rechazó: una petición que salió
+      // sin token (p. ej. justo al iniciar sesión) no significa que la sesión haya vencido.
       const esLogin = String(url ?? '').includes('Login/Autenticar');
-      if (!esLogin) {
+      const enviabaToken = Boolean(error.config?.headers?.Authorization);
+      if (!esLogin && enviabaToken) {
         logger.warn('No autorizado - Sesión expirada');
         await notificarSesionExpirada();
       }

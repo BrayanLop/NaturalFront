@@ -1,9 +1,20 @@
-import { logger } from '@/utils/logger';
+import { logger, showError } from '@/utils/logger';
 import { notificarSesionExpirada } from '@/utils/sessionEvents';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { CITAS_API_URL, CITAS_KEYS, citasConfigurado, MENSAJE_CITAS_NO_CONFIGURADO } from './citasConfig';
 import { getDemoMode } from './demoApi';
+import type {
+  BloqueoAgenda,
+  Cita,
+  CrearBloqueoRequest,
+  CrearCitaRequest,
+  DiasDisponibles,
+  DisponibilidadDia,
+  FranjaHorario,
+  HorarioEmpleado,
+  ReprogramarCitaRequest,
+} from './modelos/citas';
 
 /**
  * Clientes HTTP del backend de Citas (separados del cliente de Natural de `api.ts`).
@@ -153,7 +164,94 @@ export function mensajeErrorCitas(error: any, porDefecto = 'Ocurrió un error in
   if (status === 401) return detalle || 'Tu sesión expiró. Inicia sesión nuevamente.';
   if (status === 403) return detalle || 'No tienes permiso para esta acción o la agenda de la empresa no está activada.';
   if (status === 404) return detalle || 'No se encontró el recurso solicitado.';
+  if (status === 409) return detalle || 'El horario elegido ya no está disponible.';
   if (status === 502) return 'Natural no respondió. Intenta más tarde.';
   if (status >= 500) return 'Error del servicio de citas. Intenta más tarde.';
   return detalle || porDefecto;
+}
+
+/** 409 del backend: turno tomado, fuera de horario, cruce con cita/bloqueo o carrera. */
+export function esConflictoCitas(error: any): boolean {
+  return error?.response?.status === 409;
+}
+
+// ---- Endpoints de agenda (Fase 4). Todas las fechas/horas en hora local del negocio ----
+
+/** Horario semanal de un empleado (personal o cliente). */
+export async function obtenerHorarioEmpleado(api: AxiosInstance, usuarioId: number): Promise<HorarioEmpleado> {
+  const { data } = await api.get<HorarioEmpleado>(`/AgendaEmpleado/${usuarioId}`);
+  return { ...data, franjas: data?.franjas ?? [] };
+}
+
+/** Reemplaza el horario completo (solo personal; `[]` = no trabaja). */
+export async function guardarHorarioEmpleado(usuarioId: number, franjas: FranjaHorario[]): Promise<HorarioEmpleado> {
+  const { data } = await citasPersonalApi.put<HorarioEmpleado>(`/AgendaEmpleado/${usuarioId}`, { franjas });
+  return { ...data, franjas: data?.franjas ?? [] };
+}
+
+/** Bloqueos de un empleado entre dos fechas "YYYY-MM-DD" (solo personal). */
+export async function listarBloqueos(usuarioId: number, desde: string, hasta: string): Promise<BloqueoAgenda[]> {
+  const { data } = await citasPersonalApi.get<BloqueoAgenda[]>(`/AgendaEmpleado/${usuarioId}/bloqueos`, {
+    params: { desde, hasta },
+  });
+  return data ?? [];
+}
+
+/** Crea un bloqueo (solo personal). 409 si se cruza con citas activas. */
+export async function crearBloqueo(usuarioId: number, bloqueo: CrearBloqueoRequest): Promise<BloqueoAgenda> {
+  const { data } = await citasPersonalApi.post<BloqueoAgenda>(`/AgendaEmpleado/${usuarioId}/bloqueos`, bloqueo);
+  return data;
+}
+
+export async function eliminarBloqueo(usuarioId: number, idBloqueo: number): Promise<void> {
+  await citasPersonalApi.delete(`/AgendaEmpleado/${usuarioId}/bloqueos/${idBloqueo}`);
+}
+
+/** Horas libres de un día para un empleado y unos servicios (personal o cliente). */
+export async function obtenerDisponibilidad(
+  api: AxiosInstance,
+  empleadoId: number,
+  fecha: string,
+  idServicios: number[]
+): Promise<DisponibilidadDia> {
+  const { data } = await api.get<DisponibilidadDia>('/Disponibilidad', {
+    params: { empleadoId, fecha, idServicios: idServicios.join(',') },
+  });
+  return { ...data, horas: data?.horas ?? [] };
+}
+
+/** Días con turnos libres entre `desde` y `hasta` (máx. 62 días; personal o cliente). */
+export async function obtenerDiasDisponibles(
+  api: AxiosInstance,
+  empleadoId: number,
+  desde: string,
+  hasta: string,
+  idServicios: number[]
+): Promise<DiasDisponibles> {
+  const { data } = await api.get<DiasDisponibles>('/Disponibilidad/dias', {
+    params: { empleadoId, desde, hasta, idServicios: idServicios.join(',') },
+  });
+  return { ...data, dias: data?.dias ?? [] };
+}
+
+/** Crea una cita (cliente para sí mismo o personal 01/03). */
+export async function crearCita(api: AxiosInstance, cita: CrearCitaRequest): Promise<Cita> {
+  const { data } = await api.post<Cita>('/Citas', cita);
+  return data;
+}
+
+/** Reprograma una cita (01/03 cualquier cita activa; cliente sus citas Pendiente). */
+export async function reprogramarCita(api: AxiosInstance, idCita: number, cambios: ReprogramarCitaRequest): Promise<Cita> {
+  const { data } = await api.put<Cita>(`/Citas/${idCita}`, cambios);
+  return data;
+}
+
+/**
+ * Muestra el error de crear/reprogramar una cita (con el `detail` del backend) y devuelve
+ * 'conflicto' si fue un 409, para que el formulario recargue las horas libres.
+ */
+export function mostrarErrorEnvioCita(error: any, porDefecto: string): 'conflicto' | 'error' {
+  const conflicto = esConflictoCitas(error);
+  showError(mensajeErrorCitas(error, porDefecto), conflicto ? 'Turno no disponible' : 'Error');
+  return conflicto ? 'conflicto' : 'error';
 }

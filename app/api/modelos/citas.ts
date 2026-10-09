@@ -109,11 +109,16 @@ export interface Cita {
   idCliente: number;
   idEmpleado: number;
   estado: string;
-  /** DateTime ISO; solo importa la parte de la fecha. */
+  /** "YYYY-MM-DDT00:00:00" en hora local del negocio; solo importa la parte de la fecha. */
   fechaCita: string;
-  /** TimeSpan "HH:mm:ss". */
+  /** "HH:mm:ss" local del negocio. */
   horaEstimadaCita: string;
+  /** "HH:mm:ss" local del negocio. */
   horaEstimadaFin?: string | null;
+  /** Instante de inicio con el offset del negocio ("2026-10-20T09:00:00-05:00"). */
+  inicio?: string | null;
+  /** Instante de fin con el offset del negocio. */
+  fin?: string | null;
   observaciones?: string | null;
   nombreCliente?: string | null;
   nombreEmpleado?: string | null;
@@ -127,12 +132,79 @@ export interface CrearCitaRequest {
   /** El cliente lo puede enviar en 0: el backend usa su propio usuario. */
   idCliente: number;
   idEmpleado: number;
-  /** "YYYY-MM-DDT00:00:00". */
+  /** "YYYY-MM-DD" (hora local del negocio). */
   fechaCita: string;
-  /** "HH:mm:ss". */
+  /** "HH:mm:ss" (hora local del negocio). */
   horaEstimadaCita: string;
   observaciones?: string | null;
+  /** Mínimo uno. */
   idServicios: number[];
+}
+
+/** Body de PUT /Citas/{id} (reprogramar): lo omitido se conserva. */
+export interface ReprogramarCitaRequest {
+  fechaCita?: string;
+  horaEstimadaCita?: string;
+  idEmpleado?: number;
+  idServicios?: number[];
+  observaciones?: string | null;
+}
+
+// ---- Horario semanal, bloqueos y disponibilidad (hora local del negocio) ----
+
+/** Franja de trabajo. `dia`: 0 = domingo ... 6 = sábado (como Date.getDay()). */
+export interface FranjaHorario {
+  dia: number;
+  /** "HH:mm:ss". */
+  horaInicio: string;
+  /** "HH:mm:ss". */
+  horaFin: string;
+}
+
+/** GET/PUT /AgendaEmpleado/{usuarioId}. */
+export interface HorarioEmpleado {
+  idEmpleado: number;
+  nombreEmpleado?: string | null;
+  zonaHoraria?: string | null;
+  franjas: FranjaHorario[];
+}
+
+/** Bloqueo de agenda. `inicio`/`fin` vienen con el offset del negocio. */
+export interface BloqueoAgenda {
+  idBloqueo: number;
+  idEmpleado: number;
+  inicio: string;
+  fin: string;
+  motivo?: string | null;
+}
+
+/** POST /AgendaEmpleado/{usuarioId}/bloqueos. Sin offset = hora local del negocio. */
+export interface CrearBloqueoRequest {
+  inicio: string;
+  fin: string;
+  motivo?: string | null;
+}
+
+/** GET /Disponibilidad. */
+export interface DisponibilidadDia {
+  idEmpleado: number;
+  fecha: string;
+  /** Minutos. */
+  duracionTotal: number;
+  intervaloMinutos: number;
+  zonaHoraria?: string | null;
+  /** Horas libres "HH:mm:ss". */
+  horas: string[];
+}
+
+/** GET /Disponibilidad/dias. */
+export interface DiasDisponibles {
+  idEmpleado: number;
+  desde?: string;
+  hasta?: string;
+  duracionTotal: number;
+  /** Días con al menos un turno libre ("YYYY-MM-DD"). */
+  dias: string[];
 }
 
 /** Estados válidos (Citas.Domain/Agendamiento/EstadoCita.cs). */

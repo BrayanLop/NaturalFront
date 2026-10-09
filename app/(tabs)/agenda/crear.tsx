@@ -1,6 +1,6 @@
-import { citasPersonalApi, mensajeErrorCitas } from '@/app/api/citasApi';
-import type { Cita, CrearCitaRequest, ServicioCitas } from '@/app/api/modelos/citas';
-import FormularioCita from '@/components/citas/FormularioCita';
+import { citasPersonalApi, crearCita, mensajeErrorCitas, mostrarErrorEnvioCita } from '@/app/api/citasApi';
+import type { CrearCitaRequest, ServicioCitas } from '@/app/api/modelos/citas';
+import FormularioCita, { type ResultadoEnvioCita } from '@/components/citas/FormularioCita';
 import EmptyState from '@/components/EmptyState';
 import LoadingView from '@/components/LoadingView';
 import { COLORS } from '@/constants/theme';
@@ -11,13 +11,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
-/** Crear cita (solo 01/03): cliente, quién atiende, servicios y fecha/hora. */
+/** Crear cita (solo 01/03): cliente, quién atiende, servicios y turno libre. */
 export default function CrearCitaPersonal() {
   const router = useRouter();
   const { isAdmin } = useRole();
   const agenda = useAgendaPersonal();
   const [servicios, setServicios] = useState<ServicioCitas[] | null>(null);
-  const [enviando, setEnviando] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,26 +36,24 @@ export default function CrearCitaPersonal() {
     return <EmptyState icon="⚠️" message="No se pudo cargar la información" subtitle={agenda.error} actionLabel="Reintentar" onAction={agenda.cargar} />;
   }
 
-  const crear = async (datos: CrearCitaRequest) => {
-    setEnviando(true);
+  const crear = async (datos: CrearCitaRequest): Promise<ResultadoEnvioCita> => {
     try {
-      const { data } = await citasPersonalApi.post<Cita>('/Citas', datos);
+      const cita = await crearCita(citasPersonalApi, datos);
       showSuccess('Cita creada.');
-      router.replace(`/agenda/${data.idCita}`);
+      router.replace(`/agenda/${cita.idCita}`);
+      return 'ok';
     } catch (e) {
-      showError(mensajeErrorCitas(e, 'No se pudo crear la cita.'));
-    } finally {
-      setEnviando(false);
+      return mostrarErrorEnvioCita(e, 'No se pudo crear la cita.');
     }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <FormularioCita
+        api={citasPersonalApi}
         servicios={servicios}
         empleados={agenda.empleados.filter((e) => e.activo)}
         clientes={agenda.clientes}
-        enviando={enviando}
         textoBoton="Crear cita"
         onSubmit={crear}
       />

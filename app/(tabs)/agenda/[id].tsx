@@ -77,6 +77,17 @@ export default function DetalleCitaPersonal() {
           ))}
         </View>
       )}
+      {isAdmin && (cita.estado === 'Pendiente' || cita.estado === 'Confirmada') && (
+        <View style={styles.reprogramar}>
+          <PrimaryButton
+            title="Reprogramar"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/agenda/reprogramar', params: { id: String(cita.idCita) } })}
+            disabled={guardando}
+            fullWidth
+          />
+        </View>
+      )}
       {!puedeCambiar && siguientes.length > 0 && (
         <Text style={styles.nota}>Solo quien atiende la cita o un administrador puede cambiar su estado.</Text>
       )}
@@ -95,4 +106,5 @@ const styles = StyleSheet.create({
   acciones: { gap: SPACING.md },
   nota: { fontSize: FONT_SIZE.subhead, color: COLORS.textSecondary, textAlign: 'center' },
   eliminar: { marginTop: SPACING.xxl },
+  reprogramar: { marginTop: SPACING.md },
 });

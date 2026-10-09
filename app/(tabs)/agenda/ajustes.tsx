@@ -5,12 +5,14 @@ import EmptyState from '@/components/EmptyState';
 import PrimaryButton from '@/components/PrimaryButton';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '@/constants/theme';
 import { useRole } from '@/hooks/useRole';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 /** Ajustes de la agenda (solo 01/03): activar/renombrar y sincronizar con Natural. */
 export default function AjustesAgenda() {
   const { isAdmin } = useRole();
+  const router = useRouter();
   const [sincronizando, setSincronizando] = useState(false);
   const [resumen, setResumen] = useState<ResumenSincronizacion | null>(null);
   const [errorSync, setErrorSync] = useState('');
@@ -48,6 +50,14 @@ export default function AjustesAgenda() {
           descripcion="Activa la agenda para que los clientes puedan encontrar tu empresa y agendar. Si ya está activa, puedes cambiar el nombre visible."
           textoBoton="Activar / actualizar agenda"
         />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.titulo}>Horarios del personal</Text>
+        <Text style={styles.texto}>
+          Define los días y horas en que atiende cada persona y bloquea los espacios en que no estará disponible.
+        </Text>
+        <PrimaryButton title="Horarios y bloqueos" variant="outline" onPress={() => router.push('/agenda/horarios')} fullWidth />
       </View>
 
       <View style={styles.card}>

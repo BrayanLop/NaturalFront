@@ -7,8 +7,7 @@ import LoadingView from '@/components/LoadingView';
 import PrimaryButton from '@/components/PrimaryButton';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING } from '@/constants/theme';
 import { useCitasAuth } from '@/context/citasAuthContext';
-import { fechaDeCita, ordenarCitas } from '@/utils/citas';
-import { toDateInputValue } from '@/utils/formatters';
+import { fechaDeCita, hoyNegocio, ordenarCitas } from '@/utils/citas';
 import { showConfirm, showError } from '@/utils/logger';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -48,7 +47,7 @@ export default function MisCitas() {
   );
 
   const visibles = useMemo(() => {
-    const hoy = toDateInputValue(new Date());
+    const hoy = hoyNegocio();
     const lista = (citas ?? []).filter(
       (c) => filtro === 'todas' || (fechaDeCita(c) >= hoy && c.estado !== 'Cancelada' && c.estado !== 'Atendida')
     );
@@ -108,6 +107,16 @@ export default function MisCitas() {
             <DetalleCitaView cita={c} mostrarCliente={false} />
             {(c.estado === 'Pendiente' || c.estado === 'Confirmada') && (
               <View style={styles.cancelar}>
+                {c.estado === 'Pendiente' && (
+                  <PrimaryButton
+                    title="Reprogramar"
+                    variant="ghost"
+                    size="small"
+                    fullWidth={false}
+                    onPress={() => router.push({ pathname: '/citas/reprogramar', params: { id: String(c.idCita) } })}
+                    disabled={cancelando !== null}
+                  />
+                )}
                 <PrimaryButton
                   title="Cancelar cita"
                   variant="outline"
@@ -131,5 +140,5 @@ const styles = StyleSheet.create({
   enlace: { fontSize: FONT_SIZE.subhead, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold, marginTop: SPACING.xs },
   acciones: { gap: SPACING.md, marginVertical: SPACING.xl },
   titulo: { fontSize: FONT_SIZE.title3, fontWeight: FONT_WEIGHT.bold, color: COLORS.text, marginBottom: SPACING.md },
-  cancelar: { marginTop: -SPACING.sm, marginBottom: SPACING.lg, alignItems: 'flex-end' },
+  cancelar: { marginTop: -SPACING.sm, marginBottom: SPACING.lg, flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.sm },
 });

@@ -1,19 +1,18 @@
-import { citasClienteApi, mensajeErrorCitas } from '@/app/api/citasApi';
+import { citasClienteApi, crearCita, mensajeErrorCitas, mostrarErrorEnvioCita } from '@/app/api/citasApi';
 import type { CrearCitaRequest, ServicioCitas, UsuarioCitas } from '@/app/api/modelos/citas';
-import FormularioCita from '@/components/citas/FormularioCita';
+import FormularioCita, { type ResultadoEnvioCita } from '@/components/citas/FormularioCita';
 import EmptyState from '@/components/EmptyState';
 import LoadingView from '@/components/LoadingView';
-import { showError, showSuccess } from '@/utils/logger';
+import { showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 
-/** El cliente agenda para sí mismo: servicios + quién atiende + fecha/hora. */
+/** El cliente agenda para sí mismo: servicios + quién atiende + turno libre. */
 export default function AgendarCliente() {
   const router = useRouter();
   const [servicios, setServicios] = useState<ServicioCitas[] | null>(null);
   const [empleados, setEmpleados] = useState<UsuarioCitas[]>([]);
   const [error, setError] = useState('');
-  const [enviando, setEnviando] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -35,22 +34,20 @@ export default function AgendarCliente() {
     cargar();
   }, [cargar]);
 
-  const agendar = async (datos: CrearCitaRequest) => {
-    setEnviando(true);
+  const agendar = async (datos: CrearCitaRequest): Promise<ResultadoEnvioCita> => {
     try {
       // idCliente = 0: el backend usa el usuario del token.
-      await citasClienteApi.post('/Citas', { ...datos, idCliente: 0 });
+      await crearCita(citasClienteApi, { ...datos, idCliente: 0 });
       showSuccess('¡Tu cita quedó agendada!');
       router.back();
+      return 'ok';
     } catch (e) {
-      showError(mensajeErrorCitas(e, 'No se pudo agendar la cita.'));
-    } finally {
-      setEnviando(false);
+      return mostrarErrorEnvioCita(e, 'No se pudo agendar la cita.');
     }
   };
 
   if (servicios === null) return <LoadingView message="Cargando..." fullScreen />;
   if (error) return <EmptyState icon="⚠️" message="No se pudo cargar" subtitle={error} actionLabel="Reintentar" onAction={cargar} />;
 
-  return <FormularioCita servicios={servicios} empleados={empleados} enviando={enviando} onSubmit={agendar} />;
+  return <FormularioCita api={citasClienteApi} servicios={servicios} empleados={empleados} onSubmit={agendar} />;
 }

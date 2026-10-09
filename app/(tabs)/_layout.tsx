@@ -113,6 +113,8 @@ export default function Layout() {
       <Stack.Screen name="agenda/crear" options={{ title: 'Nueva cita' }} />
       <Stack.Screen name="agenda/servicios" options={{ title: 'Servicios de la agenda' }} />
       <Stack.Screen name="agenda/ajustes" options={{ title: 'Ajustes de la agenda' }} />
+      <Stack.Screen name="agenda/reprogramar" options={{ title: 'Reprogramar cita' }} />
+      <Stack.Screen name="agenda/horarios" options={{ title: 'Horarios y bloqueos' }} />
     </Stack>
 
     {/* Menú desplegable del usuario */}

@@ -12,8 +12,8 @@ import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '@/constants/the
 import { useAuth } from '@/context/authContext';
 import { useAgendaPersonal } from '@/hooks/useAgendaPersonal';
 import { useRole } from '@/hooks/useRole';
-import { badgeEstadoCita, fechaDeCita, formatHora, ordenarCitas } from '@/utils/citas';
-import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
+import { badgeEstadoCita, fechaDeCita, formatHora, hoyNegocio, ordenarCitas } from '@/utils/citas';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -28,7 +28,7 @@ export default function AgendaPersonal() {
   const router = useRouter();
   const agenda = useAgendaPersonal();
 
-  const [fecha, setFecha] = useState(toDateInputValue(new Date()));
+  const [fecha, setFecha] = useState(hoyNegocio());
   const [todasLasFechas, setTodasLasFechas] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [estado, setEstado] = useState('');
@@ -91,6 +91,11 @@ export default function AgendaPersonal() {
             <PrimaryButton title="Nueva cita" size="small" onPress={() => router.push('/agenda/crear')} />
             <PrimaryButton title="Servicios" size="small" variant="ghost" onPress={() => router.push('/agenda/servicios')} />
             <PrimaryButton title="Ajustes" size="small" variant="ghost" onPress={() => router.push('/agenda/ajustes')} />
+          </View>
+        )}
+        {!isAdmin && agenda.miUsuarioId != null && (
+          <View style={styles.acciones}>
+            <PrimaryButton title="Mi horario" size="small" variant="ghost" onPress={() => router.push('/agenda/horarios')} />
           </View>
         )}
 

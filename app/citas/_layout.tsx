@@ -83,6 +83,7 @@ function PilaCliente() {
       <Stack.Screen name="empresas" options={{ title: 'Elige dónde agendar', headerLeft: () => null }} />
       <Stack.Screen name="index" options={{ title: session?.empresaNombre || 'Mis citas', headerLeft: () => null }} />
       <Stack.Screen name="agendar" options={{ title: 'Agendar cita' }} />
+      <Stack.Screen name="reprogramar" options={{ title: 'Reprogramar cita' }} />
       <Stack.Screen name="catalogo" options={{ title: 'Servicios y personal' }} />
     </Stack>
   );

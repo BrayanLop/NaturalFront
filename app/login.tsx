@@ -237,6 +237,14 @@ export default function Login() {
             <Text style={styles.demoDescription}>
               Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
             </Text>
+
+            {/* Acceso de clientes externos al módulo de citas (sesión aparte de la de Natural) */}
+            <Pressable
+              onPress={() => router.push('/citas')}
+              style={({ pressed }) => [styles.forgotPasswordContainer, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.forgotPassword}>¿Eres cliente? Agenda tu cita</Text>
+            </Pressable>
           </View>
         </Animated.View>
       </ScrollView>

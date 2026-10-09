@@ -108,6 +108,11 @@ export default function Layout() {
       <Stack.Screen name="consolidadoIngresos" options={{ title: 'Consolidado' }} />
       <Stack.Screen name="consolidadoFormaPago" options={{ title: 'Total por formas de pago' }} />
       <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
+      <Stack.Screen name="agenda/index" options={{ title: 'Agenda / Citas' }} />
+      <Stack.Screen name="agenda/[id]" options={{ title: 'Detalle de la cita' }} />
+      <Stack.Screen name="agenda/crear" options={{ title: 'Nueva cita' }} />
+      <Stack.Screen name="agenda/servicios" options={{ title: 'Servicios de la agenda' }} />
+      <Stack.Screen name="agenda/ajustes" options={{ title: 'Ajustes de la agenda' }} />
     </Stack>
 
     {/* Menú desplegable del usuario */}

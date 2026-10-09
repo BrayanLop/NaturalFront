@@ -223,6 +223,19 @@ export default function WorkerHome() {
               <Text style={styles.secondaryBtnText}>Histórico</Text>
             </Pressable>
           </View>
+
+          {/* Agenda de citas (no disponible en modo demo) */}
+          {!isDemo && (
+            <View style={styles.secondaryRow}>
+              <Pressable
+                style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+                onPress={() => router.push('/(tabs)/agenda')}
+              >
+                <FontAwesome5 name="calendar-alt" size={16} color={COLORS.primary} />
+                <Text style={styles.secondaryBtnText}>Agenda / Citas</Text>
+              </Pressable>
+            </View>
+          )}
         </>
       )}
     </ScrollView>

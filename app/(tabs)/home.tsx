@@ -123,9 +123,23 @@ export default function Home() {
     ];
   }
 
+  // Agenda de citas (backend aparte). Oculta en modo demo: el mock de Natural no la cubre.
+  if (!isDemo) {
+    menuItems = [
+      ...menuItems,
+      {
+        title: 'Agenda / Citas',
+        route: '../agenda',
+        icon: 'calendar-alt',
+        color: '#e84393',
+        description: 'Citas de clientes',
+      },
+    ];
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

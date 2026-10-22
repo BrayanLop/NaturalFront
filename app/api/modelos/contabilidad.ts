@@ -87,6 +87,10 @@ export interface ComprobanteLiquidacion {
   deducciones: ComprobanteDeduccion[];
   totalDeducciones: number;
   netoPagado: number;
+  /** Propinas de los servicios liquidados; informativo, no suma al neto. Pueden no venir en backs antiguos. */
+  totalPropinas?: number;
+  propinasEntregadas?: number;
+  propinasPendientes?: number;
   pagos: PagoLiquidacion[];
   esReconstruido: boolean;
 }

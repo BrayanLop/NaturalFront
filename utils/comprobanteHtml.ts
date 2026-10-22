@@ -128,6 +128,18 @@ export function generarHtmlComprobante(c: ComprobanteLiquidacion): string {
   <h2>Pagos por método</h2>
   <table>${filasPagos}</table>
 
+  ${
+    (c.totalPropinas ?? 0) > 0
+      ? `<h2>Propinas</h2>
+  <table>
+    <tr><td>Propinas de los servicios liquidados</td><td class="num">${esc(formatCurrency(c.totalPropinas ?? 0))}</td></tr>
+    <tr><td>Entregadas</td><td class="num">${esc(formatCurrency(c.propinasEntregadas ?? 0))}</td></tr>
+    <tr><td>Pendientes de entregar</td><td class="num">${esc(formatCurrency(c.propinasPendientes ?? 0))}</td></tr>
+  </table>
+  <p class="nota">Las propinas son 100% del barbero y no están incluidas en el neto pagado.</p>`
+      : ''
+  }
+
   ${c.esReconstruido ? '<p class="nota">Liquidación anterior: valores reconstruidos, sin método de pago registrado.</p>' : ''}
 </body>
 </html>`;

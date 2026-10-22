@@ -254,6 +254,15 @@ export default function ComprobanteScreen() {
             />
           ))
         )}
+        {(c.totalPropinas ?? 0) > 0 && (
+          <>
+            <View style={styles.dividerTotales} />
+            <Text style={styles.pagosTitulo}>🤑 Propinas (no incluidas en el neto)</Text>
+            <Fila label="Total propinas" valor={formatCurrency(c.totalPropinas ?? 0)} />
+            <Fila label="Entregadas" valor={formatCurrency(c.propinasEntregadas ?? 0)} />
+            <Fila label="Pendientes de entregar" valor={formatCurrency(c.propinasPendientes ?? 0)} />
+          </>
+        )}
         {c.esReconstruido && (
           <Text style={styles.nota}>Liquidación anterior: valores reconstruidos, sin método de pago registrado</Text>
         )}

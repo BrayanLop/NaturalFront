@@ -1,3 +1,4 @@
+import { mensajeDeError } from '@/utils/apiError';
 import { showError } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -86,8 +87,10 @@ export default function Login() {
       router.replace('/home');
     } catch (error: any) {
       // Mensaje de error genérico para cualquier problema de login
-      const mensaje = error?.response?.data?.message || 
-                      'No se pudo iniciar sesión. Verifica tus credenciales e intenta nuevamente.';
+      // Usuario/empresa inactivos (403) traen su motivo; el resto de fallos conserva el mensaje genérico.
+      const mensaje = error?.response?.status === 403
+        ? mensajeDeError(error, 'Tu acceso está inactivo.')
+        : 'No se pudo iniciar sesión. Verifica tus credenciales e intenta nuevamente.';
       showError(mensaje, 'Error de inicio de sesión');
     } finally {
       setLoading(false);

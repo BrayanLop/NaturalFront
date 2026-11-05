@@ -1,7 +1,7 @@
 import LoadingView from '@/components/LoadingView';
 import WorkerHome from '@/components/WorkerHome';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
-import { isTrabajador, puedeRegistrarServicios } from '@/utils/roles';
+import { isTrabajador, puedeGestionarAccesos, puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -123,9 +123,23 @@ export default function Home() {
     ];
   }
 
+  // Accesos (crear/activar/desactivar usuarios de la empresa): solo el administrador 01
+  if (puedeGestionarAccesos(rol)) {
+    menuItems = [
+      ...menuItems,
+      {
+        title: 'Accesos',
+        route: '../accesos',
+        icon: 'user-lock',
+        color: '#c0392b',
+        description: 'Usuarios y permisos',
+      },
+    ];
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

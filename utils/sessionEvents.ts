@@ -18,6 +18,8 @@ export const SESSION_STORAGE_KEYS = [
   'personaId',
   'token',
   'isDemo',
+  'tokenPlataforma',   // token del superadmin (rol 00) para hablar con Brar
+  'sesionPlataforma',  // sesión del superadmin guardada mientras está en modo soporte
 ] as const;
 
 type SesionExpiradaHandler = () => Promise<void> | void;

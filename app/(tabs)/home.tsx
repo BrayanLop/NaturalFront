@@ -1,7 +1,8 @@
 import LoadingView from '@/components/LoadingView';
+import PlataformaHome from '@/components/PlataformaHome';
 import WorkerHome from '@/components/WorkerHome';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
-import { isTrabajador, puedeGestionarAccesos, puedeRegistrarServicios } from '@/utils/roles';
+import { isPlataforma, isTrabajador, puedeGestionarAccesos, puedeRegistrarServicios } from '@/utils/roles';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -33,6 +34,11 @@ export default function Home() {
 
   const rol = usuario.rol;
   const personaId = usuario.id;
+
+  // El superadmin de plataforma (rol 00) solo ve su menú: empresas y auditoría, nada de negocio.
+  if (isPlataforma(rol)) {
+    return <PlataformaHome />;
+  }
 
   // El trabajador (rol 02) tiene su propio dashboard "Mi Producción / Mi Saldo"
   if (isTrabajador(rol)) {

@@ -1,4 +1,5 @@
 export { MODO_OSCURO_ACTIVO } from './config';
+export { COLORES_DETALLE, COLORES_MODULO } from './modulos';
 export { ThemeOverride, ThemeProvider, useTheme, type Preferencia } from './ThemeProvider';
 export {
   ALTURA_TACTIL,

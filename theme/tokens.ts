@@ -52,6 +52,9 @@ export interface Colores {
   neutro: string;
   neutroSuave: string;
   neutroTexto: string;
+  // Series de gráficas (categóricas, en orden fijo). Validadas con el script de `dataviz`.
+  serie1: string; // efectivo
+  serie2: string; // transferencia
   // Controles
   deshabilitado: string;
   textoDeshabilitado: string;
@@ -106,6 +109,8 @@ const claro: Colores = {
   neutro: '#7d8a85',
   neutroSuave: '#eef1f0',
   neutroTexto: '#46534d',
+  serie1: '#00a383',
+  serie2: '#2a78d6',
   deshabilitado: '#e9eeec',
   textoDeshabilitado: '#9aa6a1',
   placeholder: '#7d8a85',
@@ -152,6 +157,8 @@ const oscuro: Colores = {
   neutro: '#8a9791',
   neutroSuave: '#222b28',
   neutroTexto: '#b4c0ba',
+  serie1: '#20a784',
+  serie2: '#4a94de',
   deshabilitado: '#222b28',
   textoDeshabilitado: '#5d6a64',
   placeholder: '#8a9791',

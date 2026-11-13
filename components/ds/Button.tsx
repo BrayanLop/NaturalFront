@@ -24,6 +24,8 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  /** Alineación cuando `fullWidth` es falso (por defecto, al inicio). */
+  align?: 'start' | 'center' | 'end';
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -41,6 +43,7 @@ export function Button({
   loading = false,
   disabled = false,
   fullWidth = true,
+  align = 'start',
   accessibilityLabel,
   style,
   testID,
@@ -105,6 +108,7 @@ export function Button({
         },
         relleno && !disabled ? sombra(tema, 'sm') : null,
         fullWidth ? estilos.completo : estilos.auto,
+        !fullWidth && align !== 'start' ? { alignSelf: align === 'center' ? 'center' : 'flex-end' } : null,
         style,
       ]}
     >

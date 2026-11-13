@@ -1,22 +1,21 @@
-import FormField from '@/components/FormField';
+import { Button, Input } from '@/components/ds';
+import type { IconName } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { toDateInputValue } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, KeyboardTypeOptions, ScrollView } from 'react-native';
 import { api } from '../../api/api';
 import { logger } from '@/utils/logger';
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+});
+
 export default function CrearPersona() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
 
   // Inicializa persona con fechaNacimiento actual, pero no muestres ni input ni texto
   const [persona, setPersona] = useState({
@@ -91,54 +90,37 @@ export default function CrearPersona() {
   const campos: {
     key: keyof typeof persona;
     label: string;
-    keyboardType?: any;
-    isDate?: boolean;
+    icon: IconName;
+    keyboardType?: KeyboardTypeOptions;
   }[] = [
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'apellido', label: 'Apellido' },
-    { key: 'cedula', label: 'Cédula', keyboardType: 'numeric' },
-    { key: 'residencia', label: 'Residencia' },
-    { key: 'email', label: 'Correo electrónico', keyboardType: 'email-address' },
-    { key: 'edad', label: 'Edad', keyboardType: 'numeric' },
-    { key: 'celular', label: 'Celular', keyboardType: 'numeric' },
+    { key: 'nombre', label: 'Nombre', icon: 'person-outline' },
+    { key: 'apellido', label: 'Apellido', icon: 'person-outline' },
+    { key: 'cedula', label: 'Cédula', icon: 'id-card-outline', keyboardType: 'numeric' },
+    { key: 'residencia', label: 'Residencia', icon: 'home-outline' },
+    { key: 'email', label: 'Correo electrónico', icon: 'mail-outline', keyboardType: 'email-address' },
+    { key: 'edad', label: 'Edad', icon: 'calendar-outline', keyboardType: 'numeric' },
+    { key: 'celular', label: 'Celular', icon: 'call-outline', keyboardType: 'numeric' },
   ];
 
   return (
     <KeyboardAware>
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.formCard}>
-        {campos.map(({ key, label, keyboardType, isDate }) => (
-          <FormField key={key} label={label} error={errores[key]}>
-            <TextInput
-              value={persona[key]}
-              onChangeText={(text) => handleChange(key, text)}
-              style={[commonStyles.input, errores[key] && styles.inputError]}
-              placeholder={label}
-              keyboardType={keyboardType}
-              placeholderTextColor={COLORS.textTertiary}
-            />
-          </FormField>
+      <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+        {campos.map(({ key, label, icon, keyboardType }) => (
+          <Input
+            key={key}
+            label={label}
+            value={persona[key]}
+            onChangeText={(text) => handleChange(key, text)}
+            error={errores[key] || undefined}
+            placeholder={label}
+            keyboardType={keyboardType}
+            leftIcon={icon}
+            autoCapitalize={key === 'email' ? 'none' : undefined}
+          />
         ))}
 
-        <PrimaryButton title="Guardar" onPress={guardar} />
-      </View>
-    </ScrollView>
+        <Button title="Guardar" onPress={guardar} />
+      </ScrollView>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.lg,
-    backgroundColor: COLORS.background,
-    flexGrow: 1,
-  },
-  formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-  },
-  inputError: {
-    borderColor: COLORS.error,
-  },
-});

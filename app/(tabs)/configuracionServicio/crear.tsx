@@ -1,25 +1,19 @@
+import { Button, Input, Select, ToggleRow } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import { Ionicons } from '@expo/vector-icons';
+import { SPACING, useEstilos, type Tema } from '@/theme';
+import { logger } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import { api } from '../../api/api';
-import { logger } from '@/utils/logger';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+});
 
 export default function CrearConfiguracion() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
 
   const [configuracion, setConfiguracion] = useState({
     servicioId: '',
@@ -33,7 +27,6 @@ export default function CrearConfiguracion() {
   const [servicios, setServicios] =
     useState<{ id: number; nombre: string }[]>([]);
   const [configuracionesExistentes, setConfiguracionesExistentes] = useState<number[]>([]);
-  const [mostrarModal, setMostrarModal] = useState(false);
 
   /* ===================== CARGAR SERVICIOS Y CONFIGURACIONES ===================== */
   useEffect(() => {
@@ -119,10 +112,6 @@ export default function CrearConfiguracion() {
     }
   };
 
-  const servicioSeleccionado = servicios.find(
-    (s) => s.id === parseInt(configuracion.servicioId)
-  );
-
   // Filtrar servicios que no están configurados
   const serviciosDisponibles = servicios.filter(
     (s) => !configuracionesExistentes.includes(s.id)
@@ -130,217 +119,46 @@ export default function CrearConfiguracion() {
 
   return (
     <KeyboardAware>
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      {/* ===================== SERVICIO ===================== */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Servicio</Text>
-
-        {/* WEB */}
-        {Platform.OS === 'web' ? (
-          <select
-            value={configuracion.servicioId}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              handleChange('servicioId', e.target.value)
-            }
-            style={styles.webSelect as unknown as React.CSSProperties}
-          >
-            <option value="">Seleccione un servicio</option>
-            {serviciosDisponibles.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nombre}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <>
-            {/* MOBILE */}
-            <TouchableOpacity
-              style={[
-                styles.select,
-                errores.servicioId && styles.inputError,
-              ]}
-              onPress={() => setMostrarModal(true)}
-            >
-              <Text
-                style={[
-                  styles.selectText,
-                  !configuracion.servicioId && styles.placeholder,
-                ]}
-              >
-                {servicioSeleccionado?.nombre || 'Seleccione un servicio'}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color="#6c757d" />
-            </TouchableOpacity>
-
-            <Modal transparent visible={mostrarModal} animationType="fade">
-              <Pressable
-                style={styles.overlay}
-                onPress={() => setMostrarModal(false)}
-              >
-                <Pressable style={styles.modal}>
-                  {serviciosDisponibles.length === 0 ? (
-                    <View style={styles.modalItem}>
-                      <Text style={styles.placeholder}>Todos los servicios ya están configurados</Text>
-                    </View>
-                  ) : (
-                    serviciosDisponibles.map((s) => (
-                      <Pressable
-                        key={s.id}
-                        style={styles.modalItem}
-                        onPress={() => {
-                          handleChange('servicioId', s.id.toString());
-                          setMostrarModal(false);
-                        }}
-                      >
-                        <Text>{s.nombre}</Text>
-                      </Pressable>
-                    ))
-                  )}
-                </Pressable>
-              </Pressable>
-            </Modal>
-          </>
-        )}
-
-        {errores.servicioId ? (
-          <Text style={styles.errorText}>{errores.servicioId}</Text>
-        ) : null}
-      </View>
-
-      {/* ===================== PORCENTAJES ===================== */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>% Empresa</Text>
-        <TextInput
-          value={configuracion.porcentajeEmpresa}
-          keyboardType="numeric"
-          onChangeText={setPorcentajeEmpresa}
-          style={styles.input}
-        />
-      </View>
-
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>% Trabajador</Text>
-        <TextInput
-          value={configuracion.porcentajeTrabajador}
-          keyboardType="numeric"
-          editable={false}
-          style={[styles.input, styles.inputDisabled]}
-        />
-      </View>
-
-
-      {/* ===================== ESTADO ===================== */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Estado</Text>
-        <Switch
-          value={configuracion.estado}
-          onValueChange={(value) =>
-            setConfiguracion((prev) => ({ ...prev, estado: value }))
+      <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+        <Select
+          label="Servicio"
+          placeholder={
+            serviciosDisponibles.length === 0 && servicios.length > 0
+              ? 'Todos los servicios ya están configurados'
+              : 'Seleccione un servicio'
           }
+          value={configuracion.servicioId || null}
+          onChange={(v) => handleChange('servicioId', v)}
+          options={serviciosDisponibles.map((s) => ({ value: s.id.toString(), label: s.nombre }))}
+          error={errores.servicioId || undefined}
         />
-      </View>
 
-      {/* ===================== BOTÓN ===================== */}
-      <TouchableOpacity style={styles.button} onPress={guardar}>
-        <Text style={styles.buttonText}>Guardar</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Input
+          label="Porcentaje empresa"
+          value={configuracion.porcentajeEmpresa}
+          onChangeText={setPorcentajeEmpresa}
+          keyboardType="numeric"
+          leftIcon="pie-chart-outline"
+          placeholder="Ej. 60"
+        />
+
+        <Input
+          label="Porcentaje trabajador"
+          value={configuracion.porcentajeTrabajador}
+          editable={false}
+          keyboardType="numeric"
+          helper="Se calcula automáticamente"
+        />
+
+        <ToggleRow
+          label="Estado de la configuración"
+          description={configuracion.estado ? 'Activa' : 'Inactiva'}
+          value={configuracion.estado}
+          onValueChange={(value) => setConfiguracion((prev) => ({ ...prev, estado: value }))}
+        />
+
+        <Button title="Guardar" onPress={guardar} />
+      </ScrollView>
     </KeyboardAware>
   );
 }
-
-/* ===================== STYLES ===================== */
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
-    flexGrow: 1,
-  },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 6,
-    color: '#212529',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    padding: 12,
-    backgroundColor: '#fff',
-  },
-  inputError: {
-    borderColor: 'red',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  /* SELECT MOBILE */
-  select: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-  },
-  selectText: {
-    color: '#212529',
-  },
-  placeholder: {
-    color: '#6c757d',
-  },
-
-  /* SELECT WEB */
-  webSelect: {
-    width: '100%',
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    backgroundColor: '#fff',
-  },
-
-  /* MODAL */
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modal: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingVertical: 8,
-  },
-  modalItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-
-  button: {
-    backgroundColor: '#0984e3',
-    padding: 15,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  inputDisabled: {
-    backgroundColor: '#e9ecef',
-    color: '#6c757d',
-  },
-});

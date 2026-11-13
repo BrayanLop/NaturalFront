@@ -1,30 +1,39 @@
+import { AppText, Button, Card, Icon, Input } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { logger } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
 import { api } from '../api/api';
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  cabecera: { alignItems: 'center' as const, paddingVertical: SPACING.lg, marginBottom: SPACING.md },
+  circulo: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: t.colores.primarioSuave,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    marginBottom: SPACING.md,
+  },
+});
+
 export default function CambiarContrasena() {
   const { usuario } = useAuth();
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   const [contrasenaActual, setContrasenaActual] = useState('');
   const [nuevaContrasena, setNuevaContrasena] = useState('');
   const [confirmarContrasena, setConfirmarContrasena] = useState('');
+  const [verActual, setVerActual] = useState(false);
+  const [verNueva, setVerNueva] = useState(false);
+  const [verConfirmar, setVerConfirmar] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleCambiarContrasena = async () => {
@@ -79,7 +88,7 @@ export default function CambiarContrasena() {
       setContrasenaActual('');
       setNuevaContrasena('');
       setConfirmarContrasena('');
-      
+
       // Volver atrás
       router.back();
     } catch (error: any) {
@@ -95,195 +104,65 @@ export default function CambiarContrasena() {
     }
   };
 
+  const ojo = (ver: boolean, cambiar: (v: boolean) => void) => (
+    <Pressable
+      onPress={() => cambiar(!ver)}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+    >
+      <Icon name={ver ? 'eye-off-outline' : 'eye-outline'} size={22} color={tema.colores.textoTenue} />
+    </Pressable>
+  );
+
   return (
     <KeyboardAware>
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIconContainer}>
-          <FontAwesome5 name="lock" size={24} color={COLORS.primary} />
+      <View style={estilos.contenedor}>
+        <View style={estilos.cabecera}>
+          <View style={estilos.circulo}>
+            <Icon name="lock-closed-outline" size={28} color={tema.colores.primarioTexto} />
+          </View>
+          <AppText variante="titulo">Cambiar contraseña</AppText>
+          {usuario?.nombre ? <AppText tono="suave">{usuario.nombre}</AppText> : null}
         </View>
-        <Text style={styles.headerTitle}>Cambiar contraseña</Text>
-        <Text style={styles.headerSubtitle}>{usuario?.nombre}</Text>
+
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Card>
+            <Input
+              label="Contraseña actual"
+              leftIcon="key-outline"
+              value={contrasenaActual}
+              onChangeText={setContrasenaActual}
+              secureTextEntry={!verActual}
+              placeholder="Ingrese su contraseña actual"
+              autoCapitalize="none"
+              right={ojo(verActual, setVerActual)}
+            />
+            <Input
+              label="Nueva contraseña"
+              leftIcon="lock-closed-outline"
+              value={nuevaContrasena}
+              onChangeText={setNuevaContrasena}
+              secureTextEntry={!verNueva}
+              placeholder="Ingrese su nueva contraseña"
+              autoCapitalize="none"
+              helper="Mínimo 6 caracteres"
+              right={ojo(verNueva, setVerNueva)}
+            />
+            <Input
+              label="Confirmar nueva contraseña"
+              leftIcon="checkmark-circle-outline"
+              value={confirmarContrasena}
+              onChangeText={setConfirmarContrasena}
+              secureTextEntry={!verConfirmar}
+              placeholder="Confirme su nueva contraseña"
+              autoCapitalize="none"
+              right={ojo(verConfirmar, setVerConfirmar)}
+            />
+            <Button title="Cambiar contraseña" onPress={handleCambiarContrasena} loading={loading} />
+          </Card>
+        </ScrollView>
       </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Contraseña actual</Text>
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="key" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={contrasenaActual}
-                onChangeText={setContrasenaActual}
-                secureTextEntry
-                placeholder="Ingrese su contraseña actual"
-                placeholderTextColor={COLORS.textTertiary}
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nueva contraseña</Text>
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="lock" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={nuevaContrasena}
-                onChangeText={setNuevaContrasena}
-                secureTextEntry
-                placeholder="Ingrese su nueva contraseña"
-                placeholderTextColor={COLORS.textTertiary}
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Confirmar nueva contraseña</Text>
-            <View style={styles.inputContainer}>
-              <FontAwesome5 name="check-circle" size={16} color={COLORS.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={confirmarContrasena}
-                onChangeText={setConfirmarContrasena}
-                secureTextEntry
-                placeholder="Confirme su nueva contraseña"
-                placeholderTextColor={COLORS.textTertiary}
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              loading && styles.buttonDisabled,
-              pressed && !loading && styles.buttonPressed,
-            ]}
-            onPress={handleCambiarContrasena}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <Text style={styles.buttonText}>Cambiar contraseña</Text>
-            )}
-          </Pressable>
-
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="info-circle" size={14} color={COLORS.warning} />
-            <Text style={styles.infoText}>
-              La contraseña debe tener al menos 6 caracteres
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-    paddingVertical: SPACING.lg,
-  },
-  headerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  formGroup: {
-    marginBottom: SPACING.lg,
-  },
-  label: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.white,
-  },
-  inputIcon: {
-    paddingLeft: SPACING.md,
-  },
-  input: {
-    flex: 1,
-    padding: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-    ...SHADOWS.primary,
-  },
-  buttonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.border,
-    ...SHADOWS.none,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.warningLight,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    marginTop: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    lineHeight: 18,
-  },
-});

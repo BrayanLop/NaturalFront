@@ -1,7 +1,12 @@
-import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { LoadingState } from '@/components/ds';
+import { useTheme } from '@/theme';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+/**
+ * Compatibilidad: conserva la API anterior. Con mensaje delega en `LoadingState` del sistema de diseño;
+ * sin mensaje muestra solo el indicador. `color` solo se respeta si se indica explícitamente.
+ */
 interface LoadingViewProps {
   size?: 'small' | 'large';
   color?: string;
@@ -9,41 +14,32 @@ interface LoadingViewProps {
   fullScreen?: boolean;
 }
 
-const LoadingView = React.memo(function LoadingView({ 
-  size = 'large', 
-  color = COLORS.primary,
+const LoadingView = React.memo(function LoadingView({
+  size = 'large',
+  color,
   message,
   fullScreen = true,
 }: LoadingViewProps) {
+  const { tema } = useTheme();
+  const c = tema.colores;
   return (
-    <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      <View style={styles.loaderContainer}>
+    <View
+      style={[
+        { justifyContent: 'center', alignItems: 'center' },
+        fullScreen && { flex: 1, backgroundColor: c.fondo },
+      ]}
+    >
+      {message || !color ? (
+        message ? (
+          <LoadingState message={message} />
+        ) : (
+          <ActivityIndicator size={size} color={c.primarioFuerte} />
+        )
+      ) : (
         <ActivityIndicator size={size} color={color} />
-        {message && <Text style={styles.message}>{message}</Text>}
-      </View>
+      )}
     </View>
   );
 });
 
 export default LoadingView;
-
-const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  fullScreen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loaderContainer: {
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  message: {
-    fontSize: FONT_SIZE.body,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-  },
-});

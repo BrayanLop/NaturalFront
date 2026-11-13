@@ -1,87 +1,7 @@
 {
-  "app/(tabs)/configuracion/index.tsx": {
-    "hex": 7,
-    "emoji": 8
-  },
-  "app/(tabs)/configuracionServicio/crear.tsx": {
-    "hex": 17,
-    "emoji": 0
-  },
-  "app/(tabs)/configuracionServicio/index.tsx": {
-    "hex": 0,
-    "emoji": 3
-  },
-  "app/(tabs)/configuracionServicio/[id].tsx": {
-    "hex": 19,
-    "emoji": 0
-  },
-  "app/(tabs)/contabilidad/comprobante/[id].tsx": {
-    "hex": 0,
-    "emoji": 5
-  },
-  "app/(tabs)/contabilidad/detalleServicioPersona/[id].tsx": {
-    "hex": 47,
-    "emoji": 17
-  },
-  "app/(tabs)/contabilidad/historico.tsx": {
-    "hex": 3,
-    "emoji": 1
-  },
-  "app/(tabs)/contabilidad/index.tsx": {
-    "hex": 0,
-    "emoji": 1
-  },
-  "app/(tabs)/egresos/crear.tsx": {
-    "hex": 8,
-    "emoji": 2
-  },
-  "app/(tabs)/egresos/index.tsx": {
-    "hex": 0,
-    "emoji": 2
-  },
   "app/(tabs)/explore.tsx": {
     "hex": 4,
     "emoji": 0
-  },
-  "app/(tabs)/finanzas/index.tsx": {
-    "hex": 5,
-    "emoji": 2
-  },
-  "app/(tabs)/home.tsx": {
-    "hex": 6,
-    "emoji": 0
-  },
-  "app/(tabs)/ingresos/index.tsx": {
-    "hex": 0,
-    "emoji": 1
-  },
-  "app/(tabs)/personas/index.tsx": {
-    "hex": 0,
-    "emoji": 2
-  },
-  "app/(tabs)/personas/[id].tsx": {
-    "hex": 0,
-    "emoji": 3
-  },
-  "app/(tabs)/registroServicio/formaPago.tsx": {
-    "hex": 2,
-    "emoji": 8
-  },
-  "app/(tabs)/registroServicio/index.tsx": {
-    "hex": 0,
-    "emoji": 2
-  },
-  "app/(tabs)/registroServicio/personas.tsx": {
-    "hex": 2,
-    "emoji": 0
-  },
-  "app/(tabs)/registroServicio/servicios.tsx": {
-    "hex": 4,
-    "emoji": 0
-  },
-  "app/(tabs)/servicios/index.tsx": {
-    "hex": 0,
-    "emoji": 2
   },
   "app/api/demoApi.ts": {
     "hex": 0,
@@ -91,29 +11,13 @@
     "hex": 2,
     "emoji": 0
   },
-  "components/EmptyState.tsx": {
-    "hex": 0,
-    "emoji": 1
-  },
   "components/HelloWave.tsx": {
     "hex": 0,
     "emoji": 1
   },
-  "components/ResumenLiquidacionModal.tsx": {
-    "hex": 0,
-    "emoji": 2
-  },
-  "components/SimpleDatePicker.tsx": {
-    "hex": 8,
-    "emoji": 0
-  },
   "components/ThemedText.tsx": {
     "hex": 1,
     "emoji": 0
-  },
-  "components/WorkerHome.tsx": {
-    "hex": 1,
-    "emoji": 1
   },
   "utils/password.ts": {
     "hex": 0,

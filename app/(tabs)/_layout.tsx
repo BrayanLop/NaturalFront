@@ -1,8 +1,8 @@
 import AppHeader from '@/components/ds/AppHeader';
 import { Icon } from '@/components/ds';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import SelectorApariencia from '@/components/SelectorApariencia';
 import { useAuth } from '@/context/authContext';
-import { sombra, useTheme } from '@/theme';
+import { FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, sombra, useTheme } from '@/theme';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -23,8 +23,8 @@ export default function Layout() {
 
   if (cargando) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: tema.colores.fondo }]}>
+        <ActivityIndicator size="large" color={tema.colores.primarioFuerte} />
       </View>
     );
   }
@@ -148,6 +148,10 @@ export default function Layout() {
 
           <View style={[menuEstilos.divisor, { backgroundColor: tema.colores.divisor }]} />
 
+          <SelectorApariencia />
+
+          <View style={[menuEstilos.divisor, { backgroundColor: tema.colores.divisor }]} />
+
           <Pressable
             accessibilityRole="button"
             style={({ pressed }) => [menuEstilos.item, pressed && { backgroundColor: tema.colores.fondoSuave }]}
@@ -171,27 +175,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  headerRightButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-    gap: SPACING.sm,
-  },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerUserName: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.body,
-    maxWidth: 100,
   },
 });
 

@@ -1,7 +1,10 @@
-import { commonStyles, SPACING } from '@/constants/theme';
+import { ChipGroup } from '@/components/ds';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+/**
+ * Compatibilidad: conserva la API anterior pero dibuja el `ChipGroup` del sistema de diseño
+ * (las fichas pasan de línea y nunca se salen del borde).
+ */
 interface FilterOption {
   key: string;
   label: string;
@@ -15,41 +18,5 @@ interface FilterChipsProps {
 }
 
 export default function FilterChips({ options, selected, onSelect, label }: FilterChipsProps) {
-  return (
-    <View style={styles.container}>
-      {label && <Text style={commonStyles.label}>{label}</Text>}
-      <View style={styles.chipsRow}>
-        {options.map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={[
-              commonStyles.chip,
-              selected === option.key && commonStyles.chipActive,
-            ]}
-            onPress={() => onSelect(option.key)}
-          >
-            <Text
-              style={[
-                commonStyles.chipText,
-                selected === option.key && commonStyles.chipTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+  return <ChipGroup label={label} options={options} value={selected} onChange={onSelect} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.md,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-});

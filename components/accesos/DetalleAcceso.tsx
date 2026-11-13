@@ -1,15 +1,12 @@
-import FilterChips from '@/components/FilterChips';
-import FormField from '@/components/FormField';
+import { AppText, Badge, Button, Card, ChipGroup, ConfirmDialog, Icon, Input, SectionHeader } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { RADIUS, SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
-import { ROLES } from '@/utils/roles';
+import { ROLES, getRoleName } from '@/utils/roles';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { ClienteAccesos } from '../../app/api/accesosClient';
 
 const OPCIONES_ROL = [
@@ -27,9 +24,26 @@ interface Props {
   onEliminado: () => void;
 }
 
+const crearEstilos = (t: Tema) => ({
+  container: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+  cabecera: { flexDirection: 'row' as const, alignItems: 'center' as const },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: RADIUS.full,
+    backgroundColor: t.colores.primarioSuave,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: SPACING.md,
+  },
+  textos: { flex: 1, minWidth: 0 },
+  espacio: { height: SPACING.md },
+});
+
 /** Detalle de un acceso: cambiar rol, restablecer contraseña y quitar el acceso. */
 export default function DetalleAcceso({ cliente, usuarioId, nombre, usuario, rolInicial, onEliminado }: Props) {
-  const { confirm } = useConfirmDialog();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
 
   const [rol, setRol] = useState<string>(rolInicial || ROLES.TRABAJADOR);
   const [rolOriginal, setRolOriginal] = useState<string>(rolInicial || ROLES.TRABAJADOR);
@@ -37,6 +51,7 @@ export default function DetalleAcceso({ cliente, usuarioId, nombre, usuario, rol
   const [guardandoRol, setGuardandoRol] = useState(false);
   const [guardandoClave, setGuardandoClave] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
   const [errorClave, setErrorClave] = useState('');
 
   const guardarRol = async () => {
@@ -72,68 +87,89 @@ export default function DetalleAcceso({ cliente, usuarioId, nombre, usuario, rol
     }
   };
 
-  const eliminar = () =>
-    confirm({
-      title: 'Quitar acceso',
-      message: `¿Quitar el acceso de ${nombre ?? 'este usuario'}? La persona y su historial se conservan, pero ya no podrá ingresar.`,
-      onConfirm: async () => {
-        setEliminando(true);
-        try {
-          await cliente.eliminar(usuarioId);
-          showSuccess('Acceso eliminado');
-          onEliminado();
-        } catch (error) {
-          logger.error('Error al eliminar acceso:', error);
-          showError(mensajeDeError(error, 'No se pudo eliminar el acceso'));
-        } finally {
-          setEliminando(false);
-        }
-      },
-    });
+  const eliminar = async () => {
+    setEliminando(true);
+    try {
+      await cliente.eliminar(usuarioId);
+      setConfirmarEliminar(false);
+      showSuccess('Acceso eliminado');
+      onEliminado();
+    } catch (error) {
+      logger.error('Error al eliminar acceso:', error);
+      setConfirmarEliminar(false);
+      showError(mensajeDeError(error, 'No se pudo eliminar el acceso'));
+    } finally {
+      setEliminando(false);
+    }
+  };
 
   return (
     <KeyboardAware>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Text style={styles.nombre}>{nombre}</Text>
-          <Text style={styles.usuario}>Usuario: {usuario}</Text>
-        </View>
+      <ScrollView contentContainerStyle={estilos.container} keyboardShouldPersistTaps="handled">
+        <Card>
+          <View style={estilos.cabecera}>
+            <View style={estilos.avatar}>
+              <Icon name="person-outline" size={26} color={tema.colores.primarioTexto} />
+            </View>
+            <View style={estilos.textos}>
+              <AppText variante="subtitulo" numberOfLines={1}>
+                {nombre}
+              </AppText>
+              <AppText variante="nota" tono="suave">
+                Usuario: {usuario}
+              </AppText>
+              <View style={{ marginTop: SPACING.xs + 2 }}>
+                <Badge label={getRoleName(rolOriginal)} tone="info" size="sm" />
+              </View>
+            </View>
+          </View>
+        </Card>
 
-        <View style={styles.card}>
-          <FilterChips label="Rol" options={OPCIONES_ROL} selected={rol} onSelect={setRol} />
-          <PrimaryButton title="Guardar rol" onPress={guardarRol} loading={guardandoRol} disabled={rol === rolOriginal} />
-        </View>
+        <Card>
+          <SectionHeader title="Rol" icon="shield-checkmark-outline" style={{ marginTop: 0 }} />
+          <ChipGroup options={OPCIONES_ROL} value={rol} onChange={setRol} />
+          <Button title="Guardar rol" icon="checkmark" onPress={guardarRol} loading={guardandoRol} disabled={rol === rolOriginal} />
+        </Card>
 
-        <View style={styles.card}>
-          <FormField label="Nueva contraseña" error={errorClave}>
-            <TextInput
-              value={nuevaContrasena}
-              onChangeText={setNuevaContrasena}
-              style={[commonStyles.input, !!errorClave && styles.inputError]}
-              placeholder="Nueva contraseña"
-              secureTextEntry
-              autoCapitalize="none"
-              placeholderTextColor={COLORS.textTertiary}
-            />
-          </FormField>
-          <PrimaryButton
+        <Card>
+          <SectionHeader title="Contraseña" icon="key-outline" style={{ marginTop: 0 }} />
+          <Input
+            label="Nueva contraseña"
+            leftIcon="lock-closed-outline"
+            value={nuevaContrasena}
+            onChangeText={setNuevaContrasena}
+            error={errorClave || undefined}
+            placeholder="Nueva contraseña"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <Button
             title="Restablecer contraseña"
             variant="secondary"
             onPress={restablecerContrasena}
             loading={guardandoClave}
           />
-        </View>
+        </Card>
 
-        <PrimaryButton title="Quitar acceso" variant="danger" onPress={eliminar} loading={eliminando} />
+        <View style={estilos.espacio} />
+        <Button
+          title="Quitar acceso"
+          variant="danger"
+          icon="trash-outline"
+          onPress={() => setConfirmarEliminar(true)}
+        />
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmarEliminar}
+        destructive
+        title="Quitar acceso"
+        message={`¿Quitar el acceso de ${nombre ?? 'este usuario'}? La persona y su historial se conservan, pero ya no podrá ingresar.`}
+        confirmLabel="Quitar acceso"
+        loading={eliminando}
+        onConfirm={eliminar}
+        onCancel={() => setConfirmarEliminar(false)}
+      />
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: SPACING.lg, backgroundColor: COLORS.background, flexGrow: 1, gap: SPACING.lg },
-  card: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: SPACING.lg },
-  nombre: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  usuario: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
-  inputError: { borderColor: COLORS.error },
-});

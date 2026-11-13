@@ -1,20 +1,34 @@
+import {
+  Button,
+  Card,
+  ChipGroup,
+  DateField,
+  EmptyState,
+  Icon,
+  LoadingState,
+  SectionHeader,
+  StatCard,
+  type IconName,
+} from '@/components/ds';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import {
+  COLORES_DETALLE,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SPACING,
+  sombra,
+  useEstilos,
+  useTheme,
+  type Tema,
+} from '@/theme';
 import { useAuth } from '@/context/authContext';
 import { formatCurrency, formatDate, toDateInputValue } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { api } from '../../api/api';
 import { ConsolidadoFormaPago, ConsolidadoIngresosEgresos } from '../../api/modelos/contabilidad';
 
@@ -25,33 +39,18 @@ type FormaPago = ConsolidadoFormaPago;
 
 // Fila del movimiento de caja; se omite si el back (antiguo) no envía el campo
 function FilaFlujo({ label, valor, signo, destacado }: { label: string; valor?: number | null; signo?: '-'; destacado?: boolean }) {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   if (valor === undefined || valor === null) return null;
+  const c = tema.colores;
+  const colorValor = destacado ? (valor >= 0 ? c.exitoTexto : c.errorTexto) : signo === '-' && valor !== 0 ? c.errorTexto : c.texto;
   return (
-    <View style={[styles.flujoRow, destacado && styles.flujoRowDestacado]}>
-      <Text style={[styles.flujoLabel, destacado && styles.flujoLabelDestacado]}>{label}</Text>
-      <Text
-        style={[
-          styles.flujoValor,
-          signo === '-' && { color: COLORS.error },
-          destacado && { color: valor >= 0 ? COLORS.successDark : COLORS.error, fontWeight: FONT_WEIGHT.bold },
-        ]}
-      >
+    <View style={[estilos.flujoRow, destacado && { borderTopWidth: 1, borderTopColor: c.divisor, marginTop: SPACING.xs, paddingTop: SPACING.md }]}>
+      <Text style={[estilos.flujoLabel, destacado && estilos.flujoLabelDestacado]}>{label}</Text>
+      <Text style={[estilos.flujoValor, { color: colorValor }, destacado && { fontWeight: FONT_WEIGHT.bold }]}>
         {signo === '-' && valor !== 0 ? '− ' : ''}
         {formatCurrency(valor)}
       </Text>
-    </View>
-  );
-}
-
-// Encabezado de sección con una línea de ayuda
-function Seccion({ icon, titulo, ayuda }: { icon: string; titulo: string; ayuda: string }) {
-  return (
-    <View style={styles.seccionHeader}>
-      <View style={styles.seccionTituloRow}>
-        <FontAwesome5 name={icon} size={14} color={COLORS.primary} />
-        <Text style={styles.seccionTitulo}>{titulo}</Text>
-      </View>
-      <Text style={styles.seccionAyuda}>{ayuda}</Text>
     </View>
   );
 }
@@ -65,12 +64,12 @@ const PERIODOS: { key: Periodo; label: string }[] = [
   { key: 'personalizado', label: 'Rango' },
 ];
 
-const ACCESOS = [
-  { title: 'Consolidado', desc: 'Ingresos vs egresos', icon: 'chart-line', color: '#3498db', route: '/(tabs)/consolidadoIngresos' },
-  { title: 'Formas de pago', desc: 'Efectivo y transferencia', icon: 'money-check-alt', color: '#1abc9c', route: '/(tabs)/consolidadoFormaPago' },
-  { title: 'Ingresos', desc: 'Control de ingresos', icon: 'dollar-sign', color: '#27ae60', route: '/(tabs)/ingresos' },
-  { title: 'Egresos', desc: 'Control de gastos', icon: 'money-bill-wave', color: '#e74c3c', route: '/(tabs)/egresos' },
-  { title: 'Histórico', desc: 'Historial de pagos', icon: 'history', color: '#8e44ad', route: '/(tabs)/contabilidad/historico' },
+const ACCESOS: { title: string; desc: string; icon: IconName; color: string; route: string }[] = [
+  { title: 'Consolidado', desc: 'Ingresos vs egresos', icon: 'stats-chart', color: COLORES_DETALLE.consolidado, route: '/(tabs)/consolidadoIngresos' },
+  { title: 'Formas de pago', desc: 'Efectivo y transferencia', icon: 'card', color: COLORES_DETALLE.formasPago, route: '/(tabs)/consolidadoFormaPago' },
+  { title: 'Ingresos', desc: 'Control de ingresos', icon: 'trending-up', color: COLORES_DETALLE.ingresos, route: '/(tabs)/ingresos' },
+  { title: 'Egresos', desc: 'Control de gastos', icon: 'trending-down', color: COLORES_DETALLE.egresos, route: '/(tabs)/egresos' },
+  { title: 'Histórico', desc: 'Historial de pagos', icon: 'archive', color: COLORES_DETALLE.historico, route: '/(tabs)/contabilidad/historico' },
 ];
 
 function getRango(periodo: Periodo): { desde: string; hasta: string } {
@@ -92,6 +91,9 @@ function getRango(periodo: Periodo): { desde: string; hasta: string } {
 export default function Finanzas() {
   const { usuario } = useAuth();
   const router = useRouter();
+  const { tema } = useTheme();
+  const c = tema.colores;
+  const estilos = useEstilos(crearEstilos);
   const hoyStr = toDateInputValue(new Date());
   const [periodo, setPeriodo] = useState<Periodo>('mes');
   const [desde, setDesde] = useState<string>(hoyStr);
@@ -168,9 +170,12 @@ export default function Finanzas() {
 
   if (!esAdmin) {
     return (
-      <View style={styles.centered}>
-        <FontAwesome5 name="lock" size={40} color={COLORS.textTertiary} />
-        <Text style={styles.deniedText}>Solo los administradores pueden ver las finanzas.</Text>
+      <View style={estilos.centered}>
+        <EmptyState
+          icon="lock-closed-outline"
+          title="Solo administradores"
+          subtitle="Solo los administradores pueden ver las finanzas."
+        />
       </View>
     );
   }
@@ -209,10 +214,19 @@ export default function Finanzas() {
       : `${formatDate(rangoConsultado.desde)} – ${formatDate(rangoConsultado.hasta)}`
     : null;
 
-  const metodos = [
+  const metodos: {
+    key: string;
+    titulo: string;
+    icono: IconName;
+    entro: number;
+    gastos?: number | null;
+    personal?: number | null;
+    saldo?: number | null;
+  }[] = [
     {
       key: 'E',
-      titulo: '💵 Efectivo',
+      titulo: 'Efectivo',
+      icono: 'cash-outline',
       entro: cobradoEfectivo,
       gastos: fp?.egresosPagadosEfectivo,
       personal: fp?.pagosLiquidacionesEfectivo,
@@ -220,7 +234,8 @@ export default function Finanzas() {
     },
     {
       key: 'T',
-      titulo: '💳 Transferencia',
+      titulo: 'Transferencia',
+      icono: 'swap-horizontal-outline',
       entro: cobradoTransfer,
       gastos: fp?.egresosPagadosTransferencia,
       personal: fp?.pagosLiquidacionesTransferencia,
@@ -229,197 +244,195 @@ export default function Finanzas() {
   ];
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={estilos.container}>
+      <ScrollView contentContainerStyle={estilos.scroll} showsVerticalScrollIndicator={false}>
         {/* Selector de período */}
-        <View style={styles.periodoRow}>
-          {PERIODOS.map((p) => (
-            <Pressable
-              key={p.key}
-              style={[styles.periodoChip, periodo === p.key && styles.periodoChipActive]}
-              onPress={() => cambiarPeriodo(p.key)}
-            >
-              <Text
-                style={[styles.periodoText, periodo === p.key && styles.periodoTextActive]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {p.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <ChipGroup
+          options={PERIODOS}
+          value={periodo}
+          onChange={(k) => cambiarPeriodo(k as Periodo)}
+        />
 
         {/* Rango de fechas personalizado */}
         {periodo === 'personalizado' && (
-          <View style={styles.rangoBox}>
-            <View style={styles.dateRow}>
-              <Pressable
-                style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
-                onPress={() => setPickerVisible('desde')}
-              >
-                <Text style={styles.chipLabel}>Desde</Text>
-                <Text style={styles.dateValue}>{desde}</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
-                onPress={() => setPickerVisible('hasta')}
-              >
-                <Text style={styles.chipLabel}>Hasta</Text>
-                <Text style={styles.dateValue}>{hasta}</Text>
-              </Pressable>
+          <Card>
+            <View style={estilos.dateRow}>
+              <DateField label="Desde" value={desde} onPress={() => setPickerVisible('desde')} />
+              <DateField label="Hasta" value={hasta} onPress={() => setPickerVisible('hasta')} />
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.buscarBtn, pressed && styles.buscarBtnPressed, loading && styles.buscarBtnDisabled]}
+            <View style={{ height: SPACING.md }} />
+            <Button
+              title={loading ? 'Buscando...' : 'Buscar'}
+              icon="search"
               onPress={buscarRango}
               disabled={loading}
-            >
-              <FontAwesome5 name="search" size={13} color={COLORS.white} />
-              <Text style={styles.buscarBtnText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-            </Pressable>
+            />
+          </Card>
+        )}
+
+        {rangoTexto && !loading && !error && (
+          <View style={estilos.rangoTexto}>
+            <Icon name="calendar-outline" size={14} color={c.textoSuave} />
+            <Text style={estilos.rangoTextoLabel}>{rangoTexto}</Text>
           </View>
         )}
 
-        {rangoTexto && !loading && !error && <Text style={styles.rangoTexto}>Período: {rangoTexto}</Text>}
-
         {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Cargando métricas...</Text>
-          </View>
+          <LoadingState message="Cargando métricas..." />
         ) : (
           <>
             {error ? (
-              <View style={styles.errorBox}>
-                <FontAwesome5 name="exclamation-triangle" size={16} color={COLORS.error} />
-                <Text style={styles.errorText}>{error}</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.reintentarBtn, pressed && styles.buscarBtnPressed]}
+              <Card>
+                <View style={estilos.errorFila}>
+                  <Icon name="alert-circle-outline" size={22} color={c.errorTexto} />
+                  <Text style={estilos.errorText}>{error}</Text>
+                </View>
+                <View style={{ height: SPACING.md }} />
+                <Button
+                  title="Reintentar"
+                  variant="secondary"
                   onPress={() => fetchData(rangoRef.current.desde, rangoRef.current.hasta)}
-                >
-                  <Text style={styles.buscarBtnText}>Reintentar</Text>
-                </Pressable>
-              </View>
+                />
+              </Card>
             ) : (
               <>
                 {/* Rentabilidad del negocio */}
-                <Seccion
-                  icon="chart-line"
-                  titulo="Rentabilidad del negocio"
+                <SectionHeader
+                  icon="trending-up-outline"
+                  title="Rentabilidad"
                   ayuda="Lo que gana la empresa: solo su parte de cada servicio, registrada al liquidar al personal (por fecha de liquidación)."
                 />
-                <View style={styles.kpiRow}>
-                  <View style={[styles.kpiCard, { borderLeftColor: COLORS.success }]}>
-                    <View style={[styles.kpiIcon, { backgroundColor: COLORS.successLight }]}>
-                      <FontAwesome5 name="arrow-up" size={14} color={COLORS.success} />
-                    </View>
-                    <Text style={styles.kpiLabel}>Ingresos de la empresa</Text>
-                    <Text style={[styles.kpiValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit>
-                      {formatCurrency(ie?.totalIngresos ?? 0)}
-                    </Text>
-                    <Text style={styles.kpiHint}>Parte de la empresa en las liquidaciones</Text>
-                  </View>
-
-                  <View style={[styles.kpiCard, { borderLeftColor: COLORS.error }]}>
-                    <View style={[styles.kpiIcon, { backgroundColor: COLORS.errorLight }]}>
-                      <FontAwesome5 name="arrow-down" size={14} color={COLORS.error} />
-                    </View>
-                    <Text style={styles.kpiLabel}>Gastos del negocio</Text>
-                    <Text style={[styles.kpiValue, { color: COLORS.error }]} numberOfLines={1} adjustsFontSizeToFit>
-                      {formatCurrency(ie?.totalEgresos ?? 0)}
-                    </Text>
-                    <Text style={styles.kpiHint}>Sin adelantos descontados al personal</Text>
-                  </View>
+                <View style={estilos.kpiRow}>
+                  <StatCard
+                    style={estilos.kpi}
+                    label="Ingresos"
+                    value={formatCurrency(ie?.totalIngresos ?? 0)}
+                    hint="Parte de la empresa"
+                    icon="arrow-up"
+                    tone="success"
+                  />
+                  <StatCard
+                    style={estilos.kpi}
+                    label="Gastos"
+                    value={formatCurrency(ie?.totalEgresos ?? 0)}
+                    hint="Sin adelantos al personal"
+                    icon="arrow-down"
+                    tone="error"
+                  />
                 </View>
 
-                <View style={[styles.utilidadCard, utilidad < 0 && { backgroundColor: COLORS.error }]}>
-                  <View style={styles.utilidadHeader}>
-                    <FontAwesome5 name="wallet" size={16} color={COLORS.white} />
-                    <Text style={styles.utilidadLabel}>Utilidad neta</Text>
-                  </View>
-                  <Text style={styles.utilidadValue} numberOfLines={1} adjustsFontSizeToFit>
-                    {formatCurrency(utilidad)}
-                  </Text>
-                  <Text style={styles.utilidadHint}>Ingresos de la empresa − Gastos del negocio</Text>
-                </View>
+                {utilidad < 0 ? (
+                  <StatCard
+                    tone="error"
+                    icon="wallet-outline"
+                    label="Utilidad neta"
+                    value={formatCurrency(utilidad)}
+                    hint="Ingresos − gastos"
+                  />
+                ) : (
+                  <StatCard
+                    variant="solid"
+                    icon="wallet-outline"
+                    label="Utilidad neta"
+                    value={formatCurrency(utilidad)}
+                    hint="Ingresos − gastos"
+                  />
+                )}
 
                 {definido(ie?.deduccionesRecuperadas) && (
-                  <View style={styles.infoRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fpLabel}>Deducciones recuperadas</Text>
-                      <Text style={styles.kpiHint}>
-                        Adelantos y gastos descontados al personal al liquidar. Informativo: no suma a la utilidad.
-                      </Text>
+                  <Card style={{ marginTop: SPACING.md }}>
+                    <View style={estilos.filaEntre}>
+                      <View style={estilos.textosFlex}>
+                        <Text style={estilos.etiquetaFuerte}>Deducciones recuperadas</Text>
+                        <Text style={estilos.pista}>Informativo: no suma a la utilidad</Text>
+                      </View>
+                      <Text style={estilos.valorMedio}>{formatCurrency(ie?.deduccionesRecuperadas ?? 0)}</Text>
                     </View>
-                    <Text style={styles.fpAmount}>{formatCurrency(ie?.deduccionesRecuperadas ?? 0)}</Text>
-                  </View>
+                  </Card>
                 )}
 
                 {/* Movimiento de caja */}
-                <Seccion
-                  icon="cash-register"
-                  titulo="Movimiento de caja"
+                <SectionHeader
+                  icon="cash-outline"
+                  title="Movimiento de caja"
                   ayuda="Dinero que entró y salió por cada medio de pago (por fecha del servicio o del gasto). Incluye la parte del personal, por eso no es igual a la utilidad."
+                  style={{ marginTop: SPACING.xl }}
                 />
 
                 {sinMovimientoCaja ? (
-                  <View style={styles.card}>
-                    <Text style={styles.emptyText}>Sin movimientos de caja en este período</Text>
-                  </View>
+                  <Card>
+                    <Text style={estilos.vacio}>Sin movimientos de caja en este período</Text>
+                  </Card>
                 ) : (
                   <>
                     {/* Cobrado a clientes y distribución por medio de pago */}
-                    <View style={styles.card}>
-                      <View style={styles.fpHeaderRow}>
-                        <Text style={styles.fpLabel}>Cobrado a clientes por servicios</Text>
-                        <Text style={styles.cobradoValor}>{formatCurrency(totalCobrado)}</Text>
+                    <Card>
+                      <View style={estilos.filaEntre}>
+                        <Text style={estilos.etiquetaFuerte}>Cobrado a clientes</Text>
+                        <Text style={estilos.valorMedio}>{formatCurrency(totalCobrado)}</Text>
                       </View>
                       {totalCobrado > 0 && (
                         <>
-                          <View style={[styles.barTrack, styles.barStack]}>
-                            <View style={{ width: `${pctEfectivo}%`, backgroundColor: COLORS.success }} />
-                            <View style={{ width: `${pctTransfer}%`, backgroundColor: COLORS.info }} />
+                          <View
+                            style={estilos.barra}
+                            accessible
+                            accessibilityLabel={`Efectivo ${pctEfectivo} por ciento, transferencia ${pctTransfer} por ciento`}
+                          >
+                            {pctEfectivo > 0 && <View style={{ flex: pctEfectivo, backgroundColor: c.serie1 }} />}
+                            {pctEfectivo > 0 && pctTransfer > 0 && <View style={estilos.hueco} />}
+                            {pctTransfer > 0 && <View style={{ flex: pctTransfer, backgroundColor: c.serie2 }} />}
                           </View>
-                          <View style={styles.leyendaRow}>
-                            <Text style={styles.leyenda}>
-                              <Text style={{ color: COLORS.success }}>●</Text> Efectivo {formatCurrency(cobradoEfectivo)} · {pctEfectivo}%
-                            </Text>
-                            <Text style={styles.leyenda}>
-                              <Text style={{ color: COLORS.info }}>●</Text> Transferencia {formatCurrency(cobradoTransfer)} · {pctTransfer}%
-                            </Text>
+                          <View style={estilos.leyenda}>
+                            <View style={estilos.leyendaFila}>
+                              <View style={[estilos.marca, { backgroundColor: c.serie1 }]} />
+                              <Text style={estilos.leyendaNombre}>Efectivo</Text>
+                              <Text style={estilos.leyendaValor}>
+                                {formatCurrency(cobradoEfectivo)} · {pctEfectivo}%
+                              </Text>
+                            </View>
+                            <View style={estilos.leyendaFila}>
+                              <View style={[estilos.marca, { backgroundColor: c.serie2 }]} />
+                              <Text style={estilos.leyendaNombre}>Transferencia</Text>
+                              <Text style={estilos.leyendaValor}>
+                                {formatCurrency(cobradoTransfer)} · {pctTransfer}%
+                              </Text>
+                            </View>
                           </View>
                         </>
                       )}
-                    </View>
+                    </Card>
 
                     {hayFlujoPorMetodo && (
                       <>
-                        <View style={styles.metodosGrid}>
-                          {metodos.map((m) => (
-                            <View key={m.key} style={[styles.card, styles.metodoCard]}>
-                              <Text style={styles.flujoTitulo}>{m.titulo}</Text>
-                              <FilaFlujo label="Entró por servicios" valor={m.entro} />
-                              <FilaFlujo label="Salió en gastos y adelantos" valor={m.gastos} signo="-" />
-                              <FilaFlujo label="Salió en pagos al personal" valor={m.personal} signo="-" />
-                              <FilaFlujo label="Saldo" valor={m.saldo} destacado />
+                        {metodos.map((m) => (
+                          <Card key={m.key}>
+                            <View style={estilos.metodoTitulo}>
+                              <Icon name={m.icono} size={18} color={c.primarioTexto} />
+                              <Text style={estilos.flujoTitulo}>{m.titulo}</Text>
                             </View>
-                          ))}
-                        </View>
+                            <FilaFlujo label="Cobrado" valor={m.entro} />
+                            <FilaFlujo label="Gastos y adelantos" valor={m.gastos} signo="-" />
+                            <FilaFlujo label="Pagos al personal" valor={m.personal} signo="-" />
+                            <FilaFlujo label="Saldo" valor={m.saldo} destacado />
+                          </Card>
+                        ))}
 
                         {haySaldoTotal && (
-                          <View style={styles.saldoTotalCard}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.saldoTotalLabel}>Saldo total de caja</Text>
-                              <Text style={styles.kpiHint}>Saldo en efectivo + saldo en transferencia</Text>
+                          <Card variant="tinted">
+                            <View style={estilos.filaEntre}>
+                              <View style={estilos.textosFlex}>
+                                <Text style={estilos.etiquetaFuerte}>Saldo total de caja</Text>
+                                <Text style={estilos.pista}>Efectivo + transferencia</Text>
+                              </View>
+                              <Text
+                                style={[estilos.saldoTotal, { color: saldoTotalCaja < 0 ? c.errorTexto : c.primarioTexto }]}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                              >
+                                {formatCurrency(saldoTotalCaja)}
+                              </Text>
                             </View>
-                            <Text
-                              style={[styles.saldoTotalValor, saldoTotalCaja < 0 && { color: COLORS.error }]}
-                              numberOfLines={1}
-                              adjustsFontSizeToFit
-                            >
-                              {formatCurrency(saldoTotalCaja)}
-                            </Text>
-                          </View>
+                          </Card>
                         )}
                       </>
                     )}
@@ -429,25 +442,27 @@ export default function Finanzas() {
             )}
 
             {/* Accesos a detalle */}
-            <Text style={styles.sectionTitle}>Ver detalle</Text>
-            <View style={styles.accesosGrid}>
-              {ACCESOS.map((a) => (
-                <Pressable
-                  key={a.title}
-                  style={({ pressed }) => [styles.accesoCard, pressed && styles.accesoCardPressed]}
-                  onPress={() => router.push(a.route as any)}
-                >
-                  <View style={[styles.accesoIcon, { backgroundColor: a.color }]}>
-                    <FontAwesome5 name={a.icon} size={16} color={COLORS.white} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.accesoTitle}>{a.title}</Text>
-                    <Text style={styles.accesoDesc} numberOfLines={1}>{a.desc}</Text>
-                  </View>
-                  <FontAwesome5 name="chevron-right" size={12} color={COLORS.textTertiary} />
-                </Pressable>
-              ))}
-            </View>
+            <SectionHeader icon="list-outline" title="Ver detalle" style={{ marginTop: SPACING.xl }} />
+            {ACCESOS.map((a) => (
+              <Pressable
+                key={a.title}
+                accessibilityRole="button"
+                accessibilityLabel={`${a.title}. ${a.desc}`}
+                style={({ pressed }) => [estilos.acceso, pressed && { opacity: 0.9 }]}
+                onPress={() => router.push(a.route as any)}
+              >
+                <View style={[estilos.accesoIcono, { backgroundColor: a.color }]}>
+                  <Icon name={a.icon} size={20} color={c.blanco} />
+                </View>
+                <View style={estilos.textosFlex}>
+                  <Text style={estilos.accesoTitulo}>{a.title}</Text>
+                  <Text style={estilos.pista} numberOfLines={1}>
+                    {a.desc}
+                  </Text>
+                </View>
+                <Icon name="chevron-forward" size={18} color={c.textoTenue} />
+              </Pressable>
+            ))}
           </>
         )}
       </ScrollView>
@@ -463,219 +478,74 @@ export default function Finanzas() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const crearEstilos = (t: Tema) => ({
+  container: { flex: 1, backgroundColor: t.colores.fondo },
   scroll: { padding: SPACING.lg, paddingBottom: SPACING.huge },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xxl,
-    gap: SPACING.md,
-    backgroundColor: COLORS.background,
+  centered: { flex: 1, backgroundColor: t.colores.fondo, justifyContent: 'center' as const },
+  dateRow: { flexDirection: 'row' as const, gap: SPACING.md },
+  rangoTexto: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'center' as const,
+    gap: SPACING.xs + 2,
+    marginBottom: SPACING.md,
   },
-  deniedText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+  rangoTextoLabel: { fontSize: FONT_SIZE.subhead, color: t.colores.textoSuave },
+  errorFila: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: SPACING.md },
+  errorText: { flex: 1, minWidth: 0, fontSize: FONT_SIZE.callout, color: t.colores.errorTexto },
+  kpiRow: { flexDirection: 'row' as const, gap: SPACING.md, marginBottom: SPACING.md },
+  kpi: { flex: 1 },
+  filaEntre: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
+  textosFlex: { flex: 1, minWidth: 0, marginRight: SPACING.md },
+  etiquetaFuerte: { fontSize: FONT_SIZE.callout, fontWeight: FONT_WEIGHT.semibold, color: t.colores.texto },
+  pista: { fontSize: FONT_SIZE.footnote, color: t.colores.textoSuave, marginTop: 2 },
+  valorMedio: { fontSize: FONT_SIZE.title3, fontWeight: FONT_WEIGHT.bold, color: t.colores.texto },
+  vacio: { fontSize: FONT_SIZE.callout, color: t.colores.textoSuave, textAlign: 'center' as const, paddingVertical: SPACING.md },
+  // Barra proporcional efectivo / transferencia (2 px de separación, extremos redondeados)
+  barra: {
+    flexDirection: 'row' as const,
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden' as const,
+    backgroundColor: t.colores.bordeSuave,
+    marginTop: SPACING.lg,
   },
-  periodoRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
+  hueco: { width: 2, backgroundColor: t.colores.superficie },
+  leyenda: { marginTop: SPACING.md, gap: SPACING.sm },
+  leyendaFila: { flexDirection: 'row' as const, alignItems: 'center' as const },
+  marca: { width: 10, height: 10, borderRadius: 3, marginRight: SPACING.sm },
+  leyendaNombre: { flex: 1, fontSize: FONT_SIZE.subhead, color: t.colores.textoSuave },
+  leyendaValor: { fontSize: FONT_SIZE.subhead, fontWeight: FONT_WEIGHT.semibold, color: t.colores.texto },
+  metodoTitulo: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: SPACING.sm, marginBottom: SPACING.sm },
+  flujoTitulo: { fontSize: FONT_SIZE.headline, fontWeight: FONT_WEIGHT.bold, color: t.colores.texto },
+  flujoRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: SPACING.xs + 1,
   },
-  periodoChip: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.white,
+  flujoLabel: { flex: 1, fontSize: FONT_SIZE.callout, color: t.colores.textoSuave, marginRight: SPACING.md },
+  flujoLabelDestacado: { color: t.colores.texto, fontWeight: FONT_WEIGHT.semibold },
+  flujoValor: { fontSize: FONT_SIZE.callout, fontWeight: FONT_WEIGHT.medium },
+  saldoTotal: { fontSize: FONT_SIZE.title1, fontWeight: FONT_WEIGHT.bold, maxWidth: '55%' as const },
+  acceso: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: t.colores.superficie,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  periodoChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  periodoText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textSecondary,
-  },
-  periodoTextActive: { color: COLORS.white },
-  rangoBox: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
+    borderColor: t.colores.borde,
+    borderRadius: RADIUS.xl,
     padding: SPACING.md,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
-  },
-  dateRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  dateInputBox: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  dateInputBoxPressed: {
-    backgroundColor: COLORS.primarySurface,
-    borderColor: COLORS.primary,
-  },
-  chipLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  dateValue: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
-  buscarBtn: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.primary,
-  },
-  buscarBtnPressed: { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.98 }] },
-  buscarBtnDisabled: { backgroundColor: COLORS.border, ...SHADOWS.none },
-  buscarBtnText: { color: COLORS.white, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.sm },
-  loadingBox: { paddingVertical: SPACING.huge, alignItems: 'center', gap: SPACING.md },
-  loadingText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  kpiRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderLeftWidth: 4,
-    ...SHADOWS.sm,
-  },
-  kpiIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: SPACING.sm,
+    ...sombra(t, 'sm'),
   },
-  kpiLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  kpiValue: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
-  kpiHint: { fontSize: 10, color: COLORS.textTertiary, marginTop: SPACING.xs },
-  utilidadCard: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.primary,
-  },
-  utilidadHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
-  utilidadLabel: { fontSize: FONT_SIZE.sm, color: COLORS.white, fontWeight: FONT_WEIGHT.semibold, opacity: 0.9 },
-  utilidadValue: { fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.bold, color: COLORS.white },
-  utilidadHint: { fontSize: FONT_SIZE.xs, color: COLORS.white, opacity: 0.8, marginTop: SPACING.xs },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
-  },
-  cardTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  rangoTexto: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.md, textAlign: 'center' },
-  errorBox: {
-    backgroundColor: COLORS.errorLight,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  errorText: { fontSize: FONT_SIZE.sm, color: COLORS.errorDark, textAlign: 'center' },
-  reintentarBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.md,
-  },
-  seccionHeader: { marginBottom: SPACING.md, marginTop: SPACING.xs },
-  seccionTituloRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  seccionTitulo: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  seccionAyuda: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: SPACING.xxs },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cobradoValor: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  barStack: { flexDirection: 'row', marginTop: SPACING.xs },
-  leyendaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: SPACING.xs, marginTop: SPACING.xs },
-  leyenda: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
-  metodosGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: SPACING.md },
-  metodoCard: { flexGrow: 1, flexBasis: '45%', minWidth: 240 },
-  saldoTotalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    backgroundColor: COLORS.primarySurface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  saldoTotalLabel: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  saldoTotalValor: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy, color: COLORS.successDark },
-  emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: SPACING.md },
-  flujoTitulo: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: COLORS.text, marginBottom: SPACING.xs },
-  flujoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.sm, paddingVertical: SPACING.xxs },
-  flujoRowDestacado: { borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: SPACING.xs, paddingTop: SPACING.sm },
-  flujoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, flexShrink: 1 },
-  flujoLabelDestacado: { color: COLORS.text, fontWeight: FONT_WEIGHT.bold },
-  flujoValor: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
-  fpHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xs },
-  fpLabel: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: FONT_WEIGHT.medium },
-  fpAmount: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.semibold },
-  barTrack: {
-    height: 10,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
-    overflow: 'hidden',
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  accesosGrid: { gap: SPACING.sm },
-  accesoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
-  },
-  accesoCardPressed: { backgroundColor: COLORS.surface, transform: [{ scale: 0.99 }] },
-  accesoIcon: {
+  accesoIcono: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS.md,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: RADIUS.lg,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: SPACING.md,
   },
-  accesoTitle: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  accesoDesc: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
+  accesoTitulo: { fontSize: FONT_SIZE.callout, fontWeight: FONT_WEIGHT.semibold, color: t.colores.texto },
 });

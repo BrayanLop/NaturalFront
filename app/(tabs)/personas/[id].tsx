@@ -1,22 +1,19 @@
-import FormField from '@/components/FormField';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
+import { Button, Input, LoadingState } from '@/components/ds';
+import type { IconName } from '@/components/ds';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { toDateInputValue } from '@/utils/formatters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-    Alert,
-    KeyboardTypeOptions,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View
-} from 'react-native';
+import { Alert, KeyboardTypeOptions, ScrollView } from 'react-native';
 import { api } from '../../api/api';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+});
 
 export default function EditarPersona() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [persona, setPersona] = useState({
@@ -28,7 +25,7 @@ export default function EditarPersona() {
     edad: '',
     celular: '',
     fechaNacimiento: '',
-    rol: '', // ✅ Campo oculto
+    rol: '', // Campo oculto: se conserva y se envía
   });
 
   const [errores, setErrores] = useState<Partial<Record<keyof typeof persona, string>>>({});
@@ -58,7 +55,7 @@ export default function EditarPersona() {
     }));
   };
 
-  // Al cargar persona, si no hay fechaNacimiento, asigna la fecha actual, pero no muestres ni input ni texto
+  // Al cargar persona, si no hay fechaNacimiento, asigna la fecha actual (no se muestra)
   const cargarPersona = async () => {
     try {
       const res = await api.get(`/Persona/Obtener/${id}`);
@@ -72,7 +69,7 @@ export default function EditarPersona() {
         edad: data.edad?.toString() || '',
         celular: data.celular || '',
         fechaNacimiento: data.fechaNacimiento?.split('T')[0] || toDateInputValue(new Date()),
-        rol: data.rol || '02', // ✅ Valor que viene o se mantiene
+        rol: data.rol || '02',
       });
     } catch (err) {
       Alert.alert('Error', 'No se pudo cargar la persona');
@@ -90,7 +87,7 @@ export default function EditarPersona() {
 
     (Object.keys(persona) as (keyof typeof persona)[]).forEach((campo) => {
       const valor = persona[campo];
-      const { regex, mensaje } = validaciones[campo];
+      const { mensaje } = validaciones[campo];
       if (!valor && campo !== 'residencia' && campo !== 'rol') {
         nuevosErrores[campo] = mensaje;
       }
@@ -121,61 +118,39 @@ export default function EditarPersona() {
   const campos: {
     key: keyof typeof persona;
     label: string;
+    icon: IconName;
     keyboardType?: KeyboardTypeOptions;
-    isDate?: boolean;
   }[] = [
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'apellido', label: 'Apellido' },
-    { key: 'cedula', label: 'Cédula', keyboardType: 'numeric' },
-    { key: 'residencia', label: 'Residencia' },
-    { key: 'email', label: 'Correo electrónico', keyboardType: 'email-address' },
-    { key: 'edad', label: 'Edad', keyboardType: 'numeric' },
-    { key: 'celular', label: 'Celular', keyboardType: 'numeric' },
+    { key: 'nombre', label: 'Nombre', icon: 'person-outline' },
+    { key: 'apellido', label: 'Apellido', icon: 'person-outline' },
+    { key: 'cedula', label: 'Cédula', icon: 'id-card-outline', keyboardType: 'numeric' },
+    { key: 'residencia', label: 'Residencia', icon: 'home-outline' },
+    { key: 'email', label: 'Correo electrónico', icon: 'mail-outline', keyboardType: 'email-address' },
+    { key: 'edad', label: 'Edad', icon: 'calendar-outline', keyboardType: 'numeric' },
+    { key: 'celular', label: 'Celular', icon: 'call-outline', keyboardType: 'numeric' },
   ];
 
   if (loading) {
-    return <LoadingView message="Cargando información..." />;
+    return <LoadingState message="Cargando información..." />;
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.formCard}>
-        {campos.map(({ key, label, keyboardType, isDate }) => (
-          <FormField key={key} label={label} error={errores[key]}>
-            <TextInput
-              value={persona[key]}
-              onChangeText={(text) => handleChange(key, text)}
-              style={[commonStyles.input, errores[key] && styles.inputError]}
-              placeholder={label}
-              keyboardType={keyboardType}
-              placeholderTextColor={COLORS.textTertiary}
-            />
-          </FormField>
-        ))}
+    <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+      {campos.map(({ key, label, icon, keyboardType }) => (
+        <Input
+          key={key}
+          label={label}
+          value={persona[key]}
+          onChangeText={(text) => handleChange(key, text)}
+          error={errores[key] || undefined}
+          placeholder={label}
+          keyboardType={keyboardType}
+          leftIcon={icon}
+          autoCapitalize={key === 'email' ? 'none' : undefined}
+        />
+      ))}
 
-        {/* ✅ Campo oculto, no visible */}
-        <View style={{ display: 'none' }}>
-          <TextInput value={persona.rol} onChangeText={(text) => handleChange('rol', text)} />
-        </View>
-
-        <PrimaryButton title="Guardar" onPress={guardarCambios} />
-      </View>
+      <Button title="Guardar cambios" onPress={guardarCambios} />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.lg,
-    backgroundColor: COLORS.background,
-    flexGrow: 1,
-  },
-  formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-  },
-  inputError: {
-    borderColor: COLORS.error,
-  },
-});

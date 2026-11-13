@@ -1,13 +1,12 @@
-import FormField from '@/components/FormField';
+import { Button, Card, Input, SectionHeader, type InputProps } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { CrearEmpresaRequest } from '../../../api/modelos/empresaPlataforma';
 import { plataformaApi } from '../../../api/plataformaApi';
 
@@ -37,8 +36,13 @@ const REGLAS: Partial<Record<Campo, { ok: (v: string) => boolean; mensaje: strin
   adminContrasena: { ok: (v) => v.length >= 6, mensaje: 'Mínimo 6 caracteres' },
 };
 
+const crearEstilos = (t: Tema) => ({
+  container: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+});
+
 export default function CrearEmpresa() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
   const [valores, setValores] = useState<Record<Campo, string>>(VACIO);
   const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({});
   const [guardando, setGuardando] = useState(false);
@@ -49,17 +53,16 @@ export default function CrearEmpresa() {
     setErrores((prev) => ({ ...prev, [campo]: valor === '' || !regla || regla.ok(valor) ? '' : regla.mensaje }));
   };
 
-  const campo = (key: Campo, label: string, extra?: object) => (
-    <FormField key={key} label={label} error={errores[key]}>
-      <TextInput
-        value={valores[key]}
-        onChangeText={(t) => cambiar(key, t)}
-        style={[commonStyles.input, !!errores[key] && styles.inputError]}
-        placeholder={label}
-        placeholderTextColor={COLORS.textTertiary}
-        {...extra}
-      />
-    </FormField>
+  const campo = (key: Campo, label: string, extra?: Partial<InputProps>) => (
+    <Input
+      key={key}
+      label={label}
+      value={valores[key]}
+      onChangeText={(t) => cambiar(key, t)}
+      error={errores[key] || undefined}
+      placeholder={label}
+      {...extra}
+    />
   );
 
   const guardar = async () => {
@@ -105,17 +108,17 @@ export default function CrearEmpresa() {
 
   return (
     <KeyboardAware>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Text style={styles.seccion}>Empresa</Text>
+      <ScrollView contentContainerStyle={estilos.container} keyboardShouldPersistTaps="handled">
+        <Card>
+          <SectionHeader title="Empresa" icon="business-outline" style={{ marginTop: 0 }} />
           {campo('nombre', 'Nombre')}
           {campo('nit', 'NIT (opcional)')}
           {campo('direccion', 'Dirección (opcional)')}
           {campo('telefono', 'Teléfono (opcional)', { keyboardType: 'phone-pad' })}
-        </View>
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.seccion}>Administrador de la empresa</Text>
+        <Card>
+          <SectionHeader title="Administrador de la empresa" icon="person-outline" style={{ marginTop: 0 }} />
           {campo('adminNombre', 'Nombre')}
           {campo('adminApellido', 'Apellido')}
           {campo('adminCedula', 'Cédula', { keyboardType: 'numeric' })}
@@ -123,17 +126,10 @@ export default function CrearEmpresa() {
           {campo('adminCelular', 'Celular', { keyboardType: 'numeric' })}
           {campo('adminUsuario', 'Usuario', { autoCapitalize: 'none', autoCorrect: false })}
           {campo('adminContrasena', 'Contraseña inicial', { secureTextEntry: true, autoCapitalize: 'none' })}
-        </View>
+        </Card>
 
-        <PrimaryButton title="Crear empresa" onPress={guardar} loading={guardando} />
+        <Button title="Crear empresa" icon="checkmark" onPress={guardar} loading={guardando} />
       </ScrollView>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: SPACING.lg, backgroundColor: COLORS.background, flexGrow: 1, gap: SPACING.lg },
-  card: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: SPACING.lg },
-  seccion: { fontSize: FONT_SIZE.lg ?? FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text, marginBottom: SPACING.md },
-  inputError: { borderColor: COLORS.error },
-});

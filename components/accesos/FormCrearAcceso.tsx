@@ -1,16 +1,12 @@
-import EmptyState from '@/components/EmptyState';
-import FilterChips from '@/components/FilterChips';
-import FormField from '@/components/FormField';
+import { Button, Card, ChipGroup, EmptyState, Input, LoadingState, Select } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, RADIUS, SPACING, commonStyles } from '@/constants/theme';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
 import { ROLES } from '@/utils/roles';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { ClienteAccesos } from '../../app/api/accesosClient';
 import { Acceso } from '../../app/api/modelos/acceso';
 
@@ -26,8 +22,14 @@ interface Props {
   onCreado: () => void;
 }
 
+const crearEstilos = (t: Tema) => ({
+  container: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+  vacio: { flex: 1, justifyContent: 'center' as const, backgroundColor: t.colores.fondo },
+});
+
 /** Formulario para darle acceso a una persona que aún no lo tiene. Lo usan el rol 01 y el superadmin. */
 export default function FormCrearAcceso({ cliente, personaIdInicial, onCreado }: Props) {
+  const estilos = useEstilos(crearEstilos);
   const [sinAcceso, setSinAcceso] = useState<Acceso[]>([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -88,14 +90,14 @@ export default function FormCrearAcceso({ cliente, personaIdInicial, onCreado }:
     }
   };
 
-  if (cargando) return <LoadingView message="Cargando..." />;
+  if (cargando) return <LoadingState message="Cargando..." />;
 
   if (sinAcceso.length === 0) {
     return (
-      <View style={styles.vacio}>
+      <View style={estilos.vacio}>
         <EmptyState
-          message="Todas las personas ya tienen acceso"
-          icon="✅"
+          icon="checkmark-circle-outline"
+          title="Todas las personas ya tienen acceso"
           subtitle="Crea una persona nueva en el módulo Personas para darle acceso"
         />
       </View>
@@ -104,51 +106,43 @@ export default function FormCrearAcceso({ cliente, personaIdInicial, onCreado }:
 
   return (
     <KeyboardAware>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.formCard}>
-          <FilterChips
+      <ScrollView contentContainerStyle={estilos.container} keyboardShouldPersistTaps="handled">
+        <Card padding={SPACING.lg}>
+          <Select
             label="Persona"
-            options={sinAcceso.map((a) => ({ key: String(a.personaId), label: `${a.nombre} ${a.apellido}` }))}
-            selected={personaId}
-            onSelect={setPersonaId}
+            placeholder="Seleccionar persona"
+            value={personaId || null}
+            onChange={setPersonaId}
+            options={sinAcceso.map((a) => ({ value: String(a.personaId), label: `${a.nombre} ${a.apellido}` }))}
           />
 
-          <FormField label="Usuario" error={errores.nombreUsuario}>
-            <TextInput
-              value={nombreUsuario}
-              onChangeText={setNombreUsuario}
-              style={[commonStyles.input, errores.nombreUsuario && styles.inputError]}
-              placeholder="Nombre de usuario"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor={COLORS.textTertiary}
-            />
-          </FormField>
+          <Input
+            label="Usuario"
+            leftIcon="person-outline"
+            value={nombreUsuario}
+            onChangeText={setNombreUsuario}
+            error={errores.nombreUsuario}
+            placeholder="Nombre de usuario"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-          <FormField label="Contraseña" error={errores.contrasena}>
-            <TextInput
-              value={contrasena}
-              onChangeText={setContrasena}
-              style={[commonStyles.input, errores.contrasena && styles.inputError]}
-              placeholder="Contraseña inicial"
-              secureTextEntry
-              autoCapitalize="none"
-              placeholderTextColor={COLORS.textTertiary}
-            />
-          </FormField>
+          <Input
+            label="Contraseña"
+            leftIcon="lock-closed-outline"
+            value={contrasena}
+            onChangeText={setContrasena}
+            error={errores.contrasena}
+            placeholder="Contraseña inicial"
+            secureTextEntry
+            autoCapitalize="none"
+          />
 
-          <FilterChips label="Rol" options={OPCIONES_ROL} selected={rol} onSelect={setRol} />
+          <ChipGroup label="Rol" options={OPCIONES_ROL} value={rol} onChange={setRol} />
 
-          <PrimaryButton title="Crear acceso" onPress={guardar} loading={guardando} />
-        </View>
+          <Button title="Crear acceso" icon="checkmark" onPress={guardar} loading={guardando} />
+        </Card>
       </ScrollView>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: SPACING.lg, backgroundColor: COLORS.background, flexGrow: 1 },
-  formCard: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: SPACING.lg },
-  inputError: { borderColor: COLORS.error },
-  vacio: { flex: 1, justifyContent: 'center', backgroundColor: COLORS.background },
-});

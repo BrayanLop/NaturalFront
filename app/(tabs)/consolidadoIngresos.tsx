@@ -1,14 +1,28 @@
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Button, Card, DateField, Icon, StatCard } from '@/components/ds';
 import { useAuth } from '@/context/authContext';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { formatCurrency, toDateInputValue } from '../../utils/formatters';
 import { api } from '../api/api';
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  scroll: { paddingBottom: SPACING.huge },
+  etiquetaFiltro: { marginBottom: SPACING.sm },
+  fila: { flexDirection: 'row' as const, gap: SPACING.md, marginBottom: SPACING.md },
+  kpis: { flexDirection: 'row' as const, gap: SPACING.md, marginBottom: SPACING.md },
+  kpi: { flex: 1 },
+  filaDeducciones: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
+  deduccionesTexto: { flex: 1, minWidth: 0, flexDirection: 'row' as const, alignItems: 'center' as const, marginRight: SPACING.sm },
+  textoIcono: { marginLeft: SPACING.sm, flexShrink: 1 },
+});
+
 export default function ConsolidadoIngresos() {
   const { usuario } = useAuth();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   // Filtros de fecha igual que en egresos
   const today = new Date();
   const fechaActual = toDateInputValue(today);
@@ -68,97 +82,79 @@ export default function ConsolidadoIngresos() {
     setPickerVisible(null);
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIconContainer}>
-          <FontAwesome5 name="chart-line" size={24} color={COLORS.primary} />
-        </View>
-        <Text style={styles.headerTitle}>Consolidado</Text>
-        <Text style={styles.headerSubtitle}>Ingresos y Egresos</Text>
-      </View>
+  const moneda = (valor?: number) =>
+    (valor ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.filtros}>
-          <Text style={styles.label}>Rango de fechas</Text>
-          <View style={styles.dateRow}>
-            <Pressable 
-              style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]} 
-              onPress={() => setPickerVisible('desde')}
-            >
-              <Text style={styles.chipLabel}>Desde</Text>
-              <Text style={styles.dateValue}>{fechaDesde}</Text>
-            </Pressable>
-            <Pressable 
-              style={({ pressed }) => [styles.dateInputBox, pressed && styles.dateInputBoxPressed]}
-              onPress={() => setPickerVisible('hasta')}
-            >
-              <Text style={styles.chipLabel}>Hasta</Text>
-              <Text style={styles.dateValue}>{fechaHasta}</Text>
-            </Pressable>
+  const neto = consolidado?.consolidado ?? 0;
+
+  return (
+    <View style={estilos.contenedor}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={estilos.scroll}>
+        <Card>
+          <AppText variante="etiqueta" style={estilos.etiquetaFiltro}>
+            Rango de fechas
+          </AppText>
+          <View style={estilos.fila}>
+            <DateField label="Desde" value={fechaDesde} onPress={() => setPickerVisible('desde')} />
+            <DateField label="Hasta" value={fechaHasta} onPress={() => setPickerVisible('hasta')} />
           </View>
-          <Pressable 
-            style={({ pressed }) => [
-              styles.button, 
-              pressed && styles.buttonPressed,
-              loading && styles.buttonDisabled
-            ]} 
-            onPress={fetchConsolidado} 
-            disabled={loading}
-          >
-            <FontAwesome5 name="search" size={14} color={COLORS.white} />
-            <Text style={styles.buttonText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-          </Pressable>
-        </View>
+          <Button title={loading ? 'Buscando...' : 'Buscar'} icon="search" onPress={fetchConsolidado} disabled={loading} />
+        </Card>
 
         {consolidado && (
-          <View style={styles.resultBox}>
-            <View style={styles.resultItem}>
-              <View style={styles.resultIconContainer}>
-                <FontAwesome5 name="arrow-up" size={16} color={COLORS.success} />
-              </View>
-              <View style={styles.resultInfo}>
-                <Text style={styles.resultLabel}>Total Ingresos</Text>
-                <Text style={[styles.resultValue, styles.ingresos]}>
-                  {(consolidado.totalIngresos ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                </Text>
-              </View>
+          <>
+            <View style={estilos.kpis}>
+              <StatCard
+                style={estilos.kpi}
+                label="Ingresos"
+                value={moneda(consolidado.totalIngresos)}
+                icon="trending-up-outline"
+                tone="success"
+              />
+              <StatCard
+                style={estilos.kpi}
+                label="Egresos"
+                value={moneda(consolidado.totalEgresos)}
+                icon="trending-down-outline"
+                tone="error"
+              />
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.resultItem}>
-              <View style={[styles.resultIconContainer, styles.resultIconEgresos]}>
-                <FontAwesome5 name="arrow-down" size={16} color={COLORS.error} />
-              </View>
-              <View style={styles.resultInfo}>
-                <Text style={styles.resultLabel}>Total Egresos</Text>
-                <Text style={[styles.resultValue, styles.egresos]}>
-                  {(consolidado.totalEgresos ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.consolidadoBox}>
-              <Text style={styles.consolidadoLabel}>Consolidado</Text>
-              <Text style={[styles.consolidadoValue, (consolidado.consolidado ?? 0) >= 0 ? styles.ingresos : styles.egresos]}>
-                {(consolidado.consolidado ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-              </Text>
-            </View>
+            {neto >= 0 ? (
+              <StatCard
+                variant="solid"
+                icon="stats-chart-outline"
+                label="Consolidado"
+                value={moneda(neto)}
+                hint="Ingresos menos egresos"
+              />
+            ) : (
+              <StatCard
+                icon="stats-chart-outline"
+                tone="error"
+                label="Consolidado"
+                value={moneda(neto)}
+                hint="Ingresos menos egresos"
+              />
+            )}
 
             {/* Informativo: egresos descontados a los barberos en liquidaciones (no altera el consolidado) */}
             {consolidado.deduccionesRecuperadas !== undefined && consolidado.deduccionesRecuperadas !== null && (
-              <View style={styles.deduccionesRow}>
-                <Text style={styles.resultLabel}>Deducciones recuperadas</Text>
-                <Text style={styles.deduccionesValue}>
-                  {formatCurrency(consolidado.deduccionesRecuperadas)}
-                </Text>
-              </View>
+              <Card style={{ marginTop: SPACING.md }}>
+                <View style={estilos.filaDeducciones}>
+                  <View style={estilos.deduccionesTexto}>
+                    <Icon name="swap-horizontal-outline" size={18} color={tema.colores.infoTexto} />
+                    <AppText variante="etiqueta" tono="suave" style={estilos.textoIcono}>
+                      Deducciones recuperadas
+                    </AppText>
+                  </View>
+                  <AppText variante="etiqueta" style={{ color: tema.colores.infoTexto }}>
+                    {formatCurrency(consolidado.deduccionesRecuperadas)}
+                  </AppText>
+                </View>
+              </Card>
             )}
-          </View>
+          </>
         )}
       </ScrollView>
 
@@ -172,171 +168,3 @@ export default function ConsolidadoIngresos() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-    paddingVertical: SPACING.lg,
-  },
-  headerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  filtros: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
-  },
-  label: { 
-    fontSize: FONT_SIZE.sm, 
-    fontWeight: FONT_WEIGHT.semibold, 
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  dateInputBox: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  dateInputBoxPressed: {
-    backgroundColor: COLORS.primarySurface,
-    borderColor: COLORS.primary,
-  },
-  chipLabel: { 
-    fontSize: FONT_SIZE.xs, 
-    color: COLORS.textSecondary, 
-    marginBottom: SPACING.xs,
-  },
-  dateValue: { 
-    fontSize: FONT_SIZE.md, 
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  button: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.primary,
-  },
-  buttonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.border,
-    ...SHADOWS.none,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
-  },
-  resultBox: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  resultIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.successLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resultIconEgresos: {
-    backgroundColor: COLORS.errorLight,
-  },
-  resultInfo: {
-    flex: 1,
-  },
-  resultLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  resultValue: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: SPACING.md,
-  },
-  consolidadoBox: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-  },
-  consolidadoLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  consolidadoValue: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  deduccionesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: SPACING.md,
-  },
-  deduccionesValue: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.info,
-  },
-  ingresos: {
-    color: COLORS.success,
-  },
-  egresos: {
-    color: COLORS.error,
-  },
-});

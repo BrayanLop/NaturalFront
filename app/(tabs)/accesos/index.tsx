@@ -1,21 +1,26 @@
-import EmptyState from '@/components/EmptyState';
 import ListaAccesos from '@/components/accesos/ListaAccesos';
-import { COLORS, SPACING } from '@/constants/theme';
+import { EmptyState } from '@/components/ds';
 import { useRole } from '@/hooks/useRole';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { puedeGestionarAccesos } from '@/utils/roles';
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { clienteAccesosEmpresa } from '../../api/accesosClient';
+
+const crearEstilos = (t: Tema) => ({
+  container: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo, justifyContent: 'center' as const },
+});
 
 /** Accesos de la empresa del administrador (rol 01), contra Natural. */
 export default function Accesos() {
   const router = useRouter();
   const { rol } = useRole();
+  const estilos = useEstilos(crearEstilos);
 
   if (!puedeGestionarAccesos(rol)) {
     return (
-      <View style={styles.container}>
-        <EmptyState message="Sin permiso" icon="🔒" subtitle="Solo el administrador gestiona los accesos" />
+      <View style={estilos.container}>
+        <EmptyState icon="lock-closed-outline" title="Sin permiso" subtitle="Solo el administrador gestiona los accesos" />
       </View>
     );
   }
@@ -40,7 +45,3 @@ export default function Accesos() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: SPACING.lg, backgroundColor: COLORS.background },
-});

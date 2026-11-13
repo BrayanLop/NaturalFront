@@ -1,36 +1,35 @@
+import { Button, Icon, Input } from '@/components/ds';
+import { FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, sombra, useEstilos, useTheme, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { showError } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { useAuth } from '../context/authContext';
 import { api } from './api/api';
 
 export default function Login() {
   const { login, loginDemo, usuario, cargando } = useAuth();
   const router = useRouter();
+  const { tema } = useTheme();
+  const estilos = useEstilos(crearEstilos);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
-  const [focusedInput, setFocusedInput] = useState('');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -86,7 +85,6 @@ export default function Login() {
       await login(datosUsuario);
       router.replace('/home');
     } catch (error: any) {
-      // Mensaje de error genérico para cualquier problema de login
       // Usuario/empresa inactivos (403) traen su motivo; el resto de fallos conserva el mensaje genérico.
       const mensaje = error?.response?.status === 403
         ? mensajeDeError(error, 'Tu acceso está inactivo.')
@@ -103,7 +101,7 @@ export default function Login() {
       await loginDemo();
       router.replace('/home');
     } catch (error) {
-      showError('Error al iniciar la prueba gratuita', 'Error');
+      showError('Error al iniciar la demo', 'Error');
     } finally {
       setLoadingDemo(false);
     }
@@ -114,131 +112,93 @@ export default function Login() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-          <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View style={[estilos.container, { opacity: fadeAnim }]}>
+          <Animated.View style={[estilos.logoContainer, { transform: [{ scale: scaleAnim }] }]}>
             <Image
               source={require('../assets/images/logo1.png')}
-              style={styles.logo}
+              style={estilos.logo}
             />
           </Animated.View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.welcomeTitle}>Bienvenido</Text>
-            <Text style={styles.welcomeSubtitle}>Inicia sesión para continuar</Text>
+          <View style={estilos.formCard}>
+            <Text style={estilos.welcomeTitle}>Bienvenido</Text>
+            <Text style={estilos.welcomeSubtitle}>Inicia sesión para continuar</Text>
 
-            <View style={styles.inputContainer}>
-              <Ionicons 
-                name="person-outline" 
-                size={20} 
-                color={focusedInput === 'email' ? COLORS.primary : COLORS.textTertiary} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[
-                  styles.input,
-                  focusedInput === 'email' && styles.inputFocused,
-                ]}
-                placeholder="Usuario"
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => setFocusedInput('email')}
-                onBlur={() => setFocusedInput('')}
-                placeholderTextColor={COLORS.textTertiary}
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                autoCapitalize="none"
-              />
-            </View>
+            <Input
+              placeholder="Usuario"
+              leftIcon="person-outline"
+              value={email}
+              onChangeText={setEmail}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              autoCapitalize="none"
+              containerStyle={estilos.campo}
+            />
 
-            <View style={[
-              styles.passwordContainer,
-              focusedInput === 'password' && styles.passwordContainerFocused,
-            ]}>
-              <Ionicons 
-                name="lock-closed-outline" 
-                size={20} 
-                color={focusedInput === 'password' ? COLORS.primary : COLORS.textTertiary} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                ref={passwordRef}
-                style={styles.passwordInput}
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                onFocus={() => setFocusedInput('password')}
-                onBlur={() => setFocusedInput('')}
-                placeholderTextColor={COLORS.textTertiary}
-                returnKeyType="done"
-              />
-              <Pressable 
-                onPress={() => setShowPassword(!showPassword)}
-                hitSlop={8}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={COLORS.textTertiary}
-                />
-              </Pressable>
-            </View>
+            <Input
+              ref={passwordRef}
+              placeholder="Contraseña"
+              leftIcon="lock-closed-outline"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              returnKeyType="done"
+              containerStyle={estilos.campo}
+              right={
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  <Icon
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={tema.colores.textoTenue}
+                  />
+                </Pressable>
+              }
+            />
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                !(email && password) && styles.buttonDisabled,
-                pressed && styles.buttonPressed,
-              ]}
+            <Button
+              title="Ingresar"
               onPress={handleLogin}
-              disabled={!(email && password) || loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <Text style={styles.buttonText}>Ingresar</Text>
-              )}
-            </Pressable>
+              loading={loading}
+              disabled={!(email && password)}
+              size="lg"
+            />
 
-            <Pressable 
-              onPress={() => alert('Recuperación no implementada')}
-              style={({ pressed }) => [
-                styles.forgotPasswordContainer,
-                pressed && { opacity: 0.7 }
-              ]}
-            >
-              <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
-            </Pressable>
+            <View style={estilos.olvido}>
+              <Button
+                title="¿Olvidaste tu contraseña?"
+                variant="ghost"
+                size="sm"
+                fullWidth={false}
+                align="center"
+                onPress={() => alert('Recuperación no implementada')}
+              />
+            </View>
 
             {/* Separador */}
-            <View style={styles.separatorContainer}>
-              <View style={styles.separatorLine} />
-              <Text style={styles.separatorText}>o</Text>
-              <View style={styles.separatorLine} />
+            <View style={estilos.separatorContainer}>
+              <View style={estilos.separatorLine} />
+              <Text style={estilos.separatorText}>o</Text>
+              <View style={estilos.separatorLine} />
             </View>
 
-            {/* Botón de Prueba Gratuita */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.demoButton,
-                pressed && styles.demoButtonPressed,
-                loadingDemo && styles.demoButtonDisabled,
-              ]}
+            {/* Acceso a la demo */}
+            <Button
+              title="Iniciar Demo"
+              icon="rocket-outline"
+              variant="secondary"
+              size="lg"
               onPress={handleDemoLogin}
-              disabled={loadingDemo || loading}
-            >
-              {loadingDemo ? (
-                <ActivityIndicator color={COLORS.primary} />
-              ) : (
-                <View style={styles.demoButtonContent}>
-                  <Ionicons name="rocket-outline" size={20} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
-                  <Text style={styles.demoButtonText}>Iniciar Prueba Gratuita</Text>
-                </View>
-              )}
-            </Pressable>
+              loading={loadingDemo}
+              disabled={loading}
+            />
 
-            <Text style={styles.demoDescription}>
-              Explora todas las funcionalidades sin necesidad de registro. Los datos son de demostración y no se guardarán.
+            <Text style={estilos.demoDescription}>
+              Explora la app con datos de ejemplo. No se guarda nada.
             </Text>
           </View>
         </Animated.View>
@@ -247,158 +207,70 @@ export default function Login() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (t: Tema) => ({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
     padding: SPACING.lg,
-    backgroundColor: COLORS.primary,
+    backgroundColor: t.colores.encabezado,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: 'center' as const,
     marginBottom: SPACING.xl,
   },
   logo: {
     width: 180,
     height: 180,
-    resizeMode: 'contain',
+    resizeMode: 'contain' as const,
+    // En oscuro el logo (verde oscuro) se perdería sobre el fondo: se tiñe con el verde claro del tema.
+    ...(t.esOscuro ? { tintColor: t.colores.primarioTexto } : null),
   },
   formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.xl,
+    backgroundColor: t.colores.superficie,
+    borderRadius: RADIUS.xxl,
     padding: SPACING.xl,
-    ...SHADOWS.lg,
+    ...sombra(t, 'lg'),
   },
   welcomeTitle: {
-    fontSize: FONT_SIZE.xxl,
+    fontSize: FONT_SIZE.title1,
     fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    textAlign: 'center',
+    color: t.colores.texto,
+    textAlign: 'center' as const,
     marginBottom: SPACING.xs,
   },
   welcomeSubtitle: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    fontSize: FONT_SIZE.callout,
+    color: t.colores.textoSuave,
+    textAlign: 'center' as const,
     marginBottom: SPACING.xl,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+  campo: {
     marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
   },
-  inputIcon: {
-    marginRight: SPACING.sm,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  inputFocused: {
-    borderColor: COLORS.primary,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  passwordContainerFocused: {
-    borderColor: COLORS.primary,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md + 2,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.primary,
-  },
-  buttonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.border,
-    ...SHADOWS.none,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
-  },
-  forgotPasswordContainer: {
-    marginTop: SPACING.lg,
-    alignItems: 'center',
-  },
-  forgotPassword: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.medium,
+  olvido: {
+    marginTop: SPACING.md,
+    alignItems: 'center' as const,
   },
   separatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     marginVertical: SPACING.lg,
   },
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: t.colores.divisor,
   },
   separatorText: {
     marginHorizontal: SPACING.md,
-    color: COLORS.textTertiary,
+    color: t.colores.textoTenue,
     fontSize: FONT_SIZE.sm,
-  },
-  demoButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: SPACING.md + 2,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  demoButtonPressed: {
-    backgroundColor: COLORS.surface,
-    transform: [{ scale: 0.98 }],
-  },
-  demoButtonDisabled: {
-    borderColor: COLORS.border,
-  },
-  demoButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  demoButtonText: {
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
   },
   demoDescription: {
     marginTop: SPACING.md,
-    textAlign: 'center',
-    color: COLORS.textTertiary,
-    fontSize: FONT_SIZE.xs,
-    lineHeight: FONT_SIZE.xs * 1.4,
+    textAlign: 'center' as const,
+    color: t.colores.textoSuave,
+    fontSize: FONT_SIZE.footnote,
+    lineHeight: 17,
   },
 });

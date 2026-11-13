@@ -1,47 +1,115 @@
-import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Button, Card, ChipGroup, DateField, Icon, LoadingState, type IconName } from '@/components/ds';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { formatCurrency, toDateInputValue } from '@/utils/formatters';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { logger } from '@/utils/logger';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useAuth } from '../../context/authContext';
+import { ScrollView, View } from 'react-native';
 import { api } from '../api/api';
 import { ConsolidadoFormaPago } from '../api/modelos/contabilidad';
-import { logger } from '@/utils/logger';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, backgroundColor: t.colores.fondo, padding: SPACING.lg },
+  scroll: { paddingBottom: SPACING.huge },
+  etiquetaFiltro: { marginBottom: SPACING.sm },
+  fila: { flexDirection: 'row' as const, gap: SPACING.md, marginBottom: SPACING.lg },
+  tituloTarjeta: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: SPACING.sm },
+  icono: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: SPACING.md,
+  },
+  filaResultado: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colores.divisor,
+  },
+  filaUltima: { borderBottomWidth: 0 },
+  etiquetaFila: { flex: 1, minWidth: 0, marginRight: SPACING.md },
+  tarjeta: { marginBottom: SPACING.lg },
+});
+
+type TonoFila = 'normal' | 'exito' | 'error' | 'info';
 
 // Fila opcional: si el back es antiguo y no envía el campo, la fila se omite
-function FilaOpcional({
+function FilaResultado({
   label,
   valor,
-  negativo,
+  tono = 'normal',
+  texto,
   destacado,
+  ultima,
 }: {
   label: string;
   valor?: number | null;
-  negativo?: boolean;
+  tono?: TonoFila;
+  texto?: string;
   destacado?: boolean;
+  ultima?: boolean;
 }) {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   if (valor === undefined || valor === null) return null;
+  const c = tema.colores;
+  const color = destacado
+    ? valor >= 0
+      ? c.exitoTexto
+      : c.errorTexto
+    : tono === 'error'
+      ? c.errorTexto
+      : tono === 'exito'
+        ? c.exitoTexto
+        : tono === 'info'
+          ? c.infoTexto
+          : c.texto;
   return (
-    <View style={styles.resultRow}>
-      <Text style={[styles.resultLabel, destacado && styles.resultLabelDestacado]}>{label}</Text>
-      <Text
-        style={[
-          styles.resultValue,
-          negativo && { color: COLORS.error },
-          destacado && { color: valor >= 0 ? COLORS.success : COLORS.error, fontWeight: FONT_WEIGHT.bold },
-        ]}
-      >
-        {negativo ? '- ' : ''}
-        {formatCurrency(valor)}
-      </Text>
+    <View style={[estilos.filaResultado, ultima && estilos.filaUltima]}>
+      <AppText variante={destacado ? 'etiqueta' : 'cuerpo'} tono={destacado ? 'normal' : 'suave'} style={estilos.etiquetaFila}>
+        {label}
+      </AppText>
+      <AppText variante={destacado ? 'subtitulo' : 'etiqueta'} style={{ color }}>
+        {texto ?? formatCurrency(valor)}
+      </AppText>
     </View>
   );
 }
 
+function TarjetaFormaPago({
+  titulo,
+  icono,
+  tono,
+  children,
+}: {
+  titulo: string;
+  icono: IconName;
+  tono: 'info' | 'success';
+  children: React.ReactNode;
+}) {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
+  const c = tema.colores;
+  const paleta = tono === 'info' ? { fondo: c.infoSuave, texto: c.infoTexto } : { fondo: c.exitoSuave, texto: c.exitoTexto };
+  return (
+    <Card style={estilos.tarjeta}>
+      <View style={estilos.tituloTarjeta}>
+        <View style={[estilos.icono, { backgroundColor: paleta.fondo }]}>
+          <Icon name={icono} size={18} color={paleta.texto} />
+        </View>
+        <AppText variante="subtitulo">{titulo}</AppText>
+      </View>
+      {children}
+    </Card>
+  );
+}
+
 export default function ConsolidadoFormaPagoScreen() {
-  const { usuario } = useAuth();
+  const estilos = useEstilos(crearEstilos);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ConsolidadoFormaPago | null>(null);
   const [fechaInicio, setFechaInicio] = useState<string>(toDateInputValue(new Date()));
@@ -72,116 +140,51 @@ export default function ConsolidadoFormaPagoScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerIconContainer}>
-            <FontAwesome5 name="credit-card" size={24} color={COLORS.primary} />
-          </View>
-          <Text style={styles.headerTitle}>Consolidado</Text>
-          <Text style={styles.headerSubtitle}>Por forma de pago</Text>
-        </View>
-
-        <View style={styles.filtros}>
-          <Text style={styles.filtrosLabel}>Rango de fechas</Text>
-          <View style={styles.dateRow}>
-            <Pressable 
-              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
-              onPress={() => setPickerVisible('inicio')}
-            >
-              <Text style={styles.chipLabel}>Desde</Text>
-              <Text style={styles.chipValue}>{fechaInicio}</Text>
-            </Pressable>
-            <Pressable 
-              style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]}
-              onPress={() => setPickerVisible('fin')}
-            >
-              <Text style={styles.chipLabel}>Hasta</Text>
-              <Text style={styles.chipValue}>{fechaFin}</Text>
-            </Pressable>
+    <View style={estilos.contenedor}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={estilos.scroll}>
+        <Card>
+          <AppText variante="etiqueta" style={estilos.etiquetaFiltro}>
+            Rango de fechas
+          </AppText>
+          <View style={estilos.fila}>
+            <DateField label="Desde" value={fechaInicio} onPress={() => setPickerVisible('inicio')} />
+            <DateField label="Hasta" value={fechaFin} onPress={() => setPickerVisible('fin')} />
           </View>
 
-          <Text style={styles.filtrosLabel}>Forma de pago</Text>
-          <View style={styles.chipsRow}>
-            {[{ key: 'todos', label: 'Todas', icon: 'list' }, { key: 'E', label: 'Efectivo', icon: 'money-bill-wave' }, { key: 'T', label: 'Transferencia', icon: 'exchange-alt' }].map(opt => (
-              <Pressable
-                key={opt.key}
-                style={({ pressed }) => [
-                  styles.chip, 
-                  formaPago === opt.key && styles.chipActive,
-                  pressed && styles.chipPressed
-                ]}
-                onPress={() => setFormaPago(opt.key as any)}
-              >
-                <FontAwesome5 
-                  name={opt.icon} 
-                  size={12} 
-                  color={formaPago === opt.key ? COLORS.white : COLORS.textSecondary} 
-                />
-                <Text style={[styles.chipText, formaPago === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <ChipGroup
+            label="Forma de pago"
+            value={formaPago}
+            onChange={(k) => setFormaPago(k as 'todos' | 'T' | 'E')}
+            options={[
+              { key: 'todos', label: 'Todas', icon: 'list-outline' },
+              { key: 'E', label: 'Efectivo', icon: 'cash-outline' },
+              { key: 'T', label: 'Transferencia', icon: 'swap-horizontal-outline' },
+            ]}
+          />
 
-          <Pressable 
-            style={({ pressed }) => [
-              styles.btnBuscar, 
-              pressed && styles.btnBuscarPressed,
-              loading && styles.btnBuscarDisabled
-            ]} 
-            onPress={fetchData} 
-            disabled={loading}
-          >
-            <FontAwesome5 name="search" size={14} color={COLORS.white} />
-            <Text style={styles.btnBuscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-          </Pressable>
-        </View>
+          <Button title={loading ? 'Buscando...' : 'Buscar'} icon="search" onPress={fetchData} disabled={loading} />
+        </Card>
 
         {loading ? (
-          <LoadingView />
+          <LoadingState />
         ) : (
-          <View style={styles.resultadoBox}>
-            <View style={styles.resultCard}>
-              <View style={[styles.resultIconContainer, { backgroundColor: COLORS.infoLight }]}>
-                <FontAwesome5 name="exchange-alt" size={20} color={COLORS.info} />
-              </View>
-              <Text style={styles.resultadoTitulo}>Transferencia</Text>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Servicios cobrados</Text>
-                <Text style={styles.resultValue}>{data?.cantidadTransferencia ?? 0}</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Entró por servicios</Text>
-                <Text style={[styles.resultValue, styles.resultHighlight]}>
-                  {formatCurrency(data?.totalTransferencia ?? 0)}
-                </Text>
-              </View>
-              <FilaOpcional label="Salió en gastos y adelantos" valor={data?.egresosPagadosTransferencia} negativo />
-              <FilaOpcional label="Salió en pagos al personal" valor={data?.pagosLiquidacionesTransferencia} negativo />
-              <FilaOpcional label="Saldo de caja (transferencia)" valor={data?.netoTransferencia} destacado />
-            </View>
+          <>
+            <TarjetaFormaPago titulo="Transferencia" icono="swap-horizontal-outline" tono="info">
+              <FilaResultado label="Servicios cobrados" valor={data?.cantidadTransferencia ?? 0} texto={String(data?.cantidadTransferencia ?? 0)} />
+              <FilaResultado label="Entró por servicios" valor={data?.totalTransferencia ?? 0} tono="info" />
+              <FilaResultado label="Salió en gastos y adelantos" valor={data?.egresosPagadosTransferencia} tono="error" texto={data?.egresosPagadosTransferencia != null ? `- ${formatCurrency(data.egresosPagadosTransferencia)}` : undefined} />
+              <FilaResultado label="Salió en pagos al personal" valor={data?.pagosLiquidacionesTransferencia} tono="error" texto={data?.pagosLiquidacionesTransferencia != null ? `- ${formatCurrency(data.pagosLiquidacionesTransferencia)}` : undefined} />
+              <FilaResultado label="Saldo de caja (transferencia)" valor={data?.netoTransferencia} destacado ultima />
+            </TarjetaFormaPago>
 
-            <View style={styles.resultCard}>
-              <View style={[styles.resultIconContainer, { backgroundColor: COLORS.successLight }]}>
-                <FontAwesome5 name="money-bill-wave" size={20} color={COLORS.success} />
-              </View>
-              <Text style={styles.resultadoTitulo}>Efectivo</Text>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Servicios cobrados</Text>
-                <Text style={styles.resultValue}>{data?.cantidadEfectivo ?? 0}</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Entró por servicios</Text>
-                <Text style={[styles.resultValue, { color: COLORS.success }]}>
-                  {formatCurrency(data?.totalEfectivo ?? 0)}
-                </Text>
-              </View>
-              <FilaOpcional label="Salió en gastos y adelantos" valor={data?.egresosPagadosEfectivo} negativo />
-              <FilaOpcional label="Salió en pagos al personal" valor={data?.pagosLiquidacionesEfectivo} negativo />
-              <FilaOpcional label="Saldo de caja (efectivo)" valor={data?.netoEfectivo} destacado />
-            </View>
-          </View>
+            <TarjetaFormaPago titulo="Efectivo" icono="cash-outline" tono="success">
+              <FilaResultado label="Servicios cobrados" valor={data?.cantidadEfectivo ?? 0} texto={String(data?.cantidadEfectivo ?? 0)} />
+              <FilaResultado label="Entró por servicios" valor={data?.totalEfectivo ?? 0} tono="exito" />
+              <FilaResultado label="Salió en gastos y adelantos" valor={data?.egresosPagadosEfectivo} tono="error" texto={data?.egresosPagadosEfectivo != null ? `- ${formatCurrency(data.egresosPagadosEfectivo)}` : undefined} />
+              <FilaResultado label="Salió en pagos al personal" valor={data?.pagosLiquidacionesEfectivo} tono="error" texto={data?.pagosLiquidacionesEfectivo != null ? `- ${formatCurrency(data.pagosLiquidacionesEfectivo)}` : undefined} />
+              <FilaResultado label="Saldo de caja (efectivo)" valor={data?.netoEfectivo} destacado ultima />
+            </TarjetaFormaPago>
+          </>
         )}
       </ScrollView>
 
@@ -199,183 +202,3 @@ export default function ConsolidadoFormaPagoScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background, 
-    padding: SPACING.lg,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-    paddingVertical: SPACING.lg,
-  },
-  headerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  filtros: { 
-    backgroundColor: COLORS.white, 
-    borderRadius: RADIUS.lg, 
-    padding: SPACING.lg, 
-    marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
-  },
-  filtrosLabel: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  dateChip: { 
-    flex: 1,
-    flexDirection: 'column', 
-    alignItems: 'flex-start', 
-    backgroundColor: COLORS.surface, 
-    borderRadius: RADIUS.md, 
-    paddingHorizontal: SPACING.md, 
-    paddingVertical: SPACING.md, 
-    borderWidth: 1, 
-    borderColor: COLORS.border,
-  },
-  dateChipPressed: {
-    backgroundColor: COLORS.primarySurface,
-    borderColor: COLORS.primary,
-  },
-  chipLabel: { 
-    fontSize: FONT_SIZE.xs, 
-    color: COLORS.textSecondary, 
-    marginBottom: SPACING.xs, 
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  chipValue: { 
-    fontSize: FONT_SIZE.md, 
-    color: COLORS.text, 
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  chipsRow: { 
-    flexDirection: 'row', 
-    gap: SPACING.sm, 
-    flexWrap: 'wrap', 
-    marginBottom: SPACING.lg,
-  },
-  chip: { 
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.md, 
-    paddingVertical: SPACING.sm, 
-    borderRadius: RADIUS.full, 
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  chipActive: { 
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  chipPressed: {
-    transform: [{ scale: 0.95 }],
-  },
-  chipText: { 
-    color: COLORS.textSecondary, 
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  chipTextActive: { 
-    color: COLORS.white, 
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  btnBuscar: { 
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary, 
-    padding: SPACING.md, 
-    borderRadius: RADIUS.md, 
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.primary,
-  },
-  btnBuscarPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  btnBuscarDisabled: {
-    backgroundColor: COLORS.border,
-    ...SHADOWS.none,
-  },
-  btnBuscarText: { 
-    color: COLORS.white, 
-    fontWeight: FONT_WEIGHT.semibold, 
-    fontSize: FONT_SIZE.md,
-  },
-  resultadoBox: { 
-    gap: SPACING.md,
-  },
-  resultCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  resultIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  resultadoTitulo: { 
-    fontSize: FONT_SIZE.lg, 
-    fontWeight: FONT_WEIGHT.bold, 
-    color: COLORS.text, 
-    marginBottom: SPACING.md,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  resultLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-  },
-  resultLabelDestacado: {
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  resultValue: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  resultHighlight: {
-    color: COLORS.info,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-});

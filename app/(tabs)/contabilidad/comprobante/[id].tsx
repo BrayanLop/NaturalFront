@@ -1,19 +1,16 @@
-import EmptyState from '@/components/EmptyState';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Badge, Button, Card, Divider, EmptyState, Icon, LoadingState, type IconName } from '@/components/ds';
 import { useAuth } from '@/context/authContext';
 import { useRole } from '@/hooks/useRole';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { generarHtmlComprobante, nombreArchivoComprobante } from '@/utils/comprobanteHtml';
 import { formatCurrency, formatDate, formatFormaPago } from '@/utils/formatters';
 import { logger, showError } from '@/utils/logger';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { api } from '../../../api/api';
 import { ComprobanteLiquidacion } from '../../../api/modelos/contabilidad';
 
@@ -24,6 +21,8 @@ export default function ComprobanteScreen() {
   const idLiquidacion = Array.isArray(id) ? id[0] : id;
   const { usuario } = useAuth();
   const { isTrabajador } = useRole();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
 
   const [comprobante, setComprobante] = useState<ComprobanteLiquidacion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,12 +119,12 @@ export default function ComprobanteScreen() {
 
   const esWeb = Platform.OS === 'web';
 
-  if (loading) return <LoadingView message="Cargando comprobante..." />;
+  if (loading) return <LoadingState message="Cargando comprobante..." />;
 
   if (error || !comprobante) {
     return (
-      <View style={styles.container}>
-        <EmptyState message={error || 'Comprobante no encontrado'} icon="🧾" />
+      <View style={estilos.contenedor}>
+        <EmptyState icon="document-text-outline" title={error || 'Comprobante no encontrado'} />
       </View>
     );
   }
@@ -133,8 +132,8 @@ export default function ComprobanteScreen() {
   // El trabajador solo puede ver sus propios comprobantes
   if (isTrabajador && usuario && comprobante.persona?.id !== usuario.id) {
     return (
-      <View style={styles.container}>
-        <EmptyState message="No tienes permisos para ver este comprobante" icon="🔒" />
+      <View style={estilos.contenedor}>
+        <EmptyState icon="lock-closed-outline" title="No tienes permisos para ver este comprobante" />
       </View>
     );
   }
@@ -142,327 +141,242 @@ export default function ComprobanteScreen() {
   const c = comprobante;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <ScrollView style={estilos.contenedor} contentContainerStyle={estilos.scroll} showsVerticalScrollIndicator={false}>
       {/* Encabezado compacto */}
-      <View style={styles.card}>
-        <View style={styles.headerRow}>
-          <Text style={styles.empresa} numberOfLines={2}>
-            {c.empresa?.nombre || 'Empresa'}
-            <Text style={styles.nit}>  ·  NIT {c.empresa?.nit || '—'}</Text>
-          </Text>
-          <View style={styles.numeroBadge}>
-            <Text style={styles.numero}>N.º {c.idLiquidacion}</Text>
+      <Card>
+        <View style={estilos.cabeceraFila}>
+          <View style={estilos.empresaTextos}>
+            <AppText variante="subtitulo" numberOfLines={2}>
+              {c.empresa?.nombre || 'Empresa'}
+            </AppText>
+            <AppText variante="nota" tono="suave">
+              NIT {c.empresa?.nit || '—'}
+            </AppText>
           </View>
+          <Badge label={`N.º ${c.idLiquidacion}`} tone="primary" dot={false} />
         </View>
-        <View style={styles.grid}>
+        <Divider style={estilos.separador} />
+        <View style={estilos.grid}>
           <Dato label="Barbero" valor={c.persona?.nombreCompleto ?? '—'} />
           <Dato label="Cédula" valor={c.persona?.cedula || '—'} />
           <Dato label="Fecha de liquidación" valor={fecha(c.fechaLiquidacion)} />
           <Dato label="Periodo" valor={`${fecha(c.periodoDesde)} – ${fecha(c.periodoHasta)}`} />
         </View>
-        <View style={styles.acciones}>
-          <View style={styles.accion}>
-            <PrimaryButton
+        <View style={estilos.acciones}>
+          <View style={estilos.accion}>
+            <Button
               title={abriendo ? 'Abriendo...' : esWeb ? 'Ver / imprimir PDF' : 'Ver / imprimir'}
               onPress={verPdf}
               loading={abriendo}
               disabled={compartiendo}
-              variant="outline"
-              size="small"
-              icon={<FontAwesome5 name="eye" size={13} color={COLORS.primary} />}
+              variant="secondary"
+              size="sm"
+              icon="eye-outline"
             />
           </View>
           {!esWeb && (
-            <View style={styles.accion}>
-              <PrimaryButton
+            <View style={estilos.accion}>
+              <Button
                 title={compartiendo ? 'Generando...' : 'Compartir PDF'}
                 onPress={compartirPdf}
                 loading={compartiendo}
                 disabled={abriendo}
-                size="small"
-                icon={<FontAwesome5 name="share-alt" size={13} color={COLORS.white} />}
+                size="sm"
+                icon="share-outline"
               />
             </View>
           )}
         </View>
         {esWeb && (
-          <Text style={styles.ayuda}>En el diálogo de impresión elige “Guardar como PDF” para descargarlo.</Text>
+          <AppText variante="nota" tono="suave" style={estilos.ayuda}>
+            En el diálogo de impresión elige “Guardar como PDF” para descargarlo.
+          </AppText>
         )}
-      </View>
+      </Card>
 
       {/* Detalle por servicio */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Detalle por servicio</Text>
+      <Card>
+        <AppText variante="subtitulo" style={estilos.tituloTarjeta}>
+          Detalle por servicio
+        </AppText>
         {c.servicios.length === 0 ? (
-          <Text style={styles.vacio}>Sin servicios</Text>
+          <AppText tono="suave">Sin servicios</AppText>
         ) : (
           c.servicios.map((s, i) => (
-            <View key={`${s.nombre}-${i}`} style={styles.itemRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitulo}>{s.nombre}</Text>
-                <Text style={styles.textoSecundario}>
+            <View key={`${s.nombre}-${i}`} style={estilos.itemFila}>
+              <View style={estilos.itemTextos}>
+                <AppText variante="etiqueta">{s.nombre}</AppText>
+                <AppText variante="nota" tono="suave">
                   {s.cantidad} × · Facturado {formatCurrency(s.valorFacturado)}
-                </Text>
+                </AppText>
               </View>
-              <Text style={styles.itemValor}>{formatCurrency(s.comision)}</Text>
+              <AppText variante="etiqueta" tono="exito">
+                {formatCurrency(s.comision)}
+              </AppText>
             </View>
           ))
         )}
-      </View>
+      </Card>
 
       {/* Deducciones */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Deducciones</Text>
+      <Card>
+        <AppText variante="subtitulo" style={estilos.tituloTarjeta}>
+          Deducciones
+        </AppText>
         {c.deducciones.length === 0 ? (
-          <Text style={styles.vacio}>Sin deducciones</Text>
+          <AppText tono="suave">Sin deducciones</AppText>
         ) : (
           c.deducciones.map((d, i) => (
-            <View key={`${d.motivo}-${i}`} style={styles.itemRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitulo}>{d.motivo}</Text>
-                <Text style={styles.textoSecundario}>
+            <View key={`${d.motivo}-${i}`} style={estilos.itemFila}>
+              <View style={estilos.itemTextos}>
+                <AppText variante="etiqueta">{d.motivo}</AppText>
+                <AppText variante="nota" tono="suave">
                   {fecha(d.fecha)} · {formatFormaPago(d.formaPago)}
-                </Text>
+                </AppText>
               </View>
-              <Text style={[styles.itemValor, { color: COLORS.error }]}>- {formatCurrency(d.valor)}</Text>
+              <AppText variante="etiqueta" tono="error">
+                - {formatCurrency(d.valor)}
+              </AppText>
             </View>
           ))
         )}
-      </View>
+      </Card>
 
       {/* Totales destacados */}
-      <View style={styles.totalesCard}>
+      <Card variant="tinted">
         <Fila label="Total servicios" valor={String(c.cantidadServicios)} />
         <Fila label="Total generado (facturado)" valor={formatCurrency(c.totalFacturado)} />
         <Fila label="Comisión del barbero" valor={formatCurrency(c.totalComision)} />
-        <Fila label="Total deducciones" valor={`- ${formatCurrency(c.totalDeducciones)}`} colorValor={COLORS.error} />
-        <View style={styles.dividerTotales} />
-        <View style={styles.netoRow}>
-          <Text style={styles.netoLabel}>NETO PAGADO</Text>
-          <Text style={styles.netoValor}>{formatCurrency(c.netoPagado)}</Text>
+        <Fila label="Total deducciones" valor={`- ${formatCurrency(c.totalDeducciones)}`} tonoValor="error" />
+        <Divider style={estilos.separador} />
+        <View style={estilos.netoFila}>
+          <AppText variante="etiqueta" tono="primario" style={estilos.netoEtiqueta}>
+            NETO PAGADO
+          </AppText>
+          <AppText variante="titulo" tono="primario" numberOfLines={1} adjustsFontSizeToFit style={estilos.netoValor}>
+            {formatCurrency(c.netoPagado)}
+          </AppText>
         </View>
-        <View style={styles.dividerTotales} />
-        <Text style={styles.pagosTitulo}>Pagos por método</Text>
+        <Divider style={estilos.separador} />
+        <AppText variante="etiqueta" style={estilos.subtituloTotales}>
+          Pagos por método
+        </AppText>
         {c.pagos.length === 0 ? (
-          <Text style={styles.vacio}>Sin método de pago registrado</Text>
+          <AppText variante="nota" tono="suave">
+            Sin método de pago registrado
+          </AppText>
         ) : (
           c.pagos.map((p, i) => (
             <Fila
               key={`${p.formaPago}-${i}`}
-              label={p.formaPago === 'E' ? '💵 Efectivo' : p.formaPago === 'T' ? '💳 Transferencia' : formatFormaPago(p.formaPago)}
+              icono={p.formaPago === 'E' ? 'cash-outline' : p.formaPago === 'T' ? 'swap-horizontal-outline' : undefined}
+              label={p.formaPago === 'E' ? 'Efectivo' : p.formaPago === 'T' ? 'Transferencia' : formatFormaPago(p.formaPago)}
               valor={formatCurrency(p.valor)}
             />
           ))
         )}
         {(c.totalPropinas ?? 0) > 0 && (
           <>
-            <View style={styles.dividerTotales} />
-            <Text style={styles.pagosTitulo}>🤑 Propinas (no incluidas en el neto)</Text>
+            <Divider style={estilos.separador} />
+            <View style={estilos.propinaTitulo}>
+              <Icon name="gift-outline" size={16} color={tema.colores.primarioTexto} />
+              <AppText variante="etiqueta" style={estilos.propinaTexto}>
+                Propinas (no incluidas en el neto)
+              </AppText>
+            </View>
             <Fila label="Total propinas" valor={formatCurrency(c.totalPropinas ?? 0)} />
             <Fila label="Entregadas" valor={formatCurrency(c.propinasEntregadas ?? 0)} />
             <Fila label="Pendientes de entregar" valor={formatCurrency(c.propinasPendientes ?? 0)} />
           </>
         )}
         {c.esReconstruido && (
-          <Text style={styles.nota}>Liquidación anterior: valores reconstruidos, sin método de pago registrado</Text>
+          <AppText variante="nota" tono="suave" style={estilos.nota}>
+            Liquidación anterior: valores reconstruidos, sin método de pago registrado
+          </AppText>
         )}
-      </View>
-
+      </Card>
     </ScrollView>
   );
 }
 
 function Dato({ label, valor }: { label: string; valor: string }) {
+  const estilos = useEstilos(crearEstilos);
   return (
-    <View style={styles.dato}>
-      <Text style={styles.datoLabel}>{label}</Text>
-      <Text style={styles.datoValor}>{valor}</Text>
+    <View style={estilos.dato}>
+      <AppText variante="nota" tono="suave">
+        {label}
+      </AppText>
+      <AppText variante="etiqueta">{valor}</AppText>
     </View>
   );
 }
 
-function Fila({ label, valor, colorValor }: { label: string; valor: string; colorValor?: string }) {
+function Fila({
+  label,
+  valor,
+  tonoValor,
+  icono,
+}: {
+  label: string;
+  valor: string;
+  tonoValor?: 'error';
+  icono?: IconName;
+}) {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   return (
-    <View style={styles.fila}>
-      <Text style={styles.filaLabel}>{label}</Text>
-      <Text style={[styles.filaValor, colorValor ? { color: colorValor } : null]}>{valor}</Text>
+    <View style={estilos.fila}>
+      <View style={estilos.filaEtiqueta}>
+        {icono ? <Icon name={icono} size={16} color={tema.colores.textoSuave} /> : null}
+        <AppText tono="suave" style={icono ? estilos.filaTextoIcono : undefined}>
+          {label}
+        </AppText>
+      </View>
+      <AppText variante="etiqueta" tono={tonoValor ?? 'normal'} style={estilos.filaValor}>
+        {valor}
+      </AppText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, backgroundColor: t.colores.fondo },
+  scroll: { padding: SPACING.lg, paddingBottom: SPACING.huge },
+  cabeceraFila: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    justifyContent: 'space-between' as const,
   },
-  scroll: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxxl,
-    gap: SPACING.md,
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.sm,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: SPACING.sm,
-    paddingBottom: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  empresa: {
-    flex: 1,
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  nit: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.regular,
-    color: COLORS.textSecondary,
-  },
-  numeroBadge: {
-    backgroundColor: COLORS.primarySurface,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xxs,
-  },
-  numero: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.primaryDark,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: SPACING.md,
-    rowGap: SPACING.sm,
-    paddingTop: SPACING.sm,
-  },
-  dato: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    minWidth: 130,
-  },
-  datoLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  datoValor: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  acciones: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  accion: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    minWidth: 140,
-  },
-  ayuda: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  textoSecundario: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xxs,
-  },
-  cardTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
-  vacio: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
+  empresaTextos: { flex: 1, minWidth: 0, marginRight: SPACING.md },
+  separador: { marginVertical: SPACING.md },
+  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, columnGap: SPACING.md, rowGap: SPACING.md },
+  dato: { flexGrow: 1, flexBasis: '45%' as const, minWidth: 0 },
+  acciones: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: SPACING.sm, marginTop: SPACING.lg },
+  accion: { flexGrow: 1, flexBasis: '45%' as const, minWidth: 140 },
+  ayuda: { marginTop: SPACING.sm },
+  tituloTarjeta: { marginBottom: SPACING.sm },
+  itemFila: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: t.colores.divisor,
   },
-  itemTitulo: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  itemValor: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.success,
-  },
+  itemTextos: { flex: 1, minWidth: 0, marginRight: SPACING.sm },
   fila: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: SPACING.md,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingVertical: SPACING.xs,
   },
-  filaLabel: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    flexShrink: 1,
-  },
-  filaValor: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    textAlign: 'right',
-  },
-  totalesCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    ...SHADOWS.md,
-  },
-  dividerTotales: {
-    height: 1,
-    backgroundColor: COLORS.primaryBorder,
-    marginVertical: SPACING.sm,
-  },
-  netoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  netoLabel: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.heavy,
-    color: COLORS.text,
-  },
-  netoValor: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: FONT_WEIGHT.heavy,
-    color: COLORS.successDark,
-  },
-  pagosTitulo: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  nota: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-    marginTop: SPACING.sm,
-  },
+  filaEtiqueta: { flexDirection: 'row' as const, alignItems: 'center' as const, flexShrink: 1, marginRight: SPACING.md },
+  filaTextoIcono: { marginLeft: SPACING.sm },
+  filaValor: { textAlign: 'right' as const },
+  netoFila: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
+  netoEtiqueta: { marginRight: SPACING.md },
+  netoValor: { flexShrink: 1, textAlign: 'right' as const },
+  subtituloTotales: { marginBottom: SPACING.xs },
+  propinaTitulo: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: SPACING.xs },
+  propinaTexto: { marginLeft: SPACING.sm, flex: 1 },
+  nota: { marginTop: SPACING.md },
 });

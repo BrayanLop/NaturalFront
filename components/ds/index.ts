@@ -4,6 +4,7 @@ export { Button, type TamanoBoton, type VarianteBoton } from './Button';
 export { Card, Divider } from './Card';
 export { Chip, ChipGroup, type OpcionChip } from './Chip';
 export { ConfirmDialog } from './ConfirmDialog';
+export { EmptyState, LoadingState } from './EmptyState';
 export { DateField, FilterPanel } from './FilterPanel';
 export { Icon, type IconName } from './Icon';
 export { IconButton } from './IconButton';

@@ -60,6 +60,28 @@ function contar() {
 }
 
 const actual = contar();
+
+// --only=<prefijo>: muestra el conteo de los archivos cuya ruta empieza por ese prefijo (0 = limpio).
+const soloArg = process.argv.find((a) => a.startsWith('--only='));
+if (soloArg) {
+  const prefijo = soloArg.slice('--only='.length).split(path.sep).join('/');
+  const archivosRaiz = CARPETAS.flatMap((c) => {
+    const dir = path.join(RAIZ, c);
+    return fs.existsSync(dir) ? archivos(dir) : [];
+  })
+    .map((f) => path.relative(RAIZ, f).split(path.sep).join('/'))
+    .filter((f) => f.startsWith(prefijo));
+  let hex = 0;
+  let emoji = 0;
+  for (const f of archivosRaiz) {
+    const v = actual[f] || { hex: 0, emoji: 0 };
+    hex += v.hex;
+    emoji += v.emoji;
+    if (v.hex + v.emoji > 0) console.log(`${String(v.hex).padStart(4)} hex ${String(v.emoji).padStart(3)} emoji  ${f}`);
+  }
+  console.log(`[${prefijo}] ${archivosRaiz.length} archivos · ${hex} colores a mano · ${emoji} emojis`);
+  process.exit(0);
+}
 const total = (obj) =>
   Object.values(obj).reduce((a, v) => ({ hex: a.hex + v.hex, emoji: a.emoji + v.emoji }), { hex: 0, emoji: 0 });
 

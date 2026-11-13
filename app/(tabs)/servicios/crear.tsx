@@ -1,23 +1,20 @@
-import FormField from '@/components/FormField';
+import { Button, Input, ToggleRow } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import PrimaryButton from '@/components/PrimaryButton';
-import { commonStyles } from '@/constants/theme';
+import CampoPrecio from '@/components/servicios/CampoPrecio';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View
-} from 'react-native';
-import { MaskedTextInput } from 'react-native-mask-text';
+import { ScrollView } from 'react-native';
 import { api } from '../../api/api';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+});
 
 export default function CrearServicio() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
 
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -53,66 +50,24 @@ export default function CrearServicio() {
 
   return (
     <KeyboardAware>
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <FormField label="Nombre">
-        <TextInput
-          value={nombre}
-          onChangeText={setNombre}
-          style={commonStyles.input}
-          placeholder="Nombre del servicio"
-        />
-      </FormField>
-
-      <FormField label="Descripción">
-        <TextInput
+      <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+        <Input label="Nombre" value={nombre} onChangeText={setNombre} placeholder="Nombre del servicio" />
+        <Input
+          label="Descripción"
           value={descripcion}
           onChangeText={setDescripcion}
-          style={commonStyles.input}
-          placeholder="Descripción opcional"
+          placeholder="Descripción detallada (opcional)"
+          multiline
         />
-      </FormField>
-
-      <FormField label="Precio">
-        <MaskedTextInput
-          type="currency"
-          options={{
-            prefix: '$',
-            decimalSeparator: ',',
-            groupSeparator: '.',
-            precision: 0,
-          }}
-          value={precio}
-          onChangeText={(_, unmasked) => setPrecio(unmasked)}
-          style={commonStyles.input}
-          keyboardType="numeric"
-          placeholder="Ej: $15.000"
+        <CampoPrecio label="Precio" value={precio} onChangeText={setPrecio} placeholder="Ej: $15.000" />
+        <ToggleRow
+          label="Estado del servicio"
+          description={disponible ? 'Visible al registrar' : 'Oculto temporalmente'}
+          value={disponible}
+          onValueChange={setDisponible}
         />
-      </FormField>
-
-      <View style={styles.switchRow}>
-        <Text style={commonStyles.label}>Disponible</Text>
-        <Switch value={disponible} onValueChange={setDisponible} />
-      </View>
-
-      <PrimaryButton
-        title="Guardar"
-        onPress={guardar}
-        loading={loading}
-        variant="blue"
-      />
-    </ScrollView>
+        <Button title="Guardar" onPress={guardar} loading={loading} />
+      </ScrollView>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    ...commonStyles.scrollContainer,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-});

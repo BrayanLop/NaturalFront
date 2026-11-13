@@ -1,20 +1,12 @@
 import { api } from '@/app/api/api';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Badge, Button, Card, SectionHeader, StatCard, type IconName, type TonoStat } from '@/components/ds';
 import { useAuth } from '@/context/authContext';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { formatCurrency, toDateInputValue } from '@/utils/formatters';
 import { logger } from '@/utils/logger';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 
 interface Resumen {
   realizados: number;
@@ -36,9 +28,27 @@ const VACIO: Resumen = {
   deducciones: 0,
 };
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, backgroundColor: t.colores.fondo },
+  scroll: { padding: SPACING.lg, paddingBottom: SPACING.huge },
+  saludo: { marginBottom: SPACING.lg },
+  carga: { paddingVertical: SPACING.huge, alignItems: 'center' as const },
+  grilla: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: SPACING.md, marginBottom: SPACING.lg },
+  celda: { flexBasis: '47%' as const, flexGrow: 1, minWidth: 140 },
+  fila: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, paddingVertical: SPACING.sm, gap: SPACING.md },
+  filaTexto: { flex: 1, minWidth: 0 },
+  acciones: { flexDirection: 'row' as const, gap: SPACING.md },
+  accion: { flex: 1, minWidth: 0 },
+  aviso: { marginBottom: SPACING.lg, alignSelf: 'flex-start' as const },
+});
+
+
 export default function WorkerHome() {
   const { usuario, isDemo } = useAuth();
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
+  const c = tema.colores;
   const [data, setData] = useState<Resumen>(VACIO);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,218 +132,110 @@ export default function WorkerHome() {
 
   const saldoEstimado = data.comisionAcum + data.propinasAcum - data.deducciones;
 
-  const stats = [
-    { label: 'Realizados', value: data.realizados, color: COLORS.primary, icon: 'clipboard-list' },
-    { label: 'Aprobados', value: data.aprobados, color: COLORS.success, icon: 'check-circle' },
-    { label: 'Pendientes', value: data.pendientes, color: '#f39c12', icon: 'clock' },
-    { label: 'Rechazados', value: data.rechazados, color: COLORS.error, icon: 'times-circle' },
+  const stats: { label: string; value: number; tone: TonoStat; icon: IconName }[] = [
+    { label: 'Realizados', value: data.realizados, tone: 'primary', icon: 'clipboard-outline' },
+    { label: 'Aprobados', value: data.aprobados, tone: 'success', icon: 'checkmark-circle-outline' },
+    { label: 'Pendientes', value: data.pendientes, tone: 'info', icon: 'time-outline' },
+    { label: 'Rechazados', value: data.rechazados, tone: 'error', icon: 'close-circle-outline' },
   ];
+
+  const fila = (etiqueta: string, valor: string, color?: string) => (
+    <View style={estilos.fila}>
+      <AppText tono="suave" style={estilos.filaTexto}>
+        {etiqueta}
+      </AppText>
+      <AppText variante="etiqueta" style={color ? { color } : undefined}>
+        {valor}
+      </AppText>
+    </View>
+  );
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scroll}
+      style={estilos.contenedor}
+      contentContainerStyle={estilos.scroll}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.primarioFuerte]} />}
     >
-      {/* Saludo */}
-      <View style={styles.welcome}>
-        <Text style={styles.hola}>¡Hola,</Text>
-        <Text style={styles.nombre}>{usuario?.nombre?.split(' ')[0] || 'Trabajador'}! 👋</Text>
+      <View style={estilos.saludo}>
+        <AppText tono="suave">Hola,</AppText>
+        <AppText variante="titulo">{usuario?.nombre?.split(' ')[0] || 'Trabajador'}</AppText>
       </View>
 
       {isDemo && (
-        <View style={styles.demoBanner}>
-          <FontAwesome5 name="rocket" size={14} color={COLORS.warningDark} />
-          <Text style={styles.demoText}>Modo prueba — datos de demostración</Text>
+        <View style={estilos.aviso}>
+          <Badge label="Modo prueba: datos de demostración" tone="warning" dot={false} />
         </View>
       )}
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+        <View style={estilos.carga}>
+          <ActivityIndicator size="large" color={c.primarioFuerte} />
         </View>
       ) : (
         <>
-          {/* Resumen de hoy */}
-          <Text style={styles.sectionTitle}>Resumen de hoy</Text>
-          <View style={styles.statsGrid}>
+          <SectionHeader title="Mi producción de hoy" icon="stats-chart-outline" />
+          <View style={estilos.grilla}>
             {stats.map((s) => (
-              <View key={s.label} style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: s.color + '1A' }]}>
-                  <FontAwesome5 name={s.icon} size={14} color={s.color} />
-                </View>
-                <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
-              </View>
+              <StatCard
+                key={s.label}
+                style={estilos.celda}
+                label={s.label}
+                value={String(s.value)}
+                icon={s.icon}
+                tone={s.tone}
+              />
             ))}
           </View>
 
-          {/* Mi saldo acumulado */}
-          <Text style={styles.sectionTitle}>Mi saldo acumulado</Text>
-          <View style={styles.saldoCard}>
-            <View style={styles.saldoRow}>
-              <Text style={styles.saldoLabel}>Comisión acumulada</Text>
-              <Text style={styles.saldoValue}>{formatCurrency(data.comisionAcum)}</Text>
-            </View>
-            <View style={styles.saldoRow}>
-              <Text style={styles.saldoLabel}>Propinas acumuladas</Text>
-              <Text style={[styles.saldoValue, { color: COLORS.success }]}>{formatCurrency(data.propinasAcum)}</Text>
-            </View>
-            <View style={styles.saldoRow}>
-              <Text style={styles.saldoLabel}>Deducciones pendientes</Text>
-              <Text style={[styles.saldoValue, { color: COLORS.error }]}>
-                {data.deducciones > 0 ? `- ${formatCurrency(data.deducciones)}` : formatCurrency(0)}
-              </Text>
-            </View>
+          <SectionHeader
+            title="Mi saldo"
+            icon="wallet-outline"
+            ayuda="Este valor se paga en la liquidación. Las propinas son 100% tuyas."
+          />
+          <Card>
+            {fila('Comisión acumulada', formatCurrency(data.comisionAcum))}
+            {fila('Propinas acumuladas', formatCurrency(data.propinasAcum), c.exitoTexto)}
+            {fila(
+              'Deducciones pendientes',
+              data.deducciones > 0 ? `- ${formatCurrency(data.deducciones)}` : formatCurrency(0),
+              data.deducciones > 0 ? c.errorTexto : undefined
+            )}
+          </Card>
+          <StatCard
+            variant="solid"
+            icon="cash-outline"
+            label="Saldo estimado a recibir"
+            value={formatCurrency(saldoEstimado)}
+            style={{ marginBottom: SPACING.xl }}
+          />
 
-            <View style={styles.saldoDivider} />
-
-            <View style={styles.saldoTotalBox}>
-              <Text style={styles.saldoTotalLabel}>Saldo estimado a recibir</Text>
-              <Text style={styles.saldoTotalValue}>{formatCurrency(saldoEstimado)}</Text>
-            </View>
-            <Text style={styles.saldoHint}>
-              Este valor se paga en la liquidación. Las propinas son 100% tuyas.
-            </Text>
-          </View>
-
-          {/* Acciones rápidas */}
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+          <Button
+            title="Registrar servicio"
+            icon="add"
             onPress={() => router.push('/(tabs)/registroServicio')}
-          >
-            <FontAwesome5 name="plus" size={16} color={COLORS.white} />
-            <Text style={styles.primaryBtnText}>Registrar servicio</Text>
-          </Pressable>
-
-          <View style={styles.secondaryRow}>
-            <Pressable
-              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
-              onPress={() => router.push('/(tabs)/contabilidad')}
-            >
-              <FontAwesome5 name="file-invoice-dollar" size={16} color={COLORS.primary} />
-              <Text style={styles.secondaryBtnText}>Mis pagos</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
-              onPress={() => router.push('/(tabs)/contabilidad/historico')}
-            >
-              <FontAwesome5 name="history" size={16} color={COLORS.primary} />
-              <Text style={styles.secondaryBtnText}>Histórico</Text>
-            </Pressable>
+            style={{ marginBottom: SPACING.md }}
+          />
+          <View style={estilos.acciones}>
+            <View style={estilos.accion}>
+              <Button
+                title="Mis pagos"
+                icon="receipt-outline"
+                variant="secondary"
+                onPress={() => router.push('/(tabs)/contabilidad')}
+              />
+            </View>
+            <View style={estilos.accion}>
+              <Button
+                title="Histórico"
+                icon="archive-outline"
+                variant="secondary"
+                onPress={() => router.push('/(tabs)/contabilidad/historico')}
+              />
+            </View>
           </View>
         </>
       )}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: SPACING.lg, paddingBottom: SPACING.huge },
-  welcome: { marginBottom: SPACING.lg },
-  hola: { fontSize: FONT_SIZE.body, color: COLORS.textSecondary },
-  nombre: { fontSize: FONT_SIZE.title1, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  demoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.warningLight,
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  demoText: { fontSize: FONT_SIZE.xs, color: COLORS.warningDark, fontWeight: FONT_WEIGHT.medium },
-  loadingBox: { paddingVertical: SPACING.huge, alignItems: 'center' },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xs,
-    alignItems: 'center',
-    ...SHADOWS.sm,
-  },
-  statIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  statValue: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold },
-  statLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2, textAlign: 'center' },
-  saldoCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.xl,
-    ...SHADOWS.sm,
-  },
-  saldoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-  },
-  saldoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  saldoValue: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  saldoDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.sm },
-  saldoTotalBox: {
-    backgroundColor: COLORS.primarySurface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    marginTop: SPACING.xs,
-  },
-  saldoTotalLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  saldoTotalValue: { fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.bold, color: COLORS.primary },
-  saldoHint: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.primary,
-  },
-  primaryBtnPressed: { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.98 }] },
-  primaryBtnText: { color: COLORS.white, fontWeight: FONT_WEIGHT.bold, fontSize: FONT_SIZE.md },
-  secondaryRow: { flexDirection: 'row', gap: SPACING.md },
-  secondaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.white,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
-  },
-  secondaryBtnPressed: { backgroundColor: COLORS.surface },
-  secondaryBtnText: { color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.sm },
-});

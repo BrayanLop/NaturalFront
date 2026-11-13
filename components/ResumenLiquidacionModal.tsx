@@ -1,17 +1,8 @@
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, commonStyles } from '@/constants/theme';
+import { AppText, Button, Card, Chip, Icon, Input } from '@/components/ds';
+import { RADIUS, SPACING, sombra, useEstilos, useTheme, type Tema } from '@/theme';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
 import { PagoLiquidacion, ResumenLiquidacion } from '../app/api/modelos/contabilidad';
 
 const TOLERANCIA = 0.01;
@@ -54,6 +45,8 @@ export default function ResumenLiquidacionModal({
   onCerrar,
   onConfirmar,
 }: Props) {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   const neto = redondear(resumen?.netoAPagar ?? 0);
   const hayPago = neto > 0;
 
@@ -110,105 +103,119 @@ export default function ResumenLiquidacionModal({
   };
 
   const sinServicios = !!resumen && resumen.cantidadServicios === 0;
+  const todoEfectivo = hayPago && !Number.isNaN(valorEfectivo) && Math.abs(valorEfectivo - neto) <= TOLERANCIA;
+  const todoTransferencia = hayPago && !Number.isNaN(valorTransferencia) && Math.abs(valorTransferencia - neto) <= TOLERANCIA;
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onCerrar}>
-      <View style={styles.backdrop}>
-        <View style={styles.content}>
-          <Text style={styles.titulo}>Resumen de liquidación</Text>
+      <View style={estilos.backdrop}>
+        <View style={estilos.content}>
+          <AppText variante="subtitulo" style={estilos.titulo}>
+            Resumen de liquidación
+          </AppText>
 
           {cargando ? (
-            <View style={styles.centrado}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.textoSecundario}>Calculando liquidación...</Text>
+            <View style={estilos.centrado}>
+              <ActivityIndicator size="large" color={tema.colores.primario} />
+              <AppText tono="suave">Calculando liquidación...</AppText>
             </View>
           ) : error ? (
-            <Text style={styles.textoError}>{error}</Text>
+            <AppText tono="error">{error}</AppText>
           ) : resumen ? (
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={styles.persona}>{resumen.nombrePersona}</Text>
+              <AppText variante="subtitulo">{resumen.nombrePersona}</AppText>
               {resumen.fechaDesde && resumen.fechaHasta && (
-                <Text style={styles.textoSecundario}>
-                  Periodo: {formatDate(resumen.fechaDesde)} – {formatDate(resumen.fechaHasta)}
-                </Text>
+                <View style={estilos.periodo}>
+                  <Icon name="calendar-outline" size={14} color={tema.colores.textoSuave} />
+                  <AppText variante="nota" tono="suave" style={estilos.textoConIcono}>
+                    {formatDate(resumen.fechaDesde)} – {formatDate(resumen.fechaHasta)}
+                  </AppText>
+                </View>
               )}
 
-              <View style={styles.bloque}>
+              <Card style={estilos.bloque}>
                 <Fila label="Servicios" valor={String(resumen.cantidadServicios)} />
                 <Fila label="Total facturado" valor={formatCurrency(resumen.totalFacturado)} />
                 <Fila label="Comisión del barbero" valor={formatCurrency(resumen.totalComision)} />
-                <Fila
-                  label="Deducciones"
-                  valor={`- ${formatCurrency(resumen.totalDeducciones)}`}
-                  colorValor={COLORS.error}
-                />
-                <View style={styles.divider} />
-                <View style={styles.filaNeto}>
-                  <Text style={styles.labelNeto}>NETO A PAGAR</Text>
-                  <Text style={[styles.valorNeto, neto < 0 && { color: COLORS.error }]}>
-                    {formatCurrency(neto)}
-                  </Text>
-                </View>
-              </View>
+                <Fila label="Deducciones" valor={`- ${formatCurrency(resumen.totalDeducciones)}`} error />
+              </Card>
+
+              <Card variant="tinted" style={estilos.bloque}>
+                <AppText variante="etiqueta" tono="primario">
+                  NETO A PAGAR
+                </AppText>
+                <AppText
+                  variante="titulo"
+                  tono={neto < 0 ? 'error' : 'primario'}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatCurrency(neto)}
+                </AppText>
+              </Card>
 
               {sinServicios && (
-                <Text style={styles.nota}>No hay servicios confirmados pendientes por liquidar.</Text>
+                <AppText variante="nota" tono="suave" style={estilos.nota}>
+                  No hay servicios confirmados pendientes por liquidar.
+                </AppText>
               )}
 
               {hayPago ? (
-                <View style={styles.bloque}>
-                  <Text style={styles.subtitulo}>Reparto del pago</Text>
-                  <View style={styles.rapidosRow}>
-                    <Pressable
-                      style={({ pressed }) => [styles.rapido, pressed && styles.rapidoPressed]}
+                <View style={estilos.reparto}>
+                  <AppText variante="etiqueta" style={estilos.subtitulo}>
+                    Reparto del pago
+                  </AppText>
+                  <View style={estilos.rapidosRow}>
+                    <Chip
+                      label="Todo efectivo"
+                      icon="cash-outline"
+                      selected={todoEfectivo}
                       onPress={() => cambiarEfectivo(aTexto(neto))}
-                    >
-                      <Text style={styles.rapidoTexto}>💵 Todo efectivo</Text>
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.rapido, pressed && styles.rapidoPressed]}
+                    />
+                    <Chip
+                      label="Todo transferencia"
+                      icon="swap-horizontal-outline"
+                      selected={todoTransferencia}
                       onPress={() => cambiarTransferencia(aTexto(neto))}
-                    >
-                      <Text style={styles.rapidoTexto}>💳 Todo transferencia</Text>
-                    </Pressable>
+                    />
                   </View>
 
-                  <Text style={commonStyles.label}>Efectivo</Text>
-                  <TextInput
+                  <Input
+                    label="Efectivo"
+                    leftIcon="cash-outline"
                     value={efectivo}
                     onChangeText={cambiarEfectivo}
                     keyboardType="numeric"
                     placeholder="0"
-                    style={[commonStyles.input, styles.input]}
                   />
-                  <Text style={commonStyles.label}>Transferencia</Text>
-                  <TextInput
+                  <Input
+                    label="Transferencia"
+                    leftIcon="swap-horizontal-outline"
                     value={transferencia}
                     onChangeText={cambiarTransferencia}
                     keyboardType="numeric"
                     placeholder="0"
-                    style={[commonStyles.input, styles.input]}
+                    error={errorReparto ?? undefined}
                   />
-                  {errorReparto && <Text style={styles.textoError}>{errorReparto}</Text>}
                 </View>
               ) : (
                 !sinServicios && (
-                  <Text style={styles.nota}>
+                  <AppText variante="nota" tono="suave" style={estilos.nota}>
                     El neto es {formatCurrency(neto)}: no se registra pago al barbero.
-                  </Text>
+                  </AppText>
                 )
               )}
             </ScrollView>
           ) : null}
 
-          <View style={styles.botones}>
-            <View style={styles.boton}>
-              <PrimaryButton title="Cancelar" variant="outline" onPress={onCerrar} disabled={liquidando} />
+          <View style={estilos.botones}>
+            <View style={estilos.boton}>
+              <Button title="Cancelar" variant="secondary" onPress={onCerrar} disabled={liquidando} />
             </View>
-            <View style={styles.boton}>
-              <PrimaryButton
+            <View style={estilos.boton}>
+              <Button
                 title={liquidando ? 'Liquidando...' : 'Confirmar'}
-                variant="danger"
+                icon="checkmark"
                 onPress={confirmar}
                 loading={liquidando}
                 disabled={cargando || !!error || !resumen || !!errorReparto || liquidando}
@@ -221,143 +228,58 @@ export default function ResumenLiquidacionModal({
   );
 }
 
-function Fila({ label, valor, colorValor }: { label: string; valor: string; colorValor?: string }) {
+function Fila({ label, valor, error }: { label: string; valor: string; error?: boolean }) {
+  const estilos = useEstilos(crearEstilos);
   return (
-    <View style={styles.fila}>
-      <Text style={styles.filaLabel}>{label}</Text>
-      <Text style={[styles.filaValor, colorValor ? { color: colorValor } : null]}>{valor}</Text>
+    <View style={estilos.fila}>
+      <AppText tono="suave" style={estilos.filaLabel}>
+        {label}
+      </AppText>
+      <AppText variante="etiqueta" tono={error ? 'error' : 'normal'}>
+        {valor}
+      </AppText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (t: Tema) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: t.colores.overlay,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     padding: SPACING.lg,
   },
   content: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
+    backgroundColor: t.colores.superficieElevada,
+    borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    width: '100%',
+    width: '100%' as const,
     maxWidth: 440,
-    maxHeight: '90%',
-    ...SHADOWS.lg,
+    maxHeight: '90%' as const,
+    ...sombra(t, 'lg'),
   },
-  titulo: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  centrado: {
-    alignItems: 'center',
-    padding: SPACING.xl,
-    gap: SPACING.md,
-  },
-  persona: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  textoSecundario: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  textoError: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.error,
-    marginTop: SPACING.sm,
-  },
-  nota: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-    marginTop: SPACING.sm,
-  },
-  bloque: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginTop: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  subtitulo: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
+  titulo: { marginBottom: SPACING.md },
+  centrado: { alignItems: 'center' as const, padding: SPACING.xl, gap: SPACING.md },
+  periodo: { flexDirection: 'row' as const, alignItems: 'center' as const, marginTop: SPACING.xs },
+  textoConIcono: { marginLeft: SPACING.xs },
+  nota: { marginTop: SPACING.sm },
+  bloque: { marginTop: SPACING.md, marginBottom: 0 },
+  reparto: { marginTop: SPACING.lg },
+  subtitulo: { marginBottom: SPACING.sm },
   fila: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingVertical: SPACING.xs,
   },
-  filaLabel: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-  },
-  filaValor: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.borderMedium,
-    marginVertical: SPACING.sm,
-  },
-  filaNeto: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  labelNeto: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.heavy,
-    color: COLORS.text,
-  },
-  valorNeto: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: FONT_WEIGHT.heavy,
-    color: COLORS.success,
-  },
+  filaLabel: { flexShrink: 1, marginRight: SPACING.md },
   rapidosRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
-  rapido: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    backgroundColor: COLORS.primarySurface,
-    alignItems: 'center',
-  },
-  rapidoPressed: {
-    backgroundColor: COLORS.primaryBorder,
-  },
-  rapidoTexto: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.primaryDark,
-  },
-  input: {
-    marginBottom: SPACING.md,
-  },
-  botones: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.lg,
-  },
-  boton: {
-    flex: 1,
-  },
+  botones: { flexDirection: 'row' as const, gap: SPACING.sm, marginTop: SPACING.lg },
+  boton: { flex: 1, minWidth: 0 },
 });

@@ -1,28 +1,34 @@
-import FormField from '@/components/FormField';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, commonStyles } from '@/constants/theme';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { AppText, Badge, Button, ConfirmDialog, Icon, Input, LoadingState, ToggleRow } from '@/components/ds';
+import CampoPrecio from '@/components/servicios/CampoPrecio';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
+import { logger } from '@/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { MaskedTextInput } from 'react-native-mask-text';
+import { Alert, Platform, ScrollView, View } from 'react-native';
 import { api } from '../../api/api';
-import { logger } from '@/utils/logger';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+  cabecera: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: SPACING.xl },
+  icono: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: t.colores.primarioSuave,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: SPACING.md,
+  },
+  cabeceraTextos: { flex: 1, minWidth: 0 },
+  badge: { alignSelf: 'flex-start' as const, marginTop: SPACING.xs },
+  acciones: { gap: SPACING.md, marginTop: SPACING.sm },
+});
 
 export default function ServicioDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
 
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -30,6 +36,7 @@ export default function ServicioDetalle() {
   const [disponible, setDisponible] = useState(false);
   const [errores, setErrores] = useState<{ [key in CampoValidable]?: string }>({});
   const [loading, setLoading] = useState(true);
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
 
   const validaciones = {
     nombre: { regex: /^.{3,50}$/, mensaje: 'Nombre requerido (3-50 caracteres)' },
@@ -101,250 +108,96 @@ export default function ServicioDetalle() {
     }
   };
 
-const eliminar = async () => {
-  const confirmar = Platform.OS === 'web' 
-    ? window.confirm('¿Eliminar este servicio?')
-    : await new Promise((resolve) => {
-        Alert.alert(
-          "Confirmar",
-          "¿Eliminar este servicio?",
-          [
-            { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-            { text: "Eliminar", style: "destructive", onPress: () => resolve(true) }
-          ]
-        );
-      });
+  const eliminar = async () => {
+    setConfirmarEliminar(false);
+    try {
+      logger.log('Eliminando servicio con id:', id);
+      await api.delete(`/Servicio/Eliminar/${id}`);
 
-  if (!confirmar) return;
+      if (Platform.OS === 'web') {
+        window.alert('Servicio eliminado correctamente');
+      } else {
+        Alert.alert('Eliminado', 'Servicio eliminado correctamente');
+      }
 
-  try {
-    logger.log("Eliminando servicio con id:", id);
-    await api.delete(`/Servicio/Eliminar/${id}`);
-    
-    if (Platform.OS === 'web') {
-      window.alert("Servicio eliminado correctamente");
-    } else {
-      Alert.alert("Eliminado", "Servicio eliminado correctamente");
+      router.back();
+    } catch (error) {
+      logger.error('Error al eliminar:', error);
+
+      if (Platform.OS === 'web') {
+        window.alert('No se pudo eliminar el servicio');
+      } else {
+        Alert.alert('Error', 'No se pudo eliminar el servicio');
+      }
     }
-    
-    router.back();
-  } catch (error) {
-    logger.error("Error al eliminar:", error);
-    
-    if (Platform.OS === 'web') {
-      window.alert("No se pudo eliminar el servicio");
-    } else {
-      Alert.alert("Error", "No se pudo eliminar el servicio");
-    }
-  }
-};
+  };
 
   if (loading) {
-    return <LoadingView message="Cargando servicio..." />;
+    return <LoadingState message="Cargando servicio..." />;
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.formCard}>
-        {/* Header del servicio */}
-        <View style={styles.serviceHeader}>
-          <View style={styles.serviceIconContainer}>
-            <FontAwesome5 name="concierge-bell" size={24} color={COLORS.secondary} />
-          </View>
-          <View style={styles.serviceInfo}>
-            <Text style={styles.serviceTitle}>{nombre || 'Nuevo Servicio'}</Text>
-            <View style={[styles.statusBadge, disponible ? styles.statusActive : styles.statusInactive]}>
-              <Text style={[styles.statusText, disponible ? styles.statusTextActive : styles.statusTextInactive]}>
-                {disponible ? 'Disponible' : 'No disponible'}
-              </Text>
-            </View>
-          </View>
+    <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+      <View style={estilos.cabecera}>
+        <View style={estilos.icono}>
+          <Icon name="briefcase-outline" size={26} color={tema.colores.primarioTexto} />
         </View>
-
-        {/* Nombre */}
-        <FormField label="Nombre" error={errores.nombre}>
-          <TextInput
-            value={nombre}
-            onChangeText={(text) => handleChange('nombre', text)}
-            style={[commonStyles.input, errores.nombre && styles.inputError]}
-            placeholder="Nombre del servicio"
-            placeholderTextColor={COLORS.textTertiary}
-          />
-        </FormField>
-
-        {/* Descripción */}
-        <FormField label="Descripción">
-          <TextInput
-            value={descripcion}
-            onChangeText={setDescripcion}
-            style={[commonStyles.input, styles.textArea]}
-            placeholder="Descripción detallada (opcional)"
-            placeholderTextColor={COLORS.textTertiary}
-            multiline
-            numberOfLines={3}
-          />
-        </FormField>
-
-        {/* Precio */}
-        <FormField label="Precio" error={errores.precio}>
-          <MaskedTextInput
-            type="currency"
-            options={{
-              prefix: '$',
-              decimalSeparator: ',',
-              groupSeparator: '.',
-              precision: 0,
-            }}
-            value={precio}
-            onChangeText={(_, unmasked) => handleChange('precio', unmasked)}
-            style={[commonStyles.input, errores.precio && styles.inputError]}
-            keyboardType="numeric"
-            placeholder="Precio en pesos"
-            placeholderTextColor={COLORS.textTertiary}
-          />
-        </FormField>
-
-        {/* Disponible */}
-        <View style={styles.switchRow}>
-          <View>
-            <Text style={styles.switchLabel}>Estado del servicio</Text>
-            <Text style={styles.switchHint}>{disponible ? 'Visible para clientes' : 'Oculto temporalmente'}</Text>
+        <View style={estilos.cabeceraTextos}>
+          <AppText variante="subtitulo" numberOfLines={2}>
+            {nombre || 'Nuevo servicio'}
+          </AppText>
+          <View style={estilos.badge}>
+            <Badge
+              label={disponible ? 'Disponible' : 'No disponible'}
+              tone={disponible ? 'success' : 'neutral'}
+              size="sm"
+            />
           </View>
-          <Switch 
-            value={disponible} 
-            onValueChange={setDisponible}
-            trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-            thumbColor={disponible ? COLORS.primary : COLORS.textTertiary}
-          />
         </View>
       </View>
 
-      {/* Botones de acción */}
-      <View style={styles.actionsContainer}>
-        <PrimaryButton title="Guardar cambios" onPress={actualizar}/>
-        
-        <Pressable
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.deleteButtonPressed,
-          ]}
-          onPress={eliminar}
-        >
-          <FontAwesome5 name="trash-alt" size={16} color={COLORS.error} />
-          <Text style={styles.deleteButtonText}>Eliminar servicio</Text>
-        </Pressable>
+      <Input
+        label="Nombre"
+        value={nombre}
+        onChangeText={(text) => handleChange('nombre', text)}
+        error={errores.nombre || undefined}
+        placeholder="Nombre del servicio"
+      />
+      <Input
+        label="Descripción"
+        value={descripcion}
+        onChangeText={setDescripcion}
+        placeholder="Descripción detallada (opcional)"
+        multiline
+      />
+      <CampoPrecio
+        label="Precio"
+        value={precio}
+        onChangeText={(v) => handleChange('precio', v)}
+        error={errores.precio || undefined}
+        placeholder="Precio en pesos"
+      />
+      <ToggleRow
+        label="Estado del servicio"
+        description={disponible ? 'Visible al registrar' : 'Oculto temporalmente'}
+        value={disponible}
+        onValueChange={setDisponible}
+      />
+
+      <View style={estilos.acciones}>
+        <Button title="Guardar cambios" onPress={actualizar} />
+        <Button title="Eliminar servicio" variant="danger" icon="trash-outline" onPress={() => setConfirmarEliminar(true)} />
       </View>
+
+      <ConfirmDialog
+        visible={confirmarEliminar}
+        title="¿Eliminar este servicio?"
+        message="Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={eliminar}
+        onCancel={() => setConfirmarEliminar(false)}
+      />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { 
-    padding: SPACING.lg, 
-    backgroundColor: COLORS.background,
-    flexGrow: 1,
-  },
-  formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  serviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-    paddingBottom: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  serviceIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.secondarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-  },
-  statusActive: {
-    backgroundColor: COLORS.successLight,
-  },
-  statusInactive: {
-    backgroundColor: COLORS.surface,
-  },
-  statusText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  statusTextActive: {
-    color: COLORS.success,
-  },
-  statusTextInactive: {
-    color: COLORS.textSecondary,
-  },
-  inputError: { 
-    borderColor: COLORS.error,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-  },
-  switchLabel: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.medium,
-    color: COLORS.text,
-  },
-  switchHint: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  actionsContainer: {
-    marginTop: SPACING.lg,
-    gap: SPACING.md,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.error,
-    backgroundColor: COLORS.white,
-  },
-  deleteButtonPressed: {
-    backgroundColor: COLORS.errorLight,
-  },
-  deleteButtonText: {
-    color: COLORS.error,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
-  },
-});

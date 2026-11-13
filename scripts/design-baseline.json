@@ -1,0 +1,26 @@
+{
+  "app/(tabs)/explore.tsx": {
+    "hex": 4,
+    "emoji": 0
+  },
+  "app/api/demoApi.ts": {
+    "hex": 0,
+    "emoji": 1
+  },
+  "components/BackButton.tsx": {
+    "hex": 2,
+    "emoji": 0
+  },
+  "components/HelloWave.tsx": {
+    "hex": 0,
+    "emoji": 1
+  },
+  "components/ThemedText.tsx": {
+    "hex": 1,
+    "emoji": 0
+  },
+  "utils/password.ts": {
+    "hex": 0,
+    "emoji": 1
+  }
+}

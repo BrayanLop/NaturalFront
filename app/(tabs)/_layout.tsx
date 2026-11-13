@@ -1,12 +1,13 @@
-import BackButton from '@/components/BackButton';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
-import { useAuth } from '@/context/authContext';
-import { FontAwesome5 } from '@expo/vector-icons';
+import AppHeader from '@/components/ds/AppHeader';
 import BannerSoporte from '@/components/BannerSoporte';
+import { Icon } from '@/components/ds';
+import SelectorApariencia from '@/components/SelectorApariencia';
+import { useAuth } from '@/context/authContext';
+import { FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, sombra, useTheme } from '@/theme';
 import { getRoleName, isPlataforma } from '@/utils/roles';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Layout() {
@@ -14,6 +15,7 @@ export default function Layout() {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const { tema } = useTheme();
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -37,8 +39,8 @@ export default function Layout() {
 
   if (cargando) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: tema.colores.fondo }]}>
+        <ActivityIndicator size="large" color={tema.colores.primarioFuerte} />
       </View>
     );
   }
@@ -59,30 +61,17 @@ export default function Layout() {
             // barra de navegación de Android / el home indicator de iOS.
             paddingBottom: insets.bottom,
           },
-          headerStyle: {
-            backgroundColor: COLORS.primary,
-          },
-          headerTintColor: COLORS.white,
-          headerTitleAlign: 'center',
-          headerTitleStyle: {
-            fontWeight: FONT_WEIGHT.bold,
-            fontSize: FONT_SIZE.headline,
-          },
-          headerShadowVisible: false,
-          headerLeft: () => <BackButton />,
-          headerRight: () => (
-            <Pressable
-              onPress={() => setMenuVisible(true)}
-              style={styles.headerRightButton}
-            >
-              <View style={styles.avatarCircle}>
-                <FontAwesome5 name="user" size={14} color={COLORS.primary} />
-              </View>
-              <Text style={styles.headerUserName} numberOfLines={1}>
-                {usuario?.nombre?.split(' ')[0] || 'Usuario'}
-              </Text>
-          </Pressable>
-        ),
+          // Encabezado propio: sin "píldoras de vidrio" de iOS 26, claro/oscuro y adaptable a pantallas angostas.
+          header: ({ navigation, options, back }) => (
+            <AppHeader
+              navigation={navigation}
+              options={options as { title?: string; headerLeft?: (props: { canGoBack?: boolean }) => React.ReactNode }}
+              back={back}
+              usuario={usuario}
+              onUserPress={() => setMenuVisible(true)}
+              onBackFallback={() => router.replace('/(tabs)/home')}
+            />
+          ),
       }}
     >
       {/* Personalizamos los títulos */}
@@ -91,8 +80,11 @@ export default function Layout() {
         options={{ 
           title: 'Natural', 
           headerLeft: () => (
-            <View style={{ marginLeft: 12 }}>
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+            <View style={{ marginLeft: 4, maxWidth: '100%' }}>
+              <Text
+                style={{ color: tema.colores.sobreEncabezado, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.subhead }}
+                numberOfLines={1}
+              >
                 {usuario?.nombreEmpresa || 'Empresa'}
               </Text>
             </View>
@@ -125,6 +117,7 @@ export default function Layout() {
       <Stack.Screen name="consolidadoIngresos" options={{ title: 'Consolidado' }} />
       <Stack.Screen name="consolidadoFormaPago" options={{ title: 'Total por formas de pago' }} />
       <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
+      <Stack.Screen name="catalogo" options={{ title: 'Catálogo' }} />
       <Stack.Screen name="accesos/index" options={{ title: 'Accesos' }} />
       <Stack.Screen name="accesos/crear" options={{ title: 'Crear acceso' }} />
       <Stack.Screen name="accesos/[id]" options={{ title: 'Detalle de acceso' }} />
@@ -147,53 +140,60 @@ export default function Layout() {
       animationType="fade"
       onRequestClose={() => setMenuVisible(false)}
     >
-      <Pressable
-        style={styles.modalBackdrop}
-        onPress={() => setMenuVisible(false)}
-      >
-        <View style={styles.menuContainer}>
-          <View style={styles.menuHeader}>
-            <View style={styles.menuAvatarLarge}>
-              <FontAwesome5 name="user" size={20} color={COLORS.primary} />
+      <Pressable style={[menuEstilos.fondo, { backgroundColor: tema.colores.overlay, paddingTop: insets.top + 56 }]} onPress={() => setMenuVisible(false)}>
+        <Pressable
+          onPress={() => {}}
+          style={[
+            menuEstilos.caja,
+            { backgroundColor: tema.colores.superficieElevada, borderColor: tema.colores.borde },
+            sombra(tema, 'lg'),
+          ]}
+        >
+          <View style={[menuEstilos.cabecera, { backgroundColor: tema.colores.fondoSuave }]}>
+            <View style={[menuEstilos.avatar, { backgroundColor: tema.colores.primarioSuave }]}>
+              <Icon name="person-outline" size={22} color={tema.colores.primarioTexto} />
             </View>
-            <View style={styles.menuHeaderText}>
-              <Text style={styles.menuUserName}>{usuario?.nombre || 'Usuario'}</Text>
-              <Text style={styles.menuRolText}>
+            <View style={menuEstilos.textos}>
+              <Text style={[menuEstilos.nombre, { color: tema.colores.texto }]} numberOfLines={1}>
+                {usuario?.nombre || 'Usuario'}
+              </Text>
+              <Text style={[menuEstilos.rol, { color: tema.colores.textoSuave }]}>
                 {usuario?.rol ? getRoleName(usuario.rol) : 'Usuario'}
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [menuEstilos.item, pressed && { backgroundColor: tema.colores.fondoSuave }]}
             onPress={() => {
               setMenuVisible(false);
               router.push('/(tabs)/cambiarContrasena');
             }}
           >
-            <View style={styles.menuItemIcon}>
-              <FontAwesome5 name="key" size={14} color={COLORS.secondary} />
-            </View>
-            <Text style={styles.menuItemText}>Cambiar contraseña</Text>
-            <FontAwesome5 name="chevron-right" size={12} color={COLORS.textTertiary} />
-          </TouchableOpacity>
+            <Icon name="key-outline" size={20} color={tema.colores.primarioTexto} />
+            <Text style={[menuEstilos.itemTexto, { color: tema.colores.texto }]}>Cambiar contraseña</Text>
+            <Icon name="chevron-forward" size={16} color={tema.colores.textoTenue} />
+          </Pressable>
 
-          <View style={styles.menuDivider} />
+          <View style={[menuEstilos.divisor, { backgroundColor: tema.colores.divisor }]} />
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <SelectorApariencia />
+
+          <View style={[menuEstilos.divisor, { backgroundColor: tema.colores.divisor }]} />
+
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [menuEstilos.item, pressed && { backgroundColor: tema.colores.fondoSuave }]}
             onPress={() => {
               setMenuVisible(false);
               logout();
             }}
           >
-            <View style={[styles.menuItemIcon, { backgroundColor: COLORS.errorLight }]}>
-              <FontAwesome5 name="sign-out-alt" size={14} color={COLORS.error} />
-            </View>
-            <Text style={[styles.menuItemText, { color: COLORS.error }]}>Cerrar sesión</Text>
-            <FontAwesome5 name="chevron-right" size={12} color={COLORS.textTertiary} />
-          </TouchableOpacity>
-        </View>
+            <Icon name="log-out-outline" size={20} color={tema.colores.textoSuave} />
+            <Text style={[menuEstilos.itemTexto, { color: tema.colores.textoSuave }]}>Cerrar sesión</Text>
+          </Pressable>
+        </Pressable>
       </Pressable>
     </Modal>
   </>
@@ -205,97 +205,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  headerRightButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-    gap: SPACING.sm,
-  },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerUserName: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.body,
-    maxWidth: 100,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: COLORS.overlay,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: 60,
-    paddingRight: SPACING.md,
-  },
-  menuContainer: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    minWidth: 260,
-    overflow: 'hidden',
-    ...SHADOWS.lg,
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    backgroundColor: COLORS.backgroundSecondary,
-  },
-  menuAvatarLarge: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  menuHeaderText: {
-    flex: 1,
-  },
-  menuUserName: {
-    fontSize: FONT_SIZE.headline,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  menuRolText: {
-    fontSize: FONT_SIZE.footnote,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xxs,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
-  menuItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.secondarySurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuItemText: {
-    flex: 1,
-    fontSize: FONT_SIZE.body,
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: COLORS.divider,
-    marginHorizontal: SPACING.lg,
   },
 });
 
+const menuEstilos = StyleSheet.create({
+  fondo: { flex: 1, justifyContent: 'flex-start', alignItems: 'flex-end', paddingRight: SPACING.md },
+  caja: { borderRadius: RADIUS.xl, borderWidth: 1, width: 280, maxWidth: '100%', overflow: 'hidden' },
+  cabecera: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg, gap: SPACING.md },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  textos: { flex: 1, minWidth: 0 },
+  nombre: { fontSize: FONT_SIZE.headline, fontWeight: FONT_WEIGHT.semibold },
+  rol: { fontSize: FONT_SIZE.footnote, marginTop: 2 },
+  item: { flexDirection: 'row', alignItems: 'center', minHeight: 52, paddingHorizontal: SPACING.lg, gap: SPACING.md },
+  itemTexto: { flex: 1, fontSize: FONT_SIZE.callout, fontWeight: FONT_WEIGHT.medium },
+  divisor: { height: 1, marginHorizontal: SPACING.lg },
+});

@@ -1,18 +1,9 @@
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Button, Card, ChipGroup, Icon, Input, SectionHeader, Select, type IconName } from '@/components/ds';
 import { useAuth } from '@/context/authContext';
-import { Picker } from '@react-native-picker/picker';
+import { SPACING, useEstilos, useTheme, type Preferencia, type Tema } from '@/theme';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, View } from 'react-native';
 import { api } from '../../api/api';
 import { logger } from '@/utils/logger';
 
@@ -22,17 +13,41 @@ type ConfiguracionGeneral = {
   empresaId?: number | null;
 };
 
-const webSelectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 10px',
-  borderRadius: 6,
-  border: '1px solid #ced4da',
-  backgroundColor: '#fff',
-  fontSize: 16,
-  color: '#212529',
+const OPCIONES_PERIODICIDAD = [
+  { value: 'M', label: 'Mensual (30 días)' },
+  { value: 'Q', label: 'Quincenal (15 días)' },
+  { value: 'S', label: 'Semanal (7 días)' },
+  { value: 'D', label: 'Días (personalizado)' },
+];
+
+const TEXTO_PERIODICIDAD: Record<string, string> = {
+  M: 'Liquidación cada 30 días',
+  Q: 'Liquidación cada 15 días',
+  S: 'Liquidación cada 7 días',
+  D: 'Liquidación personalizada',
 };
 
+const OPCIONES_APARIENCIA: { key: Preferencia; label: string; icon: IconName }[] = [
+  { key: 'sistema', label: 'Sistema', icon: 'phone-portrait-outline' },
+  { key: 'claro', label: 'Claro', icon: 'sunny-outline' },
+  { key: 'oscuro', label: 'Oscuro', icon: 'moon-outline' },
+];
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { padding: SPACING.lg, paddingBottom: SPACING.huge, backgroundColor: t.colores.fondo, flexGrow: 1 },
+  pista: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: SPACING.sm,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  pistaTexto: { flex: 1, minWidth: 0 },
+});
+
 export default function ConfiguracionGeneral() {
+  const estilos = useEstilos(crearEstilos);
+  const { tema, preferencia, setPreferencia } = useTheme();
   const router = useRouter();
   const { usuario } = useAuth();
   const empresaId = usuario?.empresaId;
@@ -127,154 +142,55 @@ export default function ConfiguracionGeneral() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.field}>
-        <Text style={styles.label}>Periodicidad</Text>
+    <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+      <Card>
+        <SectionHeader
+          title="Liquidación"
+          icon="calendar-outline"
+          ayuda="Define cada cuánto tiempo se liquidan los pagos de los trabajadores."
+        />
+        <Select
+          label="Periodicidad"
+          placeholder="Seleccione periodicidad"
+          value={config.periodicidad || null}
+          options={OPCIONES_PERIODICIDAD}
+          onChange={(v) => setConfig((p) => ({ ...p, periodicidad: v }))}
+        />
+        {config.periodicidad && TEXTO_PERIODICIDAD[config.periodicidad] ? (
+          <View style={estilos.pista}>
+            <Icon name="information-circle-outline" size={18} color={tema.colores.infoTexto} />
+            <AppText variante="nota" tono="suave" style={estilos.pistaTexto}>
+              {TEXTO_PERIODICIDAD[config.periodicidad]}
+            </AppText>
+          </View>
+        ) : null}
 
-        {Platform.OS === 'web' ? (
-          <>
-            <select
-              className="form-select"
-              value={config.periodicidad}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                setConfig((p) => ({ ...p, periodicidad: e.target.value }))
-              }
-              style={webSelectStyle}
-            >
-              <option value="">Seleccione periodicidad</option>
-              <option value="M">Mensual (30 días)</option>
-              <option value="Q">Quincenal (15 días)</option>
-              <option value="S">Semanal (7 días)</option>
-              <option value="D">Dias (personalizado)</option>
-            </select>
-            {config.periodicidad && (
-              <Text style={styles.helperText}>
-                {config.periodicidad === 'M' && '📅 Liquidación cada 30 días'}
-                {config.periodicidad === 'Q' && '📅 Liquidación cada 15 días'}
-                {config.periodicidad === 'S' && '📅 Liquidación cada 7 días'}
-                {config.periodicidad === 'D' && '📅 Liquidación personalizada'}
-              </Text>
-            )}
-          </>
-        ) : (
-          <>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={config.periodicidad}
-                onValueChange={(v) => setConfig((p) => ({ ...p, periodicidad: v }))}
-                style={{ backgroundColor: '#e0e0e0', color: '#2d3436' }} // Fondo gris y texto oscuro
-                itemStyle={{ backgroundColor: '#e0e0e0', color: '#2d3436' }} // Para iOS
-              >
-                <Picker.Item label="Seleccione periodicidad" value="" />
-                <Picker.Item label="Mensual (30 días)" value="M" />
-                <Picker.Item label="Quincenal (15 días)" value="Q" />
-                <Picker.Item label="Semanal (7 días)" value="S" />
-                <Picker.Item label="Dias (personalizado)" value="D" />
-              </Picker>
-            </View>
-            {config.periodicidad && (
-              <Text style={styles.helperText}>
-                {config.periodicidad === 'M' && '📅 Liquidación cada 30 días'}
-                {config.periodicidad === 'Q' && '📅 Liquidación cada 15 días'}
-                {config.periodicidad === 'S' && '📅 Liquidación cada 7 días'}
-                {config.periodicidad === 'D' && '📅 Liquidación personalizada'}
-              </Text>
-            )}
-          </>
+        {config.periodicidad === 'D' && (
+          <Input
+            label="Valor periodicidad (días)"
+            value={String(config.valorPeriodicidad ?? '')}
+            onChangeText={(t) => setConfig((p) => ({ ...p, valorPeriodicidad: Number(t) || 0 }))}
+            keyboardType="numeric"
+            placeholder="Número de días"
+            leftIcon="calendar-outline"
+          />
         )}
-      </View>
 
-      {config.periodicidad === 'D' && (
-        <View style={styles.field}>
-          <Text style={styles.label}>Valor Periodicidad (días)</Text>
-          {Platform.OS === 'web' ? (
-            <TextInput
-              value={String(config.valorPeriodicidad ?? '')}
-              onChangeText={(t) => setConfig((p) => ({ ...p, valorPeriodicidad: Number(t) || 0 }))}
-              keyboardType="numeric"
-              style={styles.input}
-              placeholder="Número de días"
-            />
-          ) : (
-            <TextInput
-              value={String(config.valorPeriodicidad ?? '')}
-              onChangeText={(t) => setConfig((p) => ({ ...p, valorPeriodicidad: Number(t) || 0 }))}
-              keyboardType="numeric"
-              style={styles.input}
-              placeholder="Número de días"
-            />
-          )}
-        </View>
-      )}
+        <Button title="Guardar" icon="checkmark" onPress={guardar} loading={loading} />
+      </Card>
 
-      {Platform.OS === 'web' ? (
-        <div style={{ marginTop: 10 }}>
-          <button className="btn btn-primary w-100" onClick={guardar} disabled={loading}>
-            Guardar
-          </button>
-        </div>
-      ) : (
-        <Pressable 
-          style={({ pressed }) => [
-            styles.button, 
-            pressed && { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.98 }] }
-          ]} 
-          onPress={guardar} 
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Guardar</Text>
-        </Pressable>
-      )}
+      <Card>
+        <SectionHeader
+          title="Apariencia"
+          icon="color-palette-outline"
+          ayuda="Elige si la app sigue el tema de tu dispositivo o usa siempre claro u oscuro."
+        />
+        <ChipGroup
+          value={preferencia}
+          onChange={(k) => setPreferencia(k as Preferencia)}
+          options={OPCIONES_APARIENCIA}
+        />
+      </Card>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { 
-    padding: SPACING.lg, 
-    backgroundColor: COLORS.background, 
-    flexGrow: 1 
-  },
-  field: { marginBottom: SPACING.lg },
-  label: { 
-    fontWeight: FONT_WEIGHT.semibold, 
-    marginBottom: SPACING.sm,
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  helperText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.info,
-    marginTop: SPACING.sm,
-    fontStyle: 'italic',
-  },
-  button: { 
-    backgroundColor: COLORS.primary, 
-    paddingVertical: SPACING.md, 
-    borderRadius: RADIUS.md, 
-    alignItems: 'center', 
-    width: '100%',
-    ...SHADOWS.primary,
-  },
-  buttonText: { 
-    color: COLORS.white, 
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
-  },
-  pickerWrapper: { 
-    borderWidth: 1, 
-    borderColor: COLORS.border, 
-    borderRadius: RADIUS.md, 
-    overflow: 'hidden',
-    backgroundColor: COLORS.surface,
-  },
-});

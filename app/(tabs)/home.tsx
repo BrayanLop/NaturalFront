@@ -1,39 +1,49 @@
-import LoadingView from '@/components/LoadingView';
+import { Button, Icon, LoadingState, type IconName } from '@/components/ds';
 import PlataformaHome from '@/components/PlataformaHome';
 import WorkerHome from '@/components/WorkerHome';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import {
+  COLORES_MODULO,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SPACING,
+  sombra,
+  useEstilos,
+  useTheme,
+  type Tema,
+} from '@/theme';
 import { isPlataforma, isTrabajador, puedeGestionarAccesos, puedeRegistrarServicios } from '@/utils/roles';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useAuth } from '../../context/authContext';
 
 type MenuItem = {
   title: string;
   route: string;
-  icon: string;
-  color?: string;
+  icon: IconName;
+  color: string;
   description?: string;
 };
 
 export default function Home() {
   const { usuario, logout, cargando, isDemo } = useAuth();
   const router = useRouter();
+  const { tema } = useTheme();
+  const estilos = useEstilos(crearEstilos);
 
   if (cargando) {
-    return <LoadingView message="Cargando..." />;
+    return <LoadingState message="Cargando..." />;
   }
 
   if (!usuario) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>No hay usuario en sesión</Text>
+      <View style={estilos.container}>
+        <Text style={estilos.errorText}>No hay usuario en sesión</Text>
       </View>
     );
   }
 
   const rol = usuario.rol;
-  const personaId = usuario.id;
 
   // El superadmin de plataforma (rol 00) solo ve su menú: empresas y auditoría, nada de negocio.
   if (isPlataforma(rol)) {
@@ -51,66 +61,66 @@ export default function Home() {
         {
           title: 'Registrar servicios',
           route: '../registroServicio',
-          icon: 'clipboard-check',
-          color: COLORS.primary,
+          icon: 'clipboard',
+          color: COLORES_MODULO.registrar,
           description: 'Nuevo registro de servicio',
         },
         {
           title: 'Mis Pagos',
           route: '../contabilidad',
-          icon: 'file-invoice-dollar',
-          color: COLORS.secondary,
+          icon: 'receipt',
+          color: COLORES_MODULO.personas,
           description: 'Ver pagos pendientes',
         },
         {
           title: 'Histórico',
           route: '../contabilidad/historico',
-          icon: 'history',
-          color: '#9b59b6',
+          icon: 'time',
+          color: COLORES_MODULO.historico,
           description: 'Consultar historial de pagos',
         },
       ]
     : [
-        { 
-          title: 'Personas', 
-          route: '../personas', 
-          icon: 'user-plus',
-          color: COLORS.secondary,
+        {
+          title: 'Personas',
+          route: '../personas',
+          icon: 'person-add',
+          color: COLORES_MODULO.personas,
           description: 'Gestionar personas',
         },
-        { 
-          title: 'Servicios', 
-          route: '../servicios', 
-          icon: 'tools',
-          color: '#e67e22',
+        {
+          title: 'Servicios',
+          route: '../servicios',
+          icon: 'construct',
+          color: COLORES_MODULO.servicios,
           description: 'Administrar servicios',
         },
         {
           title: 'Config. Servicios',
           route: '../configuracionServicio',
-          icon: 'cog',
-          color: '#9b59b6',
+          icon: 'options',
+          color: COLORES_MODULO.configServicios,
           description: 'Porcentajes y comisiones',
         },
         {
           title: 'Configuración',
           route: '../configuracion',
-          icon: 'cogs',
-          color: '#34495e',
+          icon: 'settings',
+          color: COLORES_MODULO.configuracion,
           description: 'Ajustes generales',
         },
         {
           title: 'Registrar',
           route: '../registroServicio',
-          icon: 'clipboard-check',
-          color: COLORS.primary,
+          icon: 'clipboard',
+          color: COLORES_MODULO.registrar,
           description: 'Nuevo registro de servicio',
         },
         {
           title: 'Pagos',
           route: '../contabilidad',
-          icon: 'file-invoice-dollar',
-          color: '#16a085',
+          icon: 'receipt',
+          color: COLORES_MODULO.pagos,
           description: 'Ver pagos pendientes',
         },
       ];
@@ -122,8 +132,8 @@ export default function Home() {
       {
         title: 'Finanzas',
         route: '../finanzas',
-        icon: 'chart-pie',
-        color: '#3498db',
+        icon: 'pie-chart',
+        color: COLORES_MODULO.finanzas,
         description: 'Ingresos, egresos y reportes',
       },
     ];
@@ -136,54 +146,52 @@ export default function Home() {
       {
         title: 'Accesos',
         route: '../accesos',
-        icon: 'user-lock',
-        color: '#c0392b',
+        icon: 'lock-closed',
+        color: COLORES_MODULO.accesos,
         description: 'Usuarios y permisos',
       },
     ];
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={estilos.container}>
+      <ScrollView contentContainerStyle={estilos.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header de bienvenida */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Bienvenido,</Text>
-          <Text style={styles.userName}>{usuario.nombre}</Text>
-          <Text style={styles.companyName}>{usuario.nombreEmpresa || 'Natural'}</Text>
+        <View style={estilos.welcomeSection}>
+          <Text style={estilos.welcomeText}>Bienvenido,</Text>
+          <Text style={estilos.userName}>{usuario.nombre}</Text>
+          <Text style={estilos.companyName}>{usuario.nombreEmpresa || 'Natural'}</Text>
         </View>
 
         {/* Banner de modo demo */}
         {isDemo && (
-          <View style={styles.demoBanner}>
-            <FontAwesome5 name="rocket" size={16} color={COLORS.warning} style={{ marginRight: SPACING.sm }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.demoBannerTitle}>Modo Prueba Gratuita</Text>
-              <Text style={styles.demoBannerText}>Los datos son de demostración y no se guardarán</Text>
+          <View style={estilos.demoBanner}>
+            <Icon name="rocket-outline" size={20} color={tema.colores.avisoTexto} />
+            <View style={estilos.demoTextos}>
+              <Text style={estilos.demoBannerTitle}>Modo Demo</Text>
+              <Text style={estilos.demoBannerText}>Datos de ejemplo: no se guarda nada</Text>
             </View>
           </View>
         )}
 
         {/* Grid de menú */}
-        <View style={styles.grid}>
+        <View style={estilos.grid}>
           {menuItems.map((item, index) => (
             <Pressable
               key={index}
-              style={({ pressed }) => [
-                styles.menuCard,
-                pressed && styles.menuCardPressed,
-              ]}
+              accessibilityRole="button"
+              accessibilityLabel={item.description ? `${item.title}. ${item.description}` : item.title}
+              style={({ pressed }) => [estilos.menuCard, pressed && estilos.menuCardPressed]}
               onPress={() => router.push(item.route as any)}
             >
-              <View style={[styles.iconCircle, { backgroundColor: item.color || COLORS.primary }]}>
-                <FontAwesome5 name={item.icon} size={22} color="white" />
+              <View style={[estilos.iconCircle, { backgroundColor: item.color }]}>
+                <Icon name={item.icon} size={24} color={tema.colores.blanco} />
               </View>
-              <Text style={styles.menuTitle}>{item.title}</Text>
+              <Text style={estilos.menuTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
               {item.description && (
-                <Text style={styles.menuDescription} numberOfLines={1}>
+                <Text style={estilos.menuDescription} numberOfLines={2}>
                   {item.description}
                 </Text>
               )}
@@ -191,26 +199,26 @@ export default function Home() {
           ))}
         </View>
 
-        {/* Botón de cerrar sesión */}
-        <Pressable 
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.logoutButtonPressed,
-          ]} 
-          onPress={logout}
-        >
-          <FontAwesome5 name="sign-out-alt" size={16} color={COLORS.error} />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </Pressable>
+        {/* Cerrar sesión: acción discreta (no destructiva, por eso no va en rojo) */}
+        <View style={estilos.logout}>
+          <Button
+            title="Cerrar sesión"
+            icon="log-out-outline"
+            variant="ghost"
+            fullWidth={false}
+            align="center"
+            onPress={logout}
+          />
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background,
+const crearEstilos = (t: Tema) => ({
+  container: {
+    flex: 1,
+    backgroundColor: t.colores.fondo,
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
@@ -218,112 +226,99 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.huge,
   },
   welcomeSection: {
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
     paddingHorizontal: SPACING.xs,
   },
   welcomeText: {
     fontSize: FONT_SIZE.body,
-    color: COLORS.textSecondary,
+    color: t.colores.textoSuave,
   },
   userName: {
     fontSize: FONT_SIZE.title1,
     fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
+    color: t.colores.texto,
     marginTop: SPACING.xxs,
   },
   companyName: {
     fontSize: FONT_SIZE.body,
-    color: COLORS.primary,
+    color: t.colores.primarioTexto,
     fontWeight: FONT_WEIGHT.medium,
     marginTop: SPACING.xxs,
   },
   errorText: {
-    color: COLORS.textSecondary,
+    color: t.colores.textoSuave,
     fontSize: FONT_SIZE.body,
-    textAlign: 'center',
+    textAlign: 'center' as const,
     marginTop: SPACING.xl,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    justifyContent: 'space-between' as const,
     gap: SPACING.md,
   },
   menuCard: {
-    width: '48%',
-    backgroundColor: COLORS.cardBackground,
+    width: '48%' as const,
+    backgroundColor: t.colores.superficie,
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
     paddingVertical: SPACING.xl,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
+    borderColor: t.colores.borde,
+    ...sombra(t, 'sm'),
   },
   menuCardPressed: {
-    opacity: 0.95,
+    opacity: 0.92,
     transform: [{ scale: 0.98 }],
-    backgroundColor: COLORS.cardBackgroundHover,
   },
   iconCircle: {
     width: 52,
     height: 52,
     borderRadius: RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     marginBottom: SPACING.md,
-    ...SHADOWS.sm,
+    ...sombra(t, 'sm'),
   },
   menuTitle: {
     fontSize: FONT_SIZE.body,
     fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    textAlign: 'center',
+    color: t.colores.texto,
+    textAlign: 'center' as const,
     marginBottom: SPACING.xxs,
   },
   menuDescription: {
-    fontSize: FONT_SIZE.caption,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    fontSize: FONT_SIZE.footnote,
+    color: t.colores.textoSuave,
+    textAlign: 'center' as const,
+    lineHeight: 16,
   },
   demoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.warningLight,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
-    borderRadius: RADIUS.md,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: t.colores.avisoSuave,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  demoTextos: {
+    flex: 1,
+    minWidth: 0,
   },
   demoBannerTitle: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.subhead,
     fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.warningDark,
+    color: t.colores.avisoTexto,
   },
   demoBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.warningDark,
+    fontSize: FONT_SIZE.footnote,
+    color: t.colores.avisoTexto,
     marginTop: 2,
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.xxxl,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-    backgroundColor: COLORS.errorLight,
-    borderRadius: RADIUS.md,
-    alignSelf: 'center',
-    gap: SPACING.sm,
-  },
-  logoutButtonPressed: {
-    opacity: 0.8,
-  },
-  logoutText: {
-    color: COLORS.error,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.body,
+  logout: {
+    marginTop: SPACING.xxl,
+    alignItems: 'center' as const,
   },
 });

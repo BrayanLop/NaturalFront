@@ -1,22 +1,21 @@
-import BackButton from '@/components/BackButton';
 import KeyboardAware from '@/components/KeyboardAware';
-import LoadingView from '@/components/LoadingView';
-import { COLORS } from '@/constants/theme';
+import { AppText, Badge, Button, Card, Divider, Input, LoadingState, SectionHeader } from '@/components/ds';
+import { CampoMoneda } from '@/components/registro/CampoMoneda';
+import { EncabezadoPaso } from '@/components/registro/EncabezadoPaso';
+import { OpcionFormaPago } from '@/components/registro/OpcionFormaPago';
+import { SelectorEvidencias } from '@/components/registro/SelectorEvidencias';
+import { useSeleccionArchivos } from '@/components/registro/useSeleccionArchivos';
 import { useAuth } from '@/context/authContext';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { formatCurrency } from '@/utils/formatters';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
+import { logger } from '@/utils/logger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as ImagePicker from 'expo-image-picker';
-import { comprimirImagen } from '@/utils/imagen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { MaskedTextInput } from 'react-native-mask-text';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDemoMode } from '../../api/demoApi';
+import { ActivityIndicator, Alert, Platform, ScrollView, View } from 'react-native';
 import { api, API_URL } from '../../api/api';
-import { logger } from '@/utils/logger';
+import { getDemoMode } from '../../api/demoApi';
 
 type FormaPago = 'T' | 'E';
 
@@ -32,18 +31,13 @@ interface Servicio {
   precio: number;
 }
 
-interface ArchivoSeleccionado {
-  uri: string;
-  name: string;
-  type: string;
-  size?: number;
-}
-
 export default function ResumenYFormaPago() {
   const router = useRouter();
   const { usuario } = useAuth();
   const { persona: personaId, servicios: serviciosIds } = useLocalSearchParams();
-  
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
+
   const [persona, setPersona] = useState<Persona | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [formaPago, setFormaPago] = useState<FormaPago | null>(null);
@@ -51,26 +45,31 @@ export default function ResumenYFormaPago() {
   const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [archivosSeleccionados, setArchivosSeleccionados] = useState<ArchivoSeleccionado[]>([]);
+  const {
+    archivos: archivosSeleccionados,
+    tomarFoto,
+    seleccionarImagen,
+    seleccionarDocumento,
+    eliminarArchivo,
+  } = useSeleccionArchivos();
   const [subiendoEvidencias, setSubiendoEvidencias] = useState(false);
 
   useEffect(() => {
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarDatos = async () => {
     try {
       const ids = JSON.parse(serviciosIds as string);
-      
+
       // Cargar persona
       const personaRes = await api.get(`/Persona/Obtener/${personaId}`);
       setPersona(personaRes.data);
 
       // Cargar todos los servicios y filtrar los seleccionados
       const serviciosRes = await api.get('/Servicio/Obtener');
-      const serviciosSeleccionados = serviciosRes.data.filter((s: Servicio) => 
-        ids.includes(s.id.toString())
-      );
+      const serviciosSeleccionados = serviciosRes.data.filter((s: Servicio) => ids.includes(s.id.toString()));
       setServicios(serviciosSeleccionados);
     } catch (error) {
       logger.error('Error al cargar datos:', error);
@@ -78,123 +77,6 @@ export default function ResumenYFormaPago() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const tomarFoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Necesitamos permisos para usar la cámara');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const uriComprimida = await comprimirImagen(asset.uri, asset.width);
-        const archivo: ArchivoSeleccionado = {
-          uri: uriComprimida,
-          name: `foto_${Date.now()}.jpg`,
-          type: 'image/jpeg',
-          size: asset.fileSize,
-        };
-        logger.log('Foto tomada:', archivo);
-        setArchivosSeleccionados(prev => [...prev, archivo]);
-      }
-    } catch (error) {
-      logger.error('Error al tomar foto:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto');
-    }
-  };
-
-  const seleccionarImagen = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Necesitamos permisos para acceder a tus fotos');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        let finalUri = asset.uri;
-        
-        // En Android (content://) e iOS (ph://), copiar a cache para que funcione con FormData
-        if (Platform.OS !== 'web' && (asset.uri.startsWith('content://') || asset.uri.startsWith('ph://'))) {
-          const fileName = asset.fileName || `imagen_${Date.now()}.jpg`;
-          const cacheUri = `${FileSystem.cacheDirectory}${fileName}`;
-          
-          try {
-            await FileSystem.copyAsync({
-              from: asset.uri,
-              to: cacheUri,
-            });
-            finalUri = cacheUri;
-            logger.log('Imagen copiada a cache:', cacheUri);
-          } catch (copyError) {
-            logger.error('Error al copiar imagen a cache:', copyError);
-            // Si falla la copia, intentar con la URI original
-          }
-        }
-
-        // Redimensionar/comprimir para no exceder el límite del proxy (nginx 1MB)
-        finalUri = await comprimirImagen(finalUri, asset.width);
-
-        const archivo: ArchivoSeleccionado = {
-          uri: finalUri,
-          name: `imagen_${Date.now()}.jpg`,
-          type: 'image/jpeg',
-          size: asset.fileSize,
-        };
-        logger.log('Imagen seleccionada:', archivo);
-        setArchivosSeleccionados(prev => [...prev, archivo]);
-      }
-    } catch (error) {
-      logger.error('Error al seleccionar imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
-    }
-  };
-
-  const seleccionarDocumento = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const esImagen = (asset.mimeType || '').startsWith('image/');
-        // Solo comprimir imágenes; los PDF u otros archivos van tal cual
-        const uriFinal = esImagen ? await comprimirImagen(asset.uri) : asset.uri;
-        const archivo: ArchivoSeleccionado = {
-          uri: uriFinal,
-          name: esImagen ? `imagen_${Date.now()}.jpg` : asset.name,
-          type: esImagen ? 'image/jpeg' : (asset.mimeType || 'application/octet-stream'),
-          size: asset.size,
-        };
-        logger.log('Documento seleccionado:', archivo);
-        setArchivosSeleccionados(prev => [...prev, archivo]);
-      }
-    } catch (error) {
-      logger.error('Error al seleccionar documento:', error);
-      Alert.alert('Error', 'No se pudo seleccionar el documento');
-    }
-  };
-
-  const eliminarArchivo = (index: number) => {
-    setArchivosSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
 
   const subirEvidencias = async (registrosIds: number[]) => {
@@ -219,10 +101,7 @@ export default function ResumenYFormaPago() {
       // Token y empresaId que normalmente agrega el interceptor de axios.
       // Como en móvil subimos con FileSystem.uploadAsync (fuera de axios),
       // los adjuntamos manualmente.
-      const [token, empresaId] = await Promise.all([
-        AsyncStorage.getItem('token'),
-        AsyncStorage.getItem('empresaId'),
-      ]);
+      const [token, empresaId] = await Promise.all([AsyncStorage.getItem('token'), AsyncStorage.getItem('empresaId')]);
 
       // Subir cada evidencia para cada registro
       for (const registroId of registrosIds) {
@@ -277,18 +156,14 @@ export default function ResumenYFormaPago() {
 
             logger.log('Subiendo evidencia (mobile):', archivo.uri, mimeType);
 
-            const uploadResult = await FileSystem.uploadAsync(
-              `${API_URL}/Evidencia/SubirEvidencia`,
-              archivo.uri,
-              {
-                httpMethod: 'POST',
-                uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-                fieldName: 'archivo',
-                mimeType,
-                parameters: { registroServicioId: registroId.toString() },
-                headers,
-              }
-            );
+            const uploadResult = await FileSystem.uploadAsync(`${API_URL}/Evidencia/SubirEvidencia`, archivo.uri, {
+              httpMethod: 'POST',
+              uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+              fieldName: 'archivo',
+              mimeType,
+              parameters: { registroServicioId: registroId.toString() },
+              headers,
+            });
 
             if (uploadResult.status < 200 || uploadResult.status >= 300) {
               logger.error('Fallo al subir evidencia:', uploadResult.status, uploadResult.body);
@@ -332,14 +207,14 @@ export default function ResumenYFormaPago() {
 
       // Guardar los registros
       const response = await api.post('/RegistroServicio/Guardar', registros);
-      
+
       logger.log('Respuesta del backend:', response.data);
-      
+
       // Si hay evidencias, subirlas
       if (archivosSeleccionados.length > 0) {
         try {
           let registrosIds: number[] = [];
-          
+
           // Verificar si la respuesta contiene los IDs
           if (Array.isArray(response.data)) {
             registrosIds = response.data
@@ -350,17 +225,17 @@ export default function ResumenYFormaPago() {
           } else if (response.data?.id || response.data?.Id || response.data?.ID) {
             registrosIds = [response.data.id || response.data.Id || response.data.ID];
           }
-          
+
           // Si no hay IDs en la respuesta, consultar los últimos registros de esta persona
           if (registrosIds.length === 0) {
             logger.log('Backend no retornó IDs, consultando registros recientes...');
-            
+
             // Obtener todos los registros de la persona
             const registrosResponse = await api.get(`/RegistroServicio/ObtenerPorPersona/${personaId}`);
-            
+
             if (registrosResponse.data && Array.isArray(registrosResponse.data)) {
               // Filtrar los registros que coincidan con los servicios que acabamos de guardar
-              const servicioIds = servicios.map(s => s.id);
+              const servicioIds = servicios.map((s) => s.id);
               const registrosRecientes = registrosResponse.data
                 .filter((r: any) => servicioIds.includes(r.servicioId))
                 // Ordenar por fecha descendente y tomar los últimos N registros
@@ -370,12 +245,12 @@ export default function ResumenYFormaPago() {
                   return dateB - dateA;
                 })
                 .slice(0, servicios.length);
-              
+
               registrosIds = registrosRecientes.map((r: any) => r.id || r.Id).filter(Boolean);
               logger.log('IDs obtenidos de consulta:', registrosIds);
             }
           }
-          
+
           if (registrosIds.length > 0) {
             logger.log('Subiendo evidencias para', registrosIds.length, 'registros');
             await subirEvidencias(registrosIds);
@@ -388,15 +263,14 @@ export default function ResumenYFormaPago() {
           }
         } catch (errorEvidencias) {
           logger.error('Error al procesar evidencias:', errorEvidencias);
-          Alert.alert(
-            'Advertencia',
-            'Servicios registrados correctamente, pero hubo un error al subir las evidencias.'
-          );
+          Alert.alert('Advertencia', 'Servicios registrados correctamente, pero hubo un error al subir las evidencias.');
         }
       }
 
-      Alert.alert('\u00c9xito', 'Servicios registrados correctamente' + 
-        (archivosSeleccionados.length > 0 && response.data ? ' con evidencias' : ''));
+      Alert.alert(
+        'Éxito',
+        'Servicios registrados correctamente' + (archivosSeleccionados.length > 0 && response.data ? ' con evidencias' : '')
+      );
       router.replace('/(tabs)/registroServicio');
     } catch (error) {
       logger.error('Error al guardar registros:', error);
@@ -407,7 +281,7 @@ export default function ResumenYFormaPago() {
   };
 
   if (loading) {
-    return <LoadingView />;
+    return <LoadingState />;
   }
 
   const total = servicios.reduce((sum, s) => sum + s.precio, 0);
@@ -416,367 +290,129 @@ export default function ResumenYFormaPago() {
     router.back();
   };
 
+  const opcional = <Badge label="Opcional" tone="neutral" dot={false} size="sm" />;
+  const procesando = guardando || subiendoEvidencias;
+
   return (
     <KeyboardAware>
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <BackButton onPress={volverAServicios} color="#2d3436" />
-        <Text style={styles.title}>Resumen del registro</Text>
-      </View>
+      <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
+        <EncabezadoPaso title="Resumen del registro" onBack={volverAServicios} />
 
-      {/* Fila superior: Empleado + Total */}
-      <View style={styles.topRow}>
-        <View style={styles.employeeCard}>
-          <Text style={styles.cardLabel}>👤 Empleado</Text>
-          <Text style={styles.employeeName}>
-            {persona?.nombre} {persona?.apellido}
-          </Text>
+        {/* Empleado (informativo) + total destacado */}
+        <View style={estilos.filaResumen}>
+          <Card style={estilos.bloqueResumen}>
+            <AppText variante="nota" tono="suave">
+              Empleado
+            </AppText>
+            <AppText variante="etiqueta" style={estilos.valorResumen} numberOfLines={2}>
+              {persona?.nombre} {persona?.apellido}
+            </AppText>
+          </Card>
+          <Card variant="tinted" style={estilos.bloqueResumen}>
+            <AppText variante="nota" tono="primario">
+              Total a pagar
+            </AppText>
+            <AppText variante="numero" tono="primario" style={estilos.valorResumen} numberOfLines={1} adjustsFontSizeToFit>
+              {formatCurrency(total)}
+            </AppText>
+          </Card>
         </View>
-        <View style={styles.totalCard}>
-          <Text style={styles.cardLabel}>Total a pagar</Text>
-          <Text style={styles.totalMonto}>{formatCurrency(total)}</Text>
-        </View>
-      </View>
 
-      {/* Servicios en grid */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💼 Servicios ({servicios.length})</Text>
-        <View style={styles.serviciosGrid}>
-          {servicios.map((servicio) => (
-            <View key={servicio.id} style={styles.servicioItem}>
-              <Text style={styles.servicioNombre} numberOfLines={2}>{servicio.nombre}</Text>
-              <Text style={styles.servicioValor}>{formatCurrency(servicio.precio)}</Text>
+        <Card style={estilos.seccion}>
+          <SectionHeader title={`Servicios (${servicios.length})`} icon="briefcase-outline" />
+          {servicios.map((servicio, index) => (
+            <View key={servicio.id}>
+              {index > 0 ? <Divider /> : null}
+              <View style={estilos.servicio}>
+                <AppText style={estilos.servicioNombre} numberOfLines={2}>
+                  {servicio.nombre}
+                </AppText>
+                <AppText variante="etiqueta" tono="primario">
+                  {formatCurrency(servicio.precio)}
+                </AppText>
+              </View>
             </View>
           ))}
-        </View>
-      </View>
+        </Card>
 
-      {/* Forma de pago debajo de servicios */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💳 Forma de pago</Text>
-        <View style={styles.formaPagoRow}>
-          <TouchableOpacity
-            style={[styles.option, formaPago === 'T' && styles.optionSelected]}
-            onPress={() => setFormaPago('T')}
-          >
-            <Text style={styles.optionIcon}>💳</Text>
-            <Text style={[styles.optionText, formaPago === 'T' && styles.optionTextSelected]}>
-              Transferencia
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.option, formaPago === 'E' && styles.optionSelected]}
-            onPress={() => setFormaPago('E')}
-          >
-            <Text style={styles.optionIcon}>💵</Text>
-            <Text style={[styles.optionText, formaPago === 'E' && styles.optionTextSelected]}>
-              Efectivo
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Propina (100% del trabajador) */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💰 Propina (Opcional)</Text>
-        <MaskedTextInput
-          type="currency"
-          options={{
-            prefix: '$',
-            decimalSeparator: ',',
-            groupSeparator: '.',
-            precision: 0,
-          }}
-          value={propina}
-          onChangeText={(_, unmasked) => setPropina(unmasked)}
-          style={styles.input}
-          keyboardType="numeric"
-          placeholder="$0"
-        />
-        <Text style={styles.helperText}>La propina pertenece 100% al trabajador.</Text>
-      </View>
-
-      {/* Observaciones */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📝 Observaciones (Opcional)</Text>
-        <TextInput
-          value={observaciones}
-          onChangeText={setObservaciones}
-          style={[styles.input, styles.textArea]}
-          placeholder="Ej: Cliente habitual, atención especial..."
-          multiline
-          numberOfLines={3}
-          maxLength={256}
-        />
-      </View>
-
-      {/* Evidencias con todas las opciones */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📎 Evidencias (Opcional)</Text>
-        <View style={styles.evidenceOptionsContainer}>
-          <TouchableOpacity onPress={tomarFoto} style={styles.iconButton}>
-            <MaterialIcons name="photo-camera" size={28} color={COLORS.primary} />
-            <Text style={styles.iconButtonLabel}>Cámara</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={seleccionarImagen} style={styles.iconButton}>
-            <MaterialIcons name="photo-library" size={28} color={COLORS.primary} />
-            <Text style={styles.iconButtonLabel}>Galería</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={seleccionarDocumento} style={styles.iconButton}>
-            <MaterialIcons name="attach-file" size={28} color={COLORS.primary} />
-            <Text style={styles.iconButtonLabel}>Archivo</Text>
-          </TouchableOpacity>
-        </View>
-
-        {archivosSeleccionados.length > 0 && (
-          <View style={styles.archivosGrid}>
-            {archivosSeleccionados.map((archivo, index) => (
-              <View key={index} style={styles.archivoItem}>
-                <Ionicons
-                  name={archivo.type.startsWith('image/') ? 'image' : 'document'}
-                  size={16}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.archivoNombre} numberOfLines={1}>
-                  {archivo.name}
-                </Text>
-                <TouchableOpacity onPress={() => eliminarArchivo(index)}>
-                  <Ionicons name="close-circle" size={20} color={COLORS.error} />
-                </TouchableOpacity>
-              </View>
-            ))}
+        <Card style={estilos.seccion}>
+          <SectionHeader title="Forma de pago" icon="card-outline" />
+          <View style={estilos.opciones}>
+            <OpcionFormaPago
+              label="Transferencia"
+              icon="swap-horizontal-outline"
+              selected={formaPago === 'T'}
+              onPress={() => setFormaPago('T')}
+            />
+            <OpcionFormaPago label="Efectivo" icon="cash-outline" selected={formaPago === 'E'} onPress={() => setFormaPago('E')} />
           </View>
-        )}
-      </View>
+        </Card>
 
-      {/* Botón confirmar */}
-      <TouchableOpacity
-        style={[styles.button, (!formaPago || guardando) && styles.buttonDisabled]}
-        onPress={confirmar}
-        disabled={!formaPago || guardando}
-      >
-        {guardando || subiendoEvidencias ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color={COLORS.white} size="small" />
-            <Text style={styles.buttonText}>
-              {subiendoEvidencias ? 'Subiendo evidencias...' : 'Guardando...'}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.buttonText}>Confirmar registro</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        <Card style={estilos.seccion}>
+          <SectionHeader title="Propina" icon="gift-outline" right={opcional} />
+          <CampoMoneda
+            value={propina}
+            onChangeValue={setPropina}
+            placeholder="$0"
+            leftIcon="cash-outline"
+            helper="La propina pertenece 100% al trabajador."
+          />
+        </Card>
+
+        <Card style={estilos.seccion}>
+          <SectionHeader title="Observaciones" icon="document-text-outline" right={opcional} />
+          <Input
+            value={observaciones}
+            onChangeText={setObservaciones}
+            placeholder="Ej: Cliente habitual, atención especial..."
+            multiline
+            numberOfLines={3}
+            maxLength={256}
+            containerStyle={estilos.sinMargen}
+          />
+        </Card>
+
+        <Card style={estilos.seccion}>
+          <SectionHeader title="Evidencias" icon="image-outline" right={opcional} />
+          <SelectorEvidencias
+            archivos={archivosSeleccionados}
+            onCamara={tomarFoto}
+            onGaleria={seleccionarImagen}
+            onArchivo={seleccionarDocumento}
+            onQuitar={eliminarArchivo}
+          />
+        </Card>
+
+        <Button
+          title={procesando ? (subiendoEvidencias ? 'Subiendo evidencias...' : 'Guardando...') : 'Confirmar registro'}
+          icon={
+            procesando ? <ActivityIndicator size="small" color={tema.colores.textoDeshabilitado} /> : 'checkmark'
+          }
+          size="lg"
+          onPress={confirmar}
+          disabled={!formaPago || guardando}
+          style={estilos.confirmar}
+        />
+      </ScrollView>
     </KeyboardAware>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: COLORS.surface,
+const crearEstilos = (t: Tema) => ({
+  pantalla: { flex: 1, backgroundColor: t.colores.fondo },
+  contenido: { padding: SPACING.lg, paddingBottom: SPACING.huge },
+  filaResumen: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: SPACING.md, marginBottom: SPACING.lg },
+  bloqueResumen: { flexGrow: 1, flexBasis: 140, minWidth: 0, marginBottom: 0 },
+  valorResumen: { marginTop: SPACING.xs },
+  seccion: { marginBottom: SPACING.lg },
+  servicio: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    flex: 1,
-  },
-  // Fila superior: Empleado + Total
-  topRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
-  },
-  employeeCard: {
-    flex: 1,
-    backgroundColor: COLORS.cardBackground,
-    padding: 14,
-    borderRadius: 12,
-  },
-  cardLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
-  },
-  employeeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  totalCard: {
-    flex: 1,
-    backgroundColor: '#e8f8f5',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary + '33',
-  },
-  totalMonto: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  // Secciones
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  // Grid de servicios
-  serviciosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  servicioItem: {
-    backgroundColor: COLORS.cardBackground,
-    padding: 12,
-    borderRadius: 10,
-    minWidth: 150,
-    flex: 1,
-    maxWidth: '48%',
-  },
-  servicioNombre: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-  servicioValor: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  // Inputs (propina / observaciones)
-  input: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '22',
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  helperText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 6,
-  },
-  // Forma de pago
-  formaPagoRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  option: {
-    flex: 1,
-    backgroundColor: COLORS.cardBackground,
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  optionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
-  },
-  optionIcon: {
-    fontSize: 28,
-  },
-  optionText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  optionTextSelected: {
-    color: COLORS.primary,
-  },
-  // Evidencias
-  evidenceOptionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  iconButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '33',
-  },
-  iconButtonLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  archivosGrid: {
-    marginTop: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  archivoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.cardBackground,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '22',
-  },
-  archivoNombre: {
-    maxWidth: 150,
-    fontSize: 13,
-    color: COLORS.text,
-  },
-  // Botón
-  button: {
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.textSecondary,
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  servicioNombre: { flex: 1, minWidth: 0 },
+  opciones: { flexDirection: 'row' as const, gap: SPACING.md },
+  sinMargen: { marginBottom: 0 },
+  confirmar: { marginTop: SPACING.sm },
 });

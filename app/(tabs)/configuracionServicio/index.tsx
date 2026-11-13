@@ -1,20 +1,11 @@
-import EmptyState from '@/components/EmptyState';
-import ListCard from '@/components/ListCard';
-import LoadingView from '@/components/LoadingView';
-import StatusBadge from '@/components/StatusBadge';
-import { COLORS } from '@/constants/theme';
+import { Badge, EmptyState, ListRow, LoadingState, PageHeader } from '@/components/ds';
+import { SPACING, useEstilos, type Tema } from '@/theme';
+import { logger } from '@/utils/logger';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, View } from 'react-native';
 import { api } from '../../api/api';
-import { logger } from '@/utils/logger';
 
 interface ConfiguracionServicio {
   id: number;
@@ -25,8 +16,14 @@ interface ConfiguracionServicio {
   estado: boolean;
 }
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  listaVacia: { flexGrow: 1, justifyContent: 'center' as const },
+});
+
 export default function ListaConfiguraciones() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
   const [configuraciones, setConfiguraciones] = useState<ConfiguracionServicio[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -61,15 +58,12 @@ export default function ListaConfiguraciones() {
 
   const renderItem = useCallback(
     ({ item }: { item: ConfiguracionServicio }) => (
-      <ListCard
+      <ListRow
         title={item.nombreServicio}
-        description={`🏢 Empresa: ${item.porcentajeEmpresa}% | 👷 Trabajador: ${item.porcentajeTrabajador}%`}
-        badges={
-          <StatusBadge
-            label={item.estado ? 'Activo' : 'Inactivo'}
-            type={item.estado ? 'disponible' : 'info'}
-          />
-        }
+        subtitle={`Empresa ${item.porcentajeEmpresa}% · Trabajador ${item.porcentajeTrabajador}%`}
+        icon="pie-chart-outline"
+        badge={<Badge label={item.estado ? 'Activo' : 'Inactivo'} tone={item.estado ? 'success' : 'neutral'} size="sm" />}
+        chevron
         onPress={() => handleNavegar(item.id)}
       />
     ),
@@ -78,59 +72,47 @@ export default function ListaConfiguraciones() {
 
   const keyExtractor = useCallback((item: ConfiguracionServicio) => item.id.toString(), []);
 
-  const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: 90,
-      offset: 90 * index,
-      index,
-    }),
-    []
-  );
+  const activas = useMemo(() => configuraciones.filter((c) => c.estado).length, [configuraciones]);
 
   const emptyComponent = useMemo(
-    () => <EmptyState message="No hay configuraciones registradas" icon="⚙️" subtitle="Comienza agregando una nueva configuración" />,
-    []
+    () => (
+      <EmptyState
+        icon="settings-outline"
+        title="No hay configuraciones"
+        subtitle="Comienza agregando una nueva configuración"
+        actionLabel="Agregar configuración"
+        onAction={handleCrear}
+      />
+    ),
+    [handleCrear]
   );
 
   return (
-    <View style={styles.container}>
+    <View style={estilos.contenedor}>
+      {!loading && configuraciones.length > 0 && (
+        <PageHeader
+          title={configuraciones.length === 1 ? '1 configuración' : `${configuraciones.length} configuraciones`}
+          subtitle={`${activas} activa${activas !== 1 ? 's' : ''}`}
+          action={{ icon: 'add', onPress: handleCrear, label: 'Agregar configuración' }}
+        />
+      )}
+
       {loading ? (
-        <LoadingView />
+        <LoadingState message="Cargando configuraciones..." />
       ) : (
         <FlatList
           data={configuraciones}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          getItemLayout={getItemLayout}
           ListEmptyComponent={emptyComponent}
           removeClippedSubviews
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           windowSize={10}
+          contentContainerStyle={configuraciones.length === 0 ? estilos.listaVacia : undefined}
+          showsVerticalScrollIndicator={false}
         />
       )}
-
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleCrear}
-      >
-        <Text style={styles.addText}>+ Agregar configuración</Text>
-      </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: COLORS.surface },
-  addButton: {
-    marginTop: 20,
-    backgroundColor: COLORS.primary,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-  },
-});

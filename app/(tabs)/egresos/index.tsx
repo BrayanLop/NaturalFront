@@ -1,31 +1,53 @@
-import EmptyState from '@/components/EmptyState';
-import ListCard from '@/components/ListCard';
-import LoadingView from '@/components/LoadingView';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import {
+  AppText,
+  Button,
+  Card,
+  DateField,
+  EmptyState,
+  IconButton,
+  ListRow,
+  LoadingState,
+  StatCard,
+} from '@/components/ds';
 import { useAuth } from '@/context/authContext';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { formatCurrency, formatDate, formatFormaPago, toDateInputValue } from '@/utils/formatters';
 import { logger, showError } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
+import { FlatList, View } from 'react-native';
 import { api } from '../../api/api';
 import { EgresoEmpresa } from '../../api/modelos/egreso';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  cabecera: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: SPACING.lg,
+  },
+  cabeceraTexto: { flex: 1, minWidth: 0, marginRight: SPACING.md },
+  fila: { flexDirection: 'row' as const, gap: SPACING.md, marginBottom: SPACING.md },
+  etiquetaFiltro: { marginBottom: SPACING.sm },
+  tarjetaTotal: { marginBottom: SPACING.lg },
+  lista: { paddingBottom: SPACING.lg },
+  listaVacia: { flex: 1, justifyContent: 'center' as const },
+  derecha: { alignItems: 'flex-end' as const, marginLeft: SPACING.sm },
+  agregar: { marginTop: SPACING.md },
+  sinPermiso: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flex: 1 },
+});
 
 export default function ListaEgresos() {
   const router = useRouter();
   const { usuario } = useAuth();
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   const [egresos, setEgresos] = useState<EgresoEmpresa[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   const [fechaInicio, setFechaInicio] = useState(() => {
     const today = new Date();
     const start = new Date(today);
@@ -39,7 +61,7 @@ export default function ListaEgresos() {
 
   const cargarEgresos = useCallback(async () => {
     if (!esAdmin) return;
-    
+
     setLoading(true);
     try {
       const response = await api.get('/EgresosEmpresa/ObtenerEgresosPorRango', {
@@ -72,28 +94,33 @@ export default function ListaEgresos() {
 
   const renderItem = useCallback(
     ({ item }: { item: EgresoEmpresa }) => (
-      <ListCard
+      <ListRow
+        icon="trending-down-outline"
+        iconColor={tema.colores.errorTexto}
         title={item.nombrePersona || 'Sin persona'}
-        subtitle={`💵 ${formatCurrency(item.valorEgreso)} · ${formatFormaPago(item.formaPago)}`}
-        description={item.motivo || 'Sin motivo'}
-        leftIcon={<FontAwesome5 name="arrow-down" size={16} color={COLORS.error} />}
-        rightContent={
-          <Text style={styles.fecha}>
-            {item.fechaRegistro ? formatDate(item.fechaRegistro) : 'Sin fecha'}
-          </Text>
+        subtitle={`${item.motivo || 'Sin motivo'} · ${formatFormaPago(item.formaPago)}`}
+        trailing={
+          <View style={estilos.derecha}>
+            <AppText variante="etiqueta" tono="error">
+              {formatCurrency(item.valorEgreso)}
+            </AppText>
+            <AppText variante="nota" tono="suave">
+              {item.fechaRegistro ? formatDate(item.fechaRegistro) : 'Sin fecha'}
+            </AppText>
+          </View>
         }
       />
     ),
-    []
+    [estilos, tema]
   );
 
   const keyExtractor = useCallback((item: EgresoEmpresa, index: number) => `${item.empresaId}-${item.personaId}-${index}`, []);
 
   const emptyComponent = useMemo(
     () => (
-      <EmptyState 
-        message="No hay egresos en el rango seleccionado" 
-        icon="💸"
+      <EmptyState
+        icon="trending-down-outline"
+        title="No hay egresos en el rango seleccionado"
         subtitle="Ajusta las fechas o registra un nuevo egreso"
         actionLabel="Registrar egreso"
         onAction={handleCrear}
@@ -104,64 +131,34 @@ export default function ListaEgresos() {
 
   if (!esAdmin) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>No tienes permisos para ver esta sección</Text>
+      <View style={estilos.sinPermiso}>
+        <EmptyState icon="lock-closed-outline" title="No tienes permisos para ver esta sección" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Egresos</Text>
-          <Text style={styles.headerSubtitle}>
+    <View style={estilos.contenedor}>
+      <View style={estilos.cabecera}>
+        <View style={estilos.cabeceraTexto}>
+          <AppText variante="subtitulo">Egresos registrados</AppText>
+          <AppText variante="nota" tono="suave">
             {egresos.length} registro{egresos.length !== 1 ? 's' : ''} encontrado{egresos.length !== 1 ? 's' : ''}
-          </Text>
+          </AppText>
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.headerAddButton,
-            pressed && styles.headerAddButtonPressed,
-          ]}
-          onPress={handleCrear}
-        >
-          <FontAwesome5 name="plus" size={18} color={COLORS.white} />
-        </Pressable>
+        <IconButton icon="add" variant="solid" accessibilityLabel="Registrar egreso" onPress={handleCrear} />
       </View>
 
-      <View style={styles.filtros}>
-        <Text style={styles.filtrosTitle}>Filtrar por fechas</Text>
-        <View style={styles.dateRow}>
-          <Pressable 
-            style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
-            onPress={() => setPickerVisible('inicio')}
-          >
-            <Text style={styles.chipLabel}>Desde</Text>
-            <Text style={styles.chipValue}>{fechaInicio}</Text>
-          </Pressable>
-          <Pressable 
-            style={({ pressed }) => [styles.dateChip, pressed && styles.dateChipPressed]} 
-            onPress={() => setPickerVisible('fin')}
-          >
-            <Text style={styles.chipLabel}>Hasta</Text>
-            <Text style={styles.chipValue}>{fechaFin}</Text>
-          </Pressable>
+      <Card>
+        <AppText variante="etiqueta" style={estilos.etiquetaFiltro}>
+          Rango de fechas
+        </AppText>
+        <View style={estilos.fila}>
+          <DateField label="Desde" value={fechaInicio} onPress={() => setPickerVisible('inicio')} />
+          <DateField label="Hasta" value={fechaFin} onPress={() => setPickerVisible('fin')} />
         </View>
-        <Pressable 
-          style={({ pressed }) => [
-            styles.buscarButton, 
-            pressed && styles.buscarButtonPressed,
-            loading && styles.buscarButtonDisabled,
-          ]} 
-          onPress={cargarEgresos} 
-          disabled={loading}
-        >
-          <FontAwesome5 name="search" size={14} color={COLORS.white} />
-          <Text style={styles.buscarText}>{loading ? 'Buscando...' : 'Buscar'}</Text>
-        </Pressable>
-      </View>
+        <Button title={loading ? 'Buscando...' : 'Buscar'} icon="search" onPress={cargarEgresos} disabled={loading} />
+      </Card>
 
       {/* Pickers para dispositivos móviles */}
       <SimpleDatePicker
@@ -179,199 +176,30 @@ export default function ListaEgresos() {
         title="Selecciona la fecha hasta"
       />
 
-      <View style={styles.resumen}>
-        <Text style={styles.resumenLabel}>Total egresos en rango</Text>
-        <Text style={styles.resumenMonto}>{formatCurrency(totalEgresos)}</Text>
-      </View>
+      <StatCard
+        style={estilos.tarjetaTotal}
+        icon="trending-down-outline"
+        tone="error"
+        label="Total egresos en el rango"
+        value={formatCurrency(totalEgresos)}
+      />
 
       {loading ? (
-        <LoadingView message="Cargando egresos..." />
+        <LoadingState message="Cargando egresos..." />
       ) : (
         <FlatList
           data={egresos}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={emptyComponent}
-          contentContainerStyle={egresos.length === 0 ? styles.emptyList : undefined}
+          contentContainerStyle={egresos.length === 0 ? estilos.listaVacia : estilos.lista}
         />
       )}
 
       {egresos.length > 0 && (
-        <Pressable 
-          style={({ pressed }) => [
-            styles.addButton, 
-            pressed && styles.addButtonPressed,
-          ]} 
-          onPress={handleCrear}
-        >
-          <Text style={styles.addText}>+ Registrar egreso</Text>
-        </Pressable>
+        <Button title="Registrar egreso" icon="add" onPress={handleCrear} style={estilos.agregar} />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: SPACING.lg, 
-    backgroundColor: COLORS.background 
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  headerAddButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...SHADOWS.primary,
-  },
-  headerAddButtonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.95 }],
-  },
-  filtros: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
-  },
-  filtrosTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  dateChip: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  dateChipPressed: {
-    backgroundColor: COLORS.primarySurface,
-    borderColor: COLORS.primary,
-  },
-  chipLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  chipValue: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  buscarButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
-    ...SHADOWS.primary,
-  },
-  buscarButtonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  buscarButtonDisabled: {
-    backgroundColor: COLORS.border,
-    ...SHADOWS.none,
-  },
-  buscarText: { 
-    color: COLORS.white, 
-    fontWeight: FONT_WEIGHT.semibold, 
-    fontSize: FONT_SIZE.sm 
-  },
-  resumen: {
-    backgroundColor: COLORS.errorLight,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  resumenLabel: { 
-    color: COLORS.text, 
-    fontWeight: FONT_WEIGHT.medium,
-    fontSize: FONT_SIZE.sm,
-  },
-  resumenMonto: { 
-    color: COLORS.error, 
-    fontWeight: FONT_WEIGHT.bold, 
-    fontSize: FONT_SIZE.lg,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  fecha: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  addButton: {
-    marginTop: SPACING.lg,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    ...SHADOWS.primary,
-  },
-  addButtonPressed: {
-    backgroundColor: COLORS.primaryDark,
-    transform: [{ scale: 0.98 }],
-  },
-  addText: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHT.semibold,
-    fontSize: FONT_SIZE.md,
-  },
-  errorText: {
-    textAlign: 'center',
-    marginTop: SPACING.xl,
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.md,
-  },
-});

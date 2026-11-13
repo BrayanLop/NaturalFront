@@ -9,7 +9,7 @@ import axios, { InternalAxiosRequestConfig } from 'axios';
  * superadmin entre en modo soporte (donde `token` pasa a ser el de la empresa).
  */
 export const PLATAFORMA_URL =
-  process.env.EXPO_PUBLIC_PLATAFORMA_URL ?? 'https://brar.naturalback.vip';
+  process.env.EXPO_PUBLIC_PLATAFORMA_URL ?? 'https://brar.bia.solutions';
 
 const TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT) || 50000; // ms
 

@@ -2,7 +2,9 @@ import BackButton from '@/components/BackButton';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import BannerSoporte from '@/components/BannerSoporte';
+import { getRoleName, isPlataforma } from '@/utils/roles';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +21,20 @@ export default function Layout() {
     }
   }, [cargando, usuario]);
 
+  // Separación de menús: el superadmin de plataforma (rol 00) solo ve plataforma/*, home y cambiar contraseña;
+  // cualquier otro rol (incluido el admin al que se entra en modo soporte) no puede abrir plataforma/*.
+  const segments = useSegments();
+  useEffect(() => {
+    if (cargando || !usuario) return;
+    const seccion = (segments as string[])[1];
+    if (!seccion) return;
+    const esPlataforma = isPlataforma(usuario.rol);
+    const permitidasPlataforma = ['home', 'index', 'plataforma', 'cambiarContrasena'];
+    if ((esPlataforma && !permitidasPlataforma.includes(seccion)) || (!esPlataforma && seccion === 'plataforma')) {
+      router.replace('/home');
+    }
+  }, [segments, usuario, cargando]);
+
   if (cargando) {
     return (
       <View style={styles.loadingContainer}>
@@ -33,6 +49,7 @@ export default function Layout() {
 
   return (
     <>
+      <View style={{ flex: 1 }}>
       <Stack
         screenOptions={{
           contentStyle: {
@@ -108,7 +125,20 @@ export default function Layout() {
       <Stack.Screen name="consolidadoIngresos" options={{ title: 'Consolidado' }} />
       <Stack.Screen name="consolidadoFormaPago" options={{ title: 'Total por formas de pago' }} />
       <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
+      <Stack.Screen name="accesos/index" options={{ title: 'Accesos' }} />
+      <Stack.Screen name="accesos/crear" options={{ title: 'Crear acceso' }} />
+      <Stack.Screen name="accesos/[id]" options={{ title: 'Detalle de acceso' }} />
+      <Stack.Screen name="plataforma/empresas/index" options={{ title: 'Empresas' }} />
+      <Stack.Screen name="plataforma/empresas/crear" options={{ title: 'Crear empresa' }} />
+      <Stack.Screen name="plataforma/empresas/[id]/index" options={{ title: 'Empresa' }} />
+      <Stack.Screen name="plataforma/empresas/[id]/accesos/index" options={{ title: 'Accesos de la empresa' }} />
+      <Stack.Screen name="plataforma/empresas/[id]/accesos/crear" options={{ title: 'Crear acceso' }} />
+      <Stack.Screen name="plataforma/empresas/[id]/accesos/[usuarioId]" options={{ title: 'Detalle de acceso' }} />
+      <Stack.Screen name="plataforma/auditoria/index" options={{ title: 'Auditoría' }} />
     </Stack>
+      {/* Banner fijo del modo soporte (solo se ve si el superadmin entró como una empresa) */}
+      <BannerSoporte />
+      </View>
 
     {/* Menú desplegable del usuario */}
     <Modal
@@ -129,7 +159,7 @@ export default function Layout() {
             <View style={styles.menuHeaderText}>
               <Text style={styles.menuUserName}>{usuario?.nombre || 'Usuario'}</Text>
               <Text style={styles.menuRolText}>
-                {usuario?.rol === '01' ? 'Administrador' : usuario?.rol === '02' ? 'Trabajador' : 'Usuario'}
+                {usuario?.rol ? getRoleName(usuario.rol) : 'Usuario'}
               </Text>
             </View>
           </View>

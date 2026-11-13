@@ -1,6 +1,7 @@
 
 // Constantes de roles
 export const ROLES = {
+  PLATAFORMA: '00', // Superadmin de la plataforma (no pertenece a una empresa)
   ADMIN: '01',
   TRABAJADOR: '02',
   SUPER_EMPLEADO: '03',
@@ -32,6 +33,8 @@ export function puedeRegistrarServicios(rol: string | undefined): boolean {
 // Obtener nombre del rol
 export function getRoleName(rol: string): string {
   switch (rol) {
+    case ROLES.PLATAFORMA:
+      return 'Plataforma';
     case ROLES.ADMIN:
     case '1':
       return 'Administrador';
@@ -44,4 +47,14 @@ export function getRoleName(rol: string): string {
     default:
       return 'Desconocido';
   }
+}
+
+// Verificar si es superadmin de plataforma (gestiona tenants, no el negocio de una empresa)
+export function isPlataforma(rol: string | undefined): boolean {
+  return rol === ROLES.PLATAFORMA || rol === '0';
+}
+
+// Solo el administrador (01) de la empresa gestiona accesos; el super empleado (03) no
+export function puedeGestionarAccesos(rol: string | undefined): boolean {
+  return rol === ROLES.ADMIN || rol === '1';
 }

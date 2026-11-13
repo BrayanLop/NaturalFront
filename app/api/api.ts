@@ -46,7 +46,8 @@ api.interceptors.request.use(
     const empresaId = await AsyncStorage.getItem('empresaId');
     const token = await AsyncStorage.getItem('token');
     
-    if (empresaId) {
+    // El superadmin de plataforma (rol 00) no tiene empresa: no se envía un header vacío o "0"/"null".
+    if (empresaId && empresaId !== '0' && empresaId !== 'null') {
       config.headers['empresaId'] = empresaId;
     }
     

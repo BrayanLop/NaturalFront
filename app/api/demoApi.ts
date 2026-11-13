@@ -27,6 +27,7 @@ export const setDemoMode = async (value: boolean) => {
   await AsyncStorage.setItem('isDemo', value ? 'true' : 'false');
   if (value) {
     demoStore.reset(); // Reiniciar datos al entrar en modo demo
+    demoAccesos.clear();
   }
 };
 
@@ -49,6 +50,9 @@ export const getDemoModeSync = () => isDemoModeCache === true;
 
 // Simular delay de red
 const simulateDelay = (ms: number = 200) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Accesos demo por personaId (se limpia al entrar a modo demo)
+const demoAccesos = new Map<number, { usuarioId: number; nombreUsuario: string; activo: boolean; rol: string }>();
 
 // Crear respuesta mock tipo Axios
 function createMockResponse<T>(data: T, status: number = 200): AxiosResponse<T> {
@@ -128,6 +132,65 @@ export async function handleDemoRequest(config: AxiosRequestConfig): Promise<Axi
   // ═══════════════════════════════════════════════════════════════════
   if (url.match(/\/Usuario\/ActualizarContrasena/i) && method === 'PUT') {
     return createMockResponse({ message: 'Contraseña actualizada (demo)' });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ACCESOS (usuarios de la empresa): estado en memoria
+  // ═══════════════════════════════════════════════════════════════════
+  if (url.match(/\/Acceso\//i)) {
+    const personas = demoStore.getPersonas();
+    // Las dos primeras personas arrancan con acceso; el resto aparece "sin acceso"
+    for (const p of personas.slice(0, 2)) {
+      if (!demoAccesos.has(p.id)) {
+        demoAccesos.set(p.id, { usuarioId: 100 + p.id, nombreUsuario: p.nombre.toLowerCase(), activo: true, rol: '02' });
+      }
+    }
+    const porUsuarioId = (id: number) => [...demoAccesos.entries()].find(([, a]) => a.usuarioId === id);
+
+    if (url.match(/\/Acceso\/Obtener/i) && method === 'GET') {
+      return createMockResponse(
+        personas.map(p => {
+          const a = demoAccesos.get(p.id);
+          return {
+            personaId: p.id,
+            nombre: p.nombre,
+            apellido: p.apellido,
+            email: p.email,
+            usuarioId: a?.usuarioId ?? null,
+            nombreUsuario: a?.nombreUsuario ?? null,
+            tieneAcceso: !!a,
+            activo: a?.activo ?? false,
+            rol: a?.rol ?? null,
+          };
+        })
+      );
+    }
+    if (url.match(/\/Acceso\/Crear/i) && method === 'POST') {
+      const usuarioId = 100 + data.personaId;
+      demoAccesos.set(data.personaId, { usuarioId, nombreUsuario: data.nombreUsuario, activo: true, rol: data.rol });
+      return createMockResponse({ usuarioId }, 201);
+    }
+    const estado = url.match(/\/Acceso\/CambiarEstado\/(\d+)/i);
+    if (estado && method === 'PATCH') {
+      const par = porUsuarioId(parseInt(estado[1]));
+      if (par) par[1].activo = String(queryParams.activo) === 'true';
+      return createMockResponse({ activo: par?.[1].activo ?? false });
+    }
+    const cambioRol = url.match(/\/Acceso\/CambiarRol\/(\d+)/i);
+    if (cambioRol && method === 'PATCH') {
+      const par = porUsuarioId(parseInt(cambioRol[1]));
+      if (par) par[1].rol = data.rol;
+      return createMockResponse({ rol: data.rol });
+    }
+    if (url.match(/\/Acceso\/RestablecerContrasena\/(\d+)/i) && method === 'PUT') {
+      return createMockResponse({ mensaje: 'Contraseña restablecida (demo)' });
+    }
+    const quitar = url.match(/\/Acceso\/Eliminar\/(\d+)/i);
+    if (quitar && method === 'DELETE') {
+      const par = porUsuarioId(parseInt(quitar[1]));
+      if (par) demoAccesos.delete(par[0]);
+      return createMockResponse(null, 204);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════

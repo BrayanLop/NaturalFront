@@ -220,6 +220,8 @@ const crearEstilos = (t: Tema) => ({
     width: 180,
     height: 180,
     resizeMode: 'contain' as const,
+    // En oscuro el logo (verde oscuro) se perdería sobre el fondo: se tiñe con el verde claro del tema.
+    ...(t.esOscuro ? { tintColor: t.colores.primarioTexto } : null),
   },
   formCard: {
     backgroundColor: t.colores.superficie,

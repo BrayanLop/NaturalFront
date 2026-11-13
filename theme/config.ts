@@ -5,4 +5,4 @@
  * muestra una mezcla de pantallas claras y oscuras. Se pone en `true` en la fase de cierre,
  * cuando todas las pantallas usan los tokens.
  */
-export const MODO_OSCURO_ACTIVO = false;
+export const MODO_OSCURO_ACTIVO = true;

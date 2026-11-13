@@ -1,6 +1,7 @@
-import BackButton from '@/components/BackButton';
+import AppHeader from '@/components/ds/AppHeader';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import { useTheme } from '@/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ export default function Layout() {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const { tema } = useTheme();
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -42,30 +44,17 @@ export default function Layout() {
             // barra de navegación de Android / el home indicator de iOS.
             paddingBottom: insets.bottom,
           },
-          headerStyle: {
-            backgroundColor: COLORS.primary,
-          },
-          headerTintColor: COLORS.white,
-          headerTitleAlign: 'center',
-          headerTitleStyle: {
-            fontWeight: FONT_WEIGHT.bold,
-            fontSize: FONT_SIZE.headline,
-          },
-          headerShadowVisible: false,
-          headerLeft: () => <BackButton />,
-          headerRight: () => (
-            <Pressable
-              onPress={() => setMenuVisible(true)}
-              style={styles.headerRightButton}
-            >
-              <View style={styles.avatarCircle}>
-                <FontAwesome5 name="user" size={14} color={COLORS.primary} />
-              </View>
-              <Text style={styles.headerUserName} numberOfLines={1}>
-                {usuario?.nombre?.split(' ')[0] || 'Usuario'}
-              </Text>
-          </Pressable>
-        ),
+          // Encabezado propio: sin "píldoras de vidrio" de iOS 26, claro/oscuro y adaptable a pantallas angostas.
+          header: ({ navigation, options, back }) => (
+            <AppHeader
+              navigation={navigation}
+              options={options as { title?: string; headerLeft?: (props: { canGoBack?: boolean }) => React.ReactNode }}
+              back={back}
+              usuario={usuario}
+              onUserPress={() => setMenuVisible(true)}
+              onBackFallback={() => router.replace('/(tabs)/home')}
+            />
+          ),
       }}
     >
       {/* Personalizamos los títulos */}
@@ -74,8 +63,11 @@ export default function Layout() {
         options={{ 
           title: 'Natural', 
           headerLeft: () => (
-            <View style={{ marginLeft: 12 }}>
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+            <View style={{ marginLeft: 4, maxWidth: '100%' }}>
+              <Text
+                style={{ color: tema.colores.sobreEncabezado, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.subhead }}
+                numberOfLines={1}
+              >
                 {usuario?.nombreEmpresa || 'Empresa'}
               </Text>
             </View>
@@ -108,6 +100,7 @@ export default function Layout() {
       <Stack.Screen name="consolidadoIngresos" options={{ title: 'Consolidado' }} />
       <Stack.Screen name="consolidadoFormaPago" options={{ title: 'Total por formas de pago' }} />
       <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
+      <Stack.Screen name="catalogo" options={{ title: 'Catálogo' }} />
     </Stack>
 
     {/* Menú desplegable del usuario */}

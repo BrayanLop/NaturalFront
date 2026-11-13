@@ -1,16 +1,20 @@
-import BackButton from '@/components/BackButton';
+import { ListRow } from '@/components/ds';
+import { EncabezadoPaso } from '@/components/registro/EncabezadoPaso';
+import { SPACING, useEstilos, type Tema } from '@/theme';
+import { logger } from '@/utils/logger';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { api } from '../../api/api';
-import { logger } from '@/utils/logger';
 
 export default function SeleccionarPersona() {
   const [personas, setPersonas] = useState<any[]>([]);
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
 
   useEffect(() => {
-    api.get('/Persona/Obtener')
+    api
+      .get('/Persona/Obtener')
       .then((res) => setPersonas(res.data))
       .catch((err) => logger.error('Error al cargar personas:', err));
   }, []);
@@ -27,42 +31,24 @@ export default function SeleccionarPersona() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <BackButton onPress={volverAtras} color="#2d3436" />
-        <Text style={styles.title}>Seleccionar persona</Text>
-      </View>
-      
+    <View style={estilos.pantalla}>
+      <EncabezadoPaso title="Seleccionar persona" subtitle="¿Quién realizó el servicio?" onBack={volverAtras} />
       <FlatList
         data={personas}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.item} onPress={() => seleccionarPersona(item)}>
-            <Text>{item.nombre}</Text>
-          </TouchableOpacity>
+          <ListRow
+            title={[item.nombre, item.apellido].filter(Boolean).join(' ')}
+            icon="person-outline"
+            chevron
+            onPress={() => seleccionarPersona(item)}
+          />
         )}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  title: { 
-    fontSize: 20, 
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  item: {
-    backgroundColor: '#dfe6e9',
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 8,
-  },
+const crearEstilos = (t: Tema) => ({
+  pantalla: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
 });

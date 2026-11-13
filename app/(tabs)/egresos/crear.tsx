@@ -1,33 +1,33 @@
-import FormField from '@/components/FormField';
+import { AppText, Button, ChipGroup, DateField, EmptyState, Input, LoadingState, Select, ToggleRow } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
 import SimpleDatePicker from '@/components/SimpleDatePicker';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { toDateInputValue } from '@/utils/formatters';
 import { logger, showError, showSuccess } from '@/utils/logger';
 import { isAdmin } from '@/utils/roles';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { MaskedTextInput } from 'react-native-mask-text';
+import { ScrollView, View } from 'react-native';
 import { api } from '../../api/api';
 import { Persona } from '../../api/modelos/persona';
+
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flexGrow: 1, padding: SPACING.lg, paddingBottom: SPACING.huge, backgroundColor: t.colores.fondo },
+  vacio: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  filaFecha: { flexDirection: 'row' as const, marginBottom: SPACING.lg },
+  contador: { textAlign: 'right' as const, marginTop: -SPACING.md, marginBottom: SPACING.lg },
+  boton: { marginTop: SPACING.md },
+});
+
+/** Formatea los dígitos como moneda sin decimales: 50000 -> $50.000 */
+const formatearValor = (digitos: string) => (digitos ? `$${Number(digitos).toLocaleString('es-CO')}` : '');
 
 export default function CrearEgreso() {
   const router = useRouter();
   const { usuario } = useAuth();
-  
+  const estilos = useEstilos(crearEstilos);
+
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaId, setPersonaId] = useState<number | null>(null);
   const [valorEgreso, setValorEgreso] = useState('');
@@ -88,7 +88,7 @@ export default function CrearEgreso() {
         SeDescuenta: seDescuenta,
         FormaPago: formaPago,
       };
-      
+
       await api.post('/EgresosEmpresa/RegistrarEgreso', payload);
 
       showSuccess('Egreso registrado correctamente');
@@ -101,258 +101,97 @@ export default function CrearEgreso() {
     }
   };
 
-  const onChangeFechaEgreso = (_: any, selectedDate?: Date) => {
-    if (!selectedDate) return;
-    setFechaEgreso(toDateInputValue(selectedDate));
-    setFechaModalVisible(null);
-  };
-
   if (!esAdmin) {
     return (
-      <View style={styles.container}>
-        <Text style={commonStyles.emptyText}>No tienes permisos para registrar egresos</Text>
+      <View style={estilos.vacio}>
+        <EmptyState icon="lock-closed-outline" title="No tienes permisos para registrar egresos" />
       </View>
     );
   }
 
   if (loadingPersonas) {
-    return <LoadingView />;
+    return <LoadingState />;
   }
 
   if (personas.length === 0) {
     return (
-      <View style={styles.container}>
-        <Text style={commonStyles.emptyText}>No hay personas disponibles</Text>
+      <View style={estilos.vacio}>
+        <EmptyState icon="people-outline" title="No hay personas disponibles" />
       </View>
     );
   }
 
-  const personaSeleccionada = personas.find((p) => p.id === personaId);
-
   return (
     <KeyboardAware>
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      {/* Selector de persona */}
-      <FormField label="Persona">
-        {Platform.OS === 'web' ? (
-          <select
-            value={personaId || ''}
-            onChange={(e) => setPersonaId(Number(e.target.value))}
-            style={{
-              ...commonStyles.input,
-              height: 45,
-              fontSize: 14,
-            } as any}
-          >
-            <option value="">Seleccionar persona</option>
-            {personas.map((persona) => (
-              <option key={persona.id} value={persona.id}>
-                {persona.nombre} {persona.apellido}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <View>
-            <TouchableOpacity
-              style={[commonStyles.input, styles.picker]}
-              onPress={() => {}}
-            >
-              <Text style={{ color: personaId ? '#000' : '#999' }}>
-                {personaId
-                  ? `${personas.find(p => p.id === personaId)?.nombre} ${personas.find(p => p.id === personaId)?.apellido}`
-                  : 'Seleccionar persona'}
-              </Text>
-            </TouchableOpacity>
-            {personas.map((persona) => (
-              <TouchableOpacity
-                key={persona.id}
-                style={[
-                  styles.personaOption,
-                  personaId === persona.id && styles.personaOptionSelected,
-                ]}
-                onPress={() => setPersonaId(persona.id)}
-              >
-                <Text
-                  style={[
-                    styles.personaOptionText,
-                    personaId === persona.id && styles.personaOptionTextSelected,
-                  ]}
-                >
-                  {persona.nombre} {persona.apellido}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </FormField>
+      <ScrollView contentContainerStyle={estilos.contenedor} keyboardShouldPersistTaps="handled">
+        <Select
+          label="Persona"
+          placeholder="Seleccionar persona"
+          value={personaId !== null ? String(personaId) : null}
+          options={personas.map((p) => ({ value: String(p.id), label: `${p.nombre} ${p.apellido}` }))}
+          onChange={(v) => setPersonaId(Number(v))}
+        />
 
-      <FormField label="Valor del egreso">
-        <MaskedTextInput
-          type="currency"
-          options={{
-            prefix: '$',
-            decimalSeparator: ',',
-            groupSeparator: '.',
-            precision: 0,
-          }}
-          value={valorEgreso}
-          onChangeText={(_, unmasked) => setValorEgreso(unmasked)}
-          style={commonStyles.input}
+        <Input
+          label="Valor del egreso"
+          leftIcon="cash-outline"
+          value={formatearValor(valorEgreso)}
+          onChangeText={(texto) => setValorEgreso(texto.replace(/\D/g, ''))}
           keyboardType="numeric"
           placeholder="Ej: $50.000"
         />
-      </FormField>
 
-      <FormField label="Motivo">
-        <TextInput
+        <Input
+          label="Motivo"
           value={motivo}
           onChangeText={setMotivo}
-          style={[commonStyles.input, { minHeight: 100 }]}
           placeholder="Describe el motivo del egreso..."
           multiline
           numberOfLines={4}
           maxLength={256}
         />
-        <Text style={styles.charCount}>{motivo.length}/256</Text>
-      </FormField>
+        <AppText variante="nota" tono="tenue" style={estilos.contador}>
+          {motivo.length}/256
+        </AppText>
 
-      <FormField label="Fecha del egreso">
-        {Platform.OS === 'web' ? (
-          <input
-            type="date"
-            value={fechaEgreso}
-            onChange={e => setFechaEgreso(e.target.value)}
-            style={commonStyles.input as any}
-          />
-        ) : (
-          <TouchableOpacity onPress={() => setFechaModalVisible('fecha')}>
-            <TextInput
-              style={commonStyles.input}
-              value={fechaEgreso}
-              editable={false}
-              placeholder="YYYY-MM-DD"
-            />
-          </TouchableOpacity>
-        )}
-      </FormField>
-
-      {/* Modal de fecha para dispositivos */}
-      {Platform.OS !== 'web' && fechaModalVisible && (
-        <SimpleDatePicker
-          value={fechaEgreso}
-          onChange={onChangeFechaEgreso}
-          visible={!!fechaModalVisible}
-          onClose={() => setFechaModalVisible(null)}
-          title="Selecciona la fecha del egreso"
-        />
-      )}
-
-      <FormField label="Método de pago">
-        <View style={styles.formaPagoRow}>
-          <TouchableOpacity
-            style={[styles.option, formaPago === 'E' && styles.optionSelected]}
-            onPress={() => setFormaPago('E')}
-          >
-            <Text style={styles.optionIcon}>💵</Text>
-            <Text style={[styles.optionText, formaPago === 'E' && styles.optionTextSelected]}>
-              Efectivo
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.option, formaPago === 'T' && styles.optionSelected]}
-            onPress={() => setFormaPago('T')}
-          >
-            <Text style={styles.optionIcon}>💳</Text>
-            <Text style={[styles.optionText, formaPago === 'T' && styles.optionTextSelected]}>
-              Transferencia
-            </Text>
-          </TouchableOpacity>
+        <View style={estilos.filaFecha}>
+          <DateField label="Fecha del egreso" value={fechaEgreso} onPress={() => setFechaModalVisible('fecha')} />
         </View>
-      </FormField>
 
-      <View style={styles.switchRow}>
-         <Text style={commonStyles.label}>Aplica para descuento al pagar</Text>
-         <Switch value={seDescuenta} onValueChange={setSeDescuenta} />
-      </View>
-      
-      <PrimaryButton
-        title="Registrar egreso"
-        onPress={guardar}
-        loading={loading}
-        variant="primary"
-      />
-    </ScrollView>
+        {/* Modal de fecha */}
+        {fechaModalVisible && (
+          <SimpleDatePicker
+            value={fechaEgreso}
+            onChange={(dateStr) => {
+              setFechaEgreso(dateStr);
+              setFechaModalVisible(null);
+            }}
+            visible={!!fechaModalVisible}
+            onClose={() => setFechaModalVisible(null)}
+            title="Selecciona la fecha del egreso"
+          />
+        )}
+
+        <ChipGroup
+          label="Método de pago"
+          value={formaPago ?? ''}
+          onChange={(k) => setFormaPago(k as 'E' | 'T')}
+          options={[
+            { key: 'E', label: 'Efectivo', icon: 'cash-outline' },
+            { key: 'T', label: 'Transferencia', icon: 'swap-horizontal-outline' },
+          ]}
+        />
+
+        <ToggleRow
+          label="Aplica para descuento al pagar"
+          description={seDescuenta ? 'Se descontará en la próxima liquidación' : 'No se descuenta'}
+          value={seDescuenta}
+          onValueChange={setSeDescuenta}
+          style={{ marginBottom: SPACING.lg }}
+        />
+
+        <Button title="Registrar egreso" icon="checkmark" onPress={guardar} loading={loading} style={estilos.boton} />
+      </ScrollView>
     </KeyboardAware>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    ...commonStyles.scrollContainer,
-  },
-    switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  picker: {
-    justifyContent: 'center',
-  },
-  personaOption: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#dfe6e9',
-    backgroundColor: '#fff',
-  },
-  personaOptionSelected: {
-    backgroundColor: '#e3f2fd',
-  },
-  personaOptionText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  personaOptionTextSelected: {
-    color: '#0984e3',
-    fontWeight: '600',
-  },
-  // Método de pago (mismo estilo que registroServicio/formaPago)
-  formaPagoRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  option: {
-    flex: 1,
-    backgroundColor: COLORS.cardBackground,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  optionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
-  },
-  optionIcon: {
-    fontSize: 24,
-  },
-  optionText: {
-    fontSize: FONT_SIZE.callout,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  optionTextSelected: {
-    color: COLORS.primary,
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#636e72',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-});

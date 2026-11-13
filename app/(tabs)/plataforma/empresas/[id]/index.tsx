@@ -1,16 +1,12 @@
-import FilterChips from '@/components/FilterChips';
-import FormField from '@/components/FormField';
+import { AppText, Badge, Button, Card, ChipGroup, EmptyState, Input, LoadingState } from '@/components/ds';
 import KeyboardAware from '@/components/KeyboardAware';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import StatusBadge from '@/components/StatusBadge';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
 import { useAuth } from '@/context/authContext';
+import { FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, sombra, useEstilos, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showConfirm, showError, showSuccess } from '@/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { EmpresaPlataforma, Impersonacion } from '../../../../api/modelos/empresaPlataforma';
 import { plataformaApi } from '../../../../api/plataformaApi';
 
@@ -21,8 +17,28 @@ const MINUTOS = [
   { key: '120', label: '2 horas' },
 ];
 
+const crearEstilos = (t: Tema) => ({
+  container: { padding: SPACING.lg, backgroundColor: t.colores.fondo, flexGrow: 1 },
+  titulo: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: SPACING.md },
+  nombre: { flex: 1, minWidth: 0, fontSize: FONT_SIZE.title3, fontWeight: FONT_WEIGHT.bold, color: t.colores.texto },
+  acciones: { gap: SPACING.md, marginTop: SPACING.xs },
+  backdrop: { flex: 1, backgroundColor: t.colores.overlay, justifyContent: 'center' as const, padding: SPACING.lg },
+  modal: {
+    backgroundColor: t.colores.superficieElevada,
+    borderRadius: RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: t.colores.borde,
+    padding: SPACING.xl,
+    ...sombra(t, 'lg'),
+  },
+  modalTitulo: { fontSize: FONT_SIZE.title3, fontWeight: FONT_WEIGHT.bold, color: t.colores.texto },
+  modalAyuda: { fontSize: FONT_SIZE.subhead, color: t.colores.textoSuave, marginTop: SPACING.xs, marginBottom: SPACING.lg, lineHeight: 19 },
+  modalAcciones: { gap: SPACING.sm },
+});
+
 export default function DetalleEmpresa() {
   const router = useRouter();
+  const estilos = useEstilos(crearEstilos);
   const { entrarComoSoporte } = useAuth();
   const params = useLocalSearchParams<{ id: string }>();
   const empresaId = Number(params.id);
@@ -129,110 +145,95 @@ export default function DetalleEmpresa() {
     }
   };
 
-  if (cargando) return <LoadingView message="Cargando empresa..." />;
+  if (cargando) return <LoadingState message="Cargando empresa..." />;
   if (!empresa) {
-    return (
-      <View style={styles.vacio}>
-        <Text style={styles.vacioTexto}>La empresa no existe</Text>
-      </View>
-    );
+    return <EmptyState icon="business-outline" title="La empresa no existe" />;
   }
 
   const campo = (key: keyof typeof form, label: string, extra?: object) => (
-    <FormField key={key} label={label}>
-      <TextInput
-        value={form[key]}
-        onChangeText={(t) => setForm((prev) => ({ ...prev, [key]: t }))}
-        style={commonStyles.input}
-        placeholder={label}
-        placeholderTextColor={COLORS.textTertiary}
-        {...extra}
-      />
-    </FormField>
+    <Input
+      key={key}
+      label={label}
+      value={form[key]}
+      onChangeText={(t) => setForm((prev) => ({ ...prev, [key]: t }))}
+      placeholder={label}
+      {...extra}
+    />
   );
 
   return (
     <>
       <KeyboardAware>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <View style={styles.card}>
-            <View style={styles.titulo}>
-              <Text style={styles.nombre}>{empresa.nombre}</Text>
-              <StatusBadge label={empresa.activa ? 'Activa' : 'Inactiva'} type={empresa.activa ? 'disponible' : 'rechazado'} />
+        <ScrollView contentContainerStyle={estilos.container} keyboardShouldPersistTaps="handled">
+          <Card>
+            <View style={estilos.titulo}>
+              <Text style={estilos.nombre} numberOfLines={2}>
+                {empresa.nombre}
+              </Text>
+              <Badge label={empresa.activa ? 'Activa' : 'Inactiva'} tone={empresa.activa ? 'success' : 'neutral'} />
             </View>
-            <Text style={styles.resumen}>
+            <AppText variante="nota" tono="suave" style={{ marginTop: SPACING.xs }}>
               {empresa.totalPersonas} personas · {empresa.accesosActivos}/{empresa.totalAccesos} accesos activos
-            </Text>
-          </View>
+            </AppText>
+          </Card>
 
-          <View style={styles.card}>
+          <Card>
             {campo('nombre', 'Nombre')}
             {campo('nit', 'NIT')}
             {campo('direccion', 'Dirección')}
             {campo('telefono', 'Teléfono', { keyboardType: 'phone-pad' })}
-            <PrimaryButton title="Guardar cambios" onPress={guardar} loading={guardando} />
-          </View>
+            <Button title="Guardar cambios" icon="checkmark" onPress={guardar} loading={guardando} />
+          </Card>
 
-          <PrimaryButton
-            title="Administrar accesos"
-            variant="secondary"
-            onPress={() =>
-              router.push({ pathname: '/plataforma/empresas/[id]/accesos', params: { id: String(empresaId) } })
-            }
-          />
-          <PrimaryButton
-            title="Entrar como esta empresa (soporte)"
-            variant="outline"
-            disabled={!empresa.activa}
-            onPress={() => setSoporteVisible(true)}
-          />
-          <PrimaryButton
-            title={empresa.activa ? 'Desactivar empresa' : 'Activar empresa'}
-            variant={empresa.activa ? 'danger' : 'primary'}
-            onPress={cambiarEstado}
-          />
+          <View style={estilos.acciones}>
+            <Button
+              title="Administrar accesos"
+              variant="secondary"
+              icon="people-outline"
+              onPress={() =>
+                router.push({ pathname: '/plataforma/empresas/[id]/accesos', params: { id: String(empresaId) } })
+              }
+            />
+            <Button
+              title="Entrar como esta empresa (soporte)"
+              variant="secondary"
+              icon="shield-checkmark-outline"
+              disabled={!empresa.activa}
+              onPress={() => setSoporteVisible(true)}
+            />
+            <Button
+              title={empresa.activa ? 'Desactivar empresa' : 'Activar empresa'}
+              variant={empresa.activa ? 'danger' : 'primary'}
+              icon={empresa.activa ? 'power-outline' : 'checkmark-circle-outline'}
+              onPress={cambiarEstado}
+            />
+          </View>
         </ScrollView>
       </KeyboardAware>
 
       <Modal visible={soporteVisible} transparent animationType="fade" onRequestClose={() => setSoporteVisible(false)}>
-        <Pressable style={styles.backdrop} onPress={() => !entrando && setSoporteVisible(false)}>
-          <Pressable style={styles.modal} onPress={() => undefined}>
-            <Text style={styles.modalTitulo}>Entrar como {empresa.nombre}</Text>
-            <Text style={styles.modalAyuda}>
+        <Pressable style={estilos.backdrop} onPress={() => !entrando && setSoporteVisible(false)}>
+          <Pressable style={estilos.modal} onPress={() => undefined}>
+            <Text style={estilos.modalTitulo}>Entrar como {empresa.nombre}</Text>
+            <Text style={estilos.modalAyuda}>
               Entrarás como administrador de la empresa. Queda registrado en la auditoría con tu nombre y el motivo.
             </Text>
-            <FormField label="Motivo">
-              <TextInput
-                value={motivo}
-                onChangeText={setMotivo}
-                style={[commonStyles.input, styles.motivo]}
-                placeholder="Ej.: revisar el cierre de caja que reportó el cliente"
-                placeholderTextColor={COLORS.textTertiary}
-                multiline
-                maxLength={300}
-              />
-            </FormField>
-            <FilterChips label="Duración" options={MINUTOS} selected={minutos} onSelect={setMinutos} />
-            <PrimaryButton title="Entrar" onPress={entrarComo} loading={entrando} />
-            <PrimaryButton title="Cancelar" variant="ghost" onPress={() => setSoporteVisible(false)} disabled={entrando} />
+            <Input
+              label="Motivo"
+              value={motivo}
+              onChangeText={setMotivo}
+              placeholder="Ej.: revisar el cierre de caja que reportó el cliente"
+              multiline
+              maxLength={300}
+            />
+            <ChipGroup label="Duración" options={MINUTOS} value={minutos} onChange={setMinutos} />
+            <View style={estilos.modalAcciones}>
+              <Button title="Entrar" icon="log-in-outline" onPress={entrarComo} loading={entrando} />
+              <Button title="Cancelar" variant="ghost" onPress={() => setSoporteVisible(false)} disabled={entrando} />
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: SPACING.lg, backgroundColor: COLORS.background, flexGrow: 1, gap: SPACING.lg },
-  card: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: SPACING.lg },
-  titulo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.md },
-  nombre: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  resumen: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
-  vacio: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
-  vacioTexto: { color: COLORS.textSecondary, fontSize: FONT_SIZE.body },
-  backdrop: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'center', padding: SPACING.lg },
-  modal: { backgroundColor: COLORS.white, borderRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.md },
-  modalTitulo: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  modalAyuda: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  motivo: { minHeight: 80, textAlignVertical: 'top' },
-});

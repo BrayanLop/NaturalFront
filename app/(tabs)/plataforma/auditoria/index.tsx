@@ -1,23 +1,31 @@
-import EmptyState from '@/components/EmptyState';
-import FormField from '@/components/FormField';
-import ListCard from '@/components/ListCard';
-import LoadingView from '@/components/LoadingView';
-import PrimaryButton from '@/components/PrimaryButton';
-import StatusBadge from '@/components/StatusBadge';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, commonStyles } from '@/constants/theme';
+import { AppText, Badge, Button, Card, EmptyState, Input, ListRow, LoadingState, type TonoBadge } from '@/components/ds';
+import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showError } from '@/utils/logger';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
 import { AuditoriaItem, PaginaAuditoria } from '../../../api/modelos/empresaPlataforma';
 import { plataformaApi } from '../../../api/plataformaApi';
 
 const TAMANO = 25;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
-const TIPO_RESULTADO = { ok: 'confirmado', error: 'rechazado', pendiente: 'pendiente' } as const;
+const RESULTADO: Record<string, { tono: TonoBadge; label: string }> = {
+  ok: { tono: 'success', label: 'Correcto' },
+  error: { tono: 'error', label: 'Error' },
+  pendiente: { tono: 'warning', label: 'Pendiente' },
+};
+
+const crearEstilos = (t: Tema) => ({
+  container: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  fila: { flexDirection: 'row' as const, gap: SPACING.md },
+  campoFila: { flex: 1, minWidth: 0, marginBottom: SPACING.md },
+  emptyList: { flexGrow: 1, justifyContent: 'center' as const },
+});
 
 export default function Auditoria() {
+  const estilos = useEstilos(crearEstilos);
+  const { tema } = useTheme();
   const [empresaId, setEmpresaId] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
@@ -75,43 +83,60 @@ export default function Auditoria() {
     consultar(pagina + 1);
   };
 
-  const renderItem = ({ item }: { item: AuditoriaItem }) => (
-    <ListCard
-      title={item.accion}
-      subtitle={`${new Date(item.fechaUtc).toLocaleString('es-CO')} · ${item.actorNombre}`}
-      description={[item.empresaId ? `Empresa ${item.empresaId}` : null, item.usuarioId ? `Usuario ${item.usuarioId}` : null, item.detalle]
-        .filter(Boolean)
-        .join(' · ')}
-      badges={<StatusBadge label={item.resultado} type={TIPO_RESULTADO[item.resultado] ?? 'info'} />}
-    />
-  );
+  const renderItem = ({ item }: { item: AuditoriaItem }) => {
+    const detalle = [item.empresaId ? `Empresa ${item.empresaId}` : null, item.usuarioId ? `Usuario ${item.usuarioId}` : null, item.detalle]
+      .filter(Boolean)
+      .join(' · ');
+    const r = RESULTADO[item.resultado] ?? { tono: 'neutral' as TonoBadge, label: item.resultado };
+    return (
+      <ListRow
+        title={item.accion}
+        subtitle={`${new Date(item.fechaUtc).toLocaleString('es-CO')} · ${item.actorNombre}${detalle ? `\n${detalle}` : ''}`}
+        icon="document-text-outline"
+        badge={<Badge label={r.label} tone={r.tono} size="sm" />}
+      />
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.filtros}>
-        <View style={styles.fila}>
-          <View style={styles.col}>
-            <FormField label="Empresa (id)">
-              <TextInput value={empresaId} onChangeText={setEmpresaId} style={commonStyles.input} placeholder="Todas" keyboardType="numeric" placeholderTextColor={COLORS.textTertiary} />
-            </FormField>
-          </View>
-          <View style={styles.col}>
-            <FormField label="Desde">
-              <TextInput value={desde} onChangeText={setDesde} style={commonStyles.input} placeholder="AAAA-MM-DD" autoCapitalize="none" placeholderTextColor={COLORS.textTertiary} />
-            </FormField>
-          </View>
-          <View style={styles.col}>
-            <FormField label="Hasta">
-              <TextInput value={hasta} onChangeText={setHasta} style={commonStyles.input} placeholder="AAAA-MM-DD" autoCapitalize="none" placeholderTextColor={COLORS.textTertiary} />
-            </FormField>
-          </View>
+    <View style={estilos.container}>
+      <Card>
+        <Input
+          label="Empresa (id)"
+          value={empresaId}
+          onChangeText={setEmpresaId}
+          placeholder="Todas"
+          keyboardType="numeric"
+          leftIcon="business-outline"
+        />
+        <View style={estilos.fila}>
+          <Input
+            label="Desde"
+            value={desde}
+            onChangeText={setDesde}
+            placeholder="AAAA-MM-DD"
+            autoCapitalize="none"
+            containerStyle={estilos.campoFila}
+          />
+          <Input
+            label="Hasta"
+            value={hasta}
+            onChangeText={setHasta}
+            placeholder="AAAA-MM-DD"
+            autoCapitalize="none"
+            containerStyle={estilos.campoFila}
+          />
         </View>
-        <PrimaryButton title="Buscar" onPress={buscar} loading={cargando} size="small" />
-        {!cargando && <Text style={styles.total}>{total} registro{total !== 1 ? 's' : ''}</Text>}
-      </View>
+        <Button title="Buscar" icon="search" onPress={buscar} loading={cargando} />
+        {!cargando && (
+          <AppText variante="nota" tono="suave" style={{ marginTop: SPACING.md }}>
+            {total} registro{total !== 1 ? 's' : ''}
+          </AppText>
+        )}
+      </Card>
 
       {cargando && items.length === 0 ? (
-        <LoadingView message="Consultando..." />
+        <LoadingState message="Consultando..." />
       ) : (
         <FlatList
           data={items}
@@ -119,21 +144,12 @@ export default function Auditoria() {
           renderItem={renderItem}
           onEndReached={cargarMas}
           onEndReachedThreshold={0.4}
-          ListEmptyComponent={<EmptyState message="Sin registros" icon="📋" subtitle="No hay acciones con esos filtros" />}
-          ListFooterComponent={cargandoMas ? <ActivityIndicator style={{ margin: SPACING.lg }} color={COLORS.primary} /> : null}
-          contentContainerStyle={items.length === 0 ? styles.emptyList : undefined}
+          ListEmptyComponent={<EmptyState icon="document-text-outline" title="Sin registros" subtitle="No hay acciones con esos filtros" />}
+          ListFooterComponent={cargandoMas ? <ActivityIndicator style={{ margin: SPACING.lg }} color={tema.colores.primarioFuerte} /> : null}
+          contentContainerStyle={items.length === 0 ? estilos.emptyList : undefined}
           showsVerticalScrollIndicator={false}
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: SPACING.lg, backgroundColor: COLORS.background },
-  filtros: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, gap: SPACING.sm },
-  fila: { flexDirection: 'row', gap: SPACING.sm },
-  col: { flex: 1 },
-  total: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium, color: COLORS.textSecondary },
-  emptyList: { flex: 1, justifyContent: 'center' },
-});

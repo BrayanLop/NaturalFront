@@ -1,15 +1,11 @@
-import EmptyState from '@/components/EmptyState';
-import ListCard from '@/components/ListCard';
-import LoadingView from '@/components/LoadingView';
-import StatusBadge from '@/components/StatusBadge';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '@/constants/theme';
+import { AppText, Badge, EmptyState, ListRow, LoadingState, PageHeader, Toggle } from '@/components/ds';
+import { SPACING, useEstilos, type Tema } from '@/theme';
 import { mensajeDeError } from '@/utils/apiError';
 import { logger, showError } from '@/utils/logger';
 import { getRoleName } from '@/utils/roles';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { ClienteAccesos } from '../../app/api/accesosClient';
 import { Acceso } from '../../app/api/modelos/acceso';
 
@@ -21,8 +17,15 @@ interface Props {
   onAbrirDetalle: (acceso: Acceso) => void;
 }
 
+const crearEstilos = (t: Tema) => ({
+  contenedor: { flex: 1, padding: SPACING.lg, backgroundColor: t.colores.fondo },
+  listaVacia: { flexGrow: 1, justifyContent: 'center' as const },
+  interruptor: { alignItems: 'center' as const, marginLeft: SPACING.sm },
+});
+
 /** Lista de personas y su acceso, con interruptor activo/inactivo. La usan el rol 01 y el superadmin. */
 export default function ListaAccesos({ cliente, onCrear, onAbrirDetalle }: Props) {
+  const estilos = useEstilos(crearEstilos);
   const [accesos, setAccesos] = useState<Acceso[]>([]);
   const [loading, setLoading] = useState(false);
   const [cambiando, setCambiando] = useState<number | null>(null);
@@ -61,63 +64,51 @@ export default function ListaAccesos({ cliente, onCrear, onAbrirDetalle }: Props
   const abrir = (item: Acceso) => (item.tieneAcceso ? onAbrirDetalle(item) : onCrear(item.personaId));
 
   const renderItem = ({ item }: { item: Acceso }) => (
-    <ListCard
+    <ListRow
       title={`${item.nombre} ${item.apellido}`}
       subtitle={item.tieneAcceso ? `Usuario: ${item.nombreUsuario}` : 'Sin acceso a la aplicación'}
-      badges={
+      icon={item.tieneAcceso ? 'key-outline' : 'person-outline'}
+      badge={
         item.tieneAcceso ? (
-          <StatusBadge label={getRoleName(item.rol ?? '')} type="info" />
+          <Badge label={getRoleName(item.rol ?? '')} tone="info" size="sm" />
         ) : (
-          <StatusBadge label="Sin acceso" type="pendiente" />
+          <Badge label="Sin acceso" tone="neutral" size="sm" />
         )
       }
-      onPress={() => abrir(item)}
-      leftIcon={
-        <FontAwesome5
-          name={item.tieneAcceso ? 'user-check' : 'user-slash'}
-          size={18}
-          color={item.tieneAcceso && item.activo ? COLORS.primary : COLORS.textTertiary}
-        />
-      }
-      rightContent={
+      trailing={
         item.tieneAcceso ? (
-          <View style={styles.switchBox}>
-            <Text style={styles.switchLabel}>{item.activo ? 'Activo' : 'Inactivo'}</Text>
-            <Switch
+          <View style={estilos.interruptor}>
+            <AppText variante="nota" tono="suave">
+              {item.activo ? 'Activo' : 'Inactivo'}
+            </AppText>
+            <Toggle
               value={item.activo}
               disabled={cambiando === item.usuarioId}
               onValueChange={(valor) => cambiarEstado(item, valor)}
-              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+              accessibilityLabel={`Acceso activo de ${item.nombre} ${item.apellido}`}
             />
           </View>
         ) : undefined
       }
+      chevron
+      onPress={() => abrir(item)}
     />
   );
 
   const conAcceso = accesos.filter((a) => a.tieneAcceso).length;
 
   return (
-    <View style={styles.container}>
+    <View style={estilos.contenedor}>
       {!loading && accesos.length > 0 && (
-        <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Accesos</Text>
-            <Text style={styles.headerSubtitle}>
-              {conAcceso} de {accesos.length} personas con acceso
-            </Text>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
-            onPress={() => onCrear()}
-          >
-            <FontAwesome5 name="plus" size={14} color={COLORS.white} />
-          </Pressable>
-        </View>
+        <PageHeader
+          title={`${accesos.length} persona${accesos.length !== 1 ? 's' : ''}`}
+          subtitle={`${conAcceso} con acceso`}
+          action={{ icon: 'add', onPress: () => onCrear(), label: 'Crear acceso' }}
+        />
       )}
 
       {loading ? (
-        <LoadingView message="Cargando accesos..." />
+        <LoadingState message="Cargando accesos..." />
       ) : (
         <FlatList
           data={accesos}
@@ -125,44 +116,15 @@ export default function ListaAccesos({ cliente, onCrear, onAbrirDetalle }: Props
           renderItem={renderItem}
           ListEmptyComponent={
             <EmptyState
-              message="No hay personas registradas"
-              icon="👥"
+              icon="people-outline"
+              title="No hay personas registradas"
               subtitle="Crea primero una persona en el módulo Personas"
             />
           }
-          contentContainerStyle={accesos.length === 0 ? styles.emptyList : undefined}
+          contentContainerStyle={accesos.length === 0 ? estilos.listaVacia : undefined}
           showsVerticalScrollIndicator={false}
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: SPACING.lg, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerInfo: { flex: 1 },
-  headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  headerSubtitle: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...SHADOWS.primary,
-  },
-  addButtonPressed: { backgroundColor: COLORS.primaryDark, transform: [{ scale: 0.95 }] },
-  emptyList: { flex: 1, justifyContent: 'center' },
-  switchBox: { alignItems: 'center', marginLeft: SPACING.sm },
-  switchLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
-});

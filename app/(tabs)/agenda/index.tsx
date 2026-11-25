@@ -145,6 +145,9 @@ export default function AgendaPersonal() {
         refreshControl={<RefreshControl refreshing={agenda.refrescando} onRefresh={agenda.refrescar} colors={[tema.colores.primario]} />}
       >
         <View style={estilos.acciones}>
+          {agenda.miUsuarioId != null && (
+            <Button title="Google Calendar" icon="logo-google" size="sm" variant="secondary" fullWidth={false} onPress={() => router.push('/agenda/google' as never)} />
+          )}
           {isAdmin ? (
             <>
               <Button title="Nueva cita" icon="add" size="sm" fullWidth={false} onPress={() => router.push('/agenda/crear' as never)} />

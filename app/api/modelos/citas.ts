@@ -218,3 +218,15 @@ export const TRANSICIONES_CITA: Record<string, EstadoCita[]> = {
   Atendida: [],
   Cancelada: [],
 };
+
+/** GET /Google/Estado: conexión del empleado con su Google Calendar (sin secretos). */
+export interface EstadoGoogle {
+  /** La integración está configurada en el servidor. */
+  habilitado: boolean;
+  conectada: boolean;
+  /** "Activa" o "Revocada" (hay que reconectar). Ausente si nunca se conectó. */
+  estado?: string | null;
+  email?: string | null;
+  ultimaSincronizacionUtc?: string | null;
+  error?: string | null;
+}

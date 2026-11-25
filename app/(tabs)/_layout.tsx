@@ -124,6 +124,7 @@ export default function Layout() {
       <Stack.Screen name="agenda/ajustes" options={{ title: 'Ajustes de la agenda' }} />
       <Stack.Screen name="agenda/reprogramar" options={{ title: 'Reprogramar cita' }} />
       <Stack.Screen name="agenda/horarios" options={{ title: 'Horarios y bloqueos' }} />
+      <Stack.Screen name="agenda/google" options={{ title: 'Google Calendar' }} />
       <Stack.Screen name="catalogo" options={{ title: 'Catálogo' }} />
       <Stack.Screen name="accesos/index" options={{ title: 'Accesos' }} />
       <Stack.Screen name="accesos/crear" options={{ title: 'Crear acceso' }} />

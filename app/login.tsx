@@ -1,5 +1,6 @@
 import { Button, Icon, Input } from '@/components/ds';
 import { FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, sombra, useEstilos, useTheme, type Tema } from '@/theme';
+import { citasConfigurado } from '@/app/api/citasConfig';
 import { mensajeDeError } from '@/utils/apiError';
 import { showError } from '@/utils/logger';
 import { hashPassword } from '@/utils/password';
@@ -200,6 +201,18 @@ export default function Login() {
             <Text style={estilos.demoDescription}>
               Explora la app con datos de ejemplo. No se guarda nada.
             </Text>
+
+            {/* Clientes externos: agendan con su propia cuenta de Citas, aparte de la de Natural */}
+            {citasConfigurado && (
+              <Button
+                title="¿Eres cliente? Agenda tu cita"
+                icon="calendar-outline"
+                variant="ghost"
+                onPress={() => router.push('/citas' as never)}
+                disabled={loading}
+                style={{ marginTop: SPACING.md }}
+              />
+            )}
           </View>
         </Animated.View>
       </ScrollView>

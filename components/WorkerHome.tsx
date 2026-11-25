@@ -1,4 +1,5 @@
 import { api } from '@/app/api/api';
+import { citasConfigurado } from '@/app/api/citasConfig';
 import { AppText, Badge, Button, Card, SectionHeader, StatCard, type IconName, type TonoStat } from '@/components/ds';
 import { useAuth } from '@/context/authContext';
 import { SPACING, useEstilos, useTheme, type Tema } from '@/theme';
@@ -234,6 +235,15 @@ export default function WorkerHome() {
               />
             </View>
           </View>
+          {!isDemo && citasConfigurado && (
+            <Button
+              title="Agenda / Citas"
+              icon="calendar-outline"
+              variant="secondary"
+              onPress={() => router.push('/(tabs)/agenda')}
+              style={{ marginTop: SPACING.md }}
+            />
+          )}
         </>
       )}
     </ScrollView>

@@ -14,7 +14,8 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://naturalback.vip/v2/api",
-        "EXPO_PUBLIC_PLATAFORMA_URL": "https://brar.bia.solutions"
+        "EXPO_PUBLIC_PLATAFORMA_URL": "https://brar.bia.solutions",
+        "EXPO_PUBLIC_CITAS_API_URL": "https://citas.bia.solutions"
       }
     },
     "production": {
@@ -22,7 +23,8 @@
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://naturalback.vip/v2/api",
-        "EXPO_PUBLIC_PLATAFORMA_URL": "https://brar.bia.solutions"
+        "EXPO_PUBLIC_PLATAFORMA_URL": "https://brar.bia.solutions",
+        "EXPO_PUBLIC_CITAS_API_URL": "https://citas.bia.solutions"
       }
     }
   },

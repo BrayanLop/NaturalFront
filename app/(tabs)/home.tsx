@@ -12,6 +12,7 @@ import {
   useTheme,
   type Tema,
 } from '@/theme';
+import { citasConfigurado } from '@/app/api/citasConfig';
 import { isPlataforma, isTrabajador, puedeGestionarAccesos, puedeRegistrarServicios } from '@/utils/roles';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -149,6 +150,20 @@ export default function Home() {
         icon: 'lock-closed',
         color: COLORES_MODULO.accesos,
         description: 'Usuarios y permisos',
+      },
+    ];
+  }
+
+  // Agenda de citas (backend aparte). Oculta en modo demo y si la app no trae la URL de Citas.
+  if (!isDemo && citasConfigurado) {
+    menuItems = [
+      ...menuItems,
+      {
+        title: 'Agenda / Citas',
+        route: '../agenda',
+        icon: 'calendar',
+        color: COLORES_MODULO.agenda,
+        description: 'Citas de clientes',
       },
     ];
   }

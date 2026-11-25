@@ -12,6 +12,7 @@ export const COLORES_MODULO = {
   finanzas: '#3498db',
   historico: '#9b59b6',
   accesos: '#c0392b',
+  agenda: '#6c5ce7',
 } as const;
 
 /** Colores de los accesos de "Ver detalle" en Finanzas. */
